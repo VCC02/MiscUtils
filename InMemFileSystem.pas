@@ -90,6 +90,7 @@ type
     procedure AttachAdditionalInfoToFile(AFileName: string; AFileInfo: Pointer);
     function GetAdditionalFileInfo(AFileName: string): Pointer;
     function GetHashByFileName(AFileName: string): string;
+    procedure Clear;
 
     property FileNameHashSeparator: string read FFileNameHashSeparator write FFileNameHashSeparator;
     property OnComputeInMemFileHash: TOnComputeInMemFileHash read FOnComputeInMemFileHash write FOnComputeInMemFileHash;
@@ -175,19 +176,9 @@ end;
 
 
 destructor TInMemFileSystem.Destroy;
-var
-  i: Integer;
 begin
   try
-    EnterCriticalSection(FSystemCriticalSection);
-    try
-      for i := 0 to Length(FListOfFiles) - 1 do
-        FreeMem(FListOfFiles[i].Content, FListOfFiles[i].Size);
-
-      SetLength(FListOfFiles, 0);
-    finally
-      LeaveCriticalSection(FSystemCriticalSection);
-    end;
+    Clear;
   finally
     DeleteCriticalSection(FSystemCriticalSection);
   end;
@@ -585,6 +576,22 @@ begin
       Result := ''
     else
       Result := FListOfFiles[AFileIndex].Hash;
+  finally
+    LeaveCriticalSection(FSystemCriticalSection);
+  end;
+end;
+
+
+procedure TInMemFileSystem.Clear;
+var
+  i: Integer;
+begin
+  EnterCriticalSection(FSystemCriticalSection);
+  try
+    for i := 0 to Length(FListOfFiles) - 1 do
+      FreeMem(FListOfFiles[i].Content, FListOfFiles[i].Size);
+
+    SetLength(FListOfFiles, 0);
   finally
     LeaveCriticalSection(FSystemCriticalSection);
   end;
