@@ -232,7 +232,7 @@ begin
     end;
 
     Move(NewContent^, FListOfFiles[AIndex].Content^, ASize);
-    DoOnComputeInMemFileHash(FListOfFiles[AIndex].Content, FListOfFiles[AIndex].Size);
+    FListOfFiles[AIndex].Hash := DoOnComputeInMemFileHash(FListOfFiles[AIndex].Content, FListOfFiles[AIndex].Size);
   finally
     LeaveCriticalSection(FSystemCriticalSection);
   end;
