@@ -63,7 +63,9 @@ type
     procedure ToBe(ExpectedValue: Integer; ExtraMessage: string = ''); overload;
     procedure ToBe(ExpectedValue: Boolean; ExtraMessage: string = ''); overload;
     procedure ToBeGreaterThan(ExpectedValue: Integer; ExtraMessage: string = '');
+    procedure ToBeGreaterThanOrEqualTo(ExpectedValue: Integer; ExtraMessage: string = '');
     procedure ToBeLessThan(ExpectedValue: Integer; ExtraMessage: string = '');
+    procedure ToBeLessThanOrEqualTo(ExpectedValue: Integer; ExtraMessage: string = '');
     procedure ToBeAssigned(ExtraMessage: string = ''); overload;  //verifies FActualValueStringList
     procedure ToMatchContentOfStringArray(ExpectedValue: PStrArr; ExpectedLength: Integer; ExtraMessage: string = '');
     procedure NotToBe(ExpectedValue: string; ExtraMessage: string = ''); overload;
@@ -208,10 +210,30 @@ begin
 end;
 
 
+procedure TExpect.ToBeGreaterThanOrEqualTo(ExpectedValue: Integer; ExtraMessage: string = '');
+begin
+  try
+    ExpectInt(Ord(FActualValueInt >= ExpectedValue), 1, IntToStr(FActualValueInt) + ' is not greater than or equal to ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
+  finally
+    Free;
+  end;
+end;
+
+
 procedure TExpect.ToBeLessThan(ExpectedValue: Integer; ExtraMessage: string = '');
 begin
   try
     ExpectInt(Ord(FActualValueInt < ExpectedValue), 1, IntToStr(FActualValueInt) + ' is not less than ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
+  finally
+    Free;
+  end;
+end;
+
+
+procedure TExpect.ToBeLessThanOrEqualTo(ExpectedValue: Integer; ExtraMessage: string = '');
+begin
+  try
+    ExpectInt(Ord(FActualValueInt <= ExpectedValue), 1, IntToStr(FActualValueInt) + ' is not less than or equal to ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
   finally
     Free;
   end;
