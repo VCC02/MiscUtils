@@ -137,7 +137,7 @@ var
 begin
   DigitCount := CDigitCount[SizeOf(Pointer) = 8];
   if not Assigned(ActualValue) then
-    raise Exception.Create('Expected pointer/object at' + IntToHex(Int64(ActualValue), DigitCount) + ', to be assigned.  ' + ExtraMsg);
+    raise Exception.Create('Expected pointer/object at ' + IntToHex(Int64(ActualValue), DigitCount) + ', to be assigned.  ' + ExtraMsg);
 end;
 
 
@@ -300,7 +300,7 @@ end;
 function TExpect.WithItem(ExpectedItemName: string; ExtraMessage: string = ''): TExpectedValue; overload;
 begin
   try
-    Expect(FActualValueStringList).ToBeAssigned(ExtraMessage);
+    Expect(FActualValueStringList).ToBeAssigned(ExtraMessage + '  Also, make sure you pass a TStringList to Expect(), not a string.');
     Expect(FActualValueStringList.IndexOfName(ExpectedItemName)).ToBeGreaterThan(-1, ExtraMessage + '  Expected "' + ExpectedItemName + '" to be an item of list.');
 
     Result := TExpectedValue.Create;
