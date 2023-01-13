@@ -42,7 +42,7 @@ type
     procedure Put(AString: string);
     procedure PutMultiple(AListOfFiles: TStringList);
     function Pop(out AString: string): Boolean; //Returns True for valid output and False if there was no item in FIFO
-    procedure PopAll(OutStringList: TStringList);
+    procedure PopAll(OutStrings: TStringList);
     function PopAllAsString: string;
     function GetLength: Integer;
   end;
@@ -123,11 +123,15 @@ begin
 end;
 
 
-procedure TPollingFIFO.PopAll(OutStringList: TStringList);
+procedure TPollingFIFO.PopAll(OutStrings: TStringList);
 begin
   EnterCriticalSection(FCritSec);
   try
-    OutStringList.AddStrings(FFIFO);
+    if FFIFO.Count = 0 then
+      Exit;
+
+    OutStrings.AddStrings(FFIFO);
+
     FFIFO.Clear;
   finally
     LeaveCriticalSection(FCritSec);
