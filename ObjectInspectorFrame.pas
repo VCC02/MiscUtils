@@ -100,8 +100,8 @@ type
   TOnOITextEditorMouseDown = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer) of object;
 
-  TOnOITextEditorMouseMove = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
-    Sender: TObject; Shift: TShiftState; X, Y: Integer) of object;
+  TOnOITextEditorMouseMove = function(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
+    Sender: TObject; Shift: TShiftState; X, Y: Integer): Boolean of object;
 
   TOnOITextEditorKeyUp = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     Sender: TObject; var Key: Word; Shift: TShiftState) of object;
@@ -226,8 +226,8 @@ type
     procedure DoOnOITextEditorMouseDown(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 
-    procedure DoOnOITextEditorMouseMove(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
-      Sender: TObject; Shift: TShiftState; X, Y: Integer);
+    function DoOnOITextEditorMouseMove(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
+      Sender: TObject; Shift: TShiftState; X, Y: Integer): Boolean;
 
     procedure DoOnOITextEditorKeyUp(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -304,7 +304,7 @@ type
 
     procedure CreateRemainingUIComponents;
     procedure FreeEditorComponents;
-    function GetNodeIndexInfo(ANode: PVirtualNode; var ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer): Boolean;
+    function GetNodeIndexInfo(ANode: PVirtualNode; out ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer): Boolean;
     function GetColcmbPropertyAsText: string;
     function GetPropertyValueForEditor(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; ACurrentEditorType: TOIEditorType): string;
     procedure AssignPopupMenuAndTooltipToEditor(AEditor: TControl);
@@ -991,13 +991,13 @@ begin
 end;
 
 
-procedure TfrObjectInspector.DoOnOITextEditorMouseMove(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
-  Sender: TObject; Shift: TShiftState; X, Y: Integer);
+function TfrObjectInspector.DoOnOITextEditorMouseMove(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
+  Sender: TObject; Shift: TShiftState; X, Y: Integer): Boolean;
 begin
   if not Assigned(FOnOITextEditorMouseMove) then
     raise Exception.Create('OnOITextEditorMouseMove not assigned.')
   else
-    FOnOITextEditorMouseMove(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, Sender, Shift, X, Y);
+    Result := FOnOITextEditorMouseMove(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, Sender, Shift, X, Y);
 end;
 
 
@@ -1277,6 +1277,7 @@ begin
 
   //if Assigned(FTextEditorEditBox) then
   //  FreeAndNil(FTextEditorEditBox);    //this is freed by the VST itself, so it should not be freed again here
+  FTextEditorEditBox := nil; //it has to be set to nil, though
 end;
 
 
@@ -1291,23 +1292,25 @@ begin
 
   if Assigned(FupdownTextEditor) then
     FreeAndNil(FupdownTextEditor);
+
+  FTextEditorEditBox := nil;
 end;
 
 
-function TfrObjectInspector.GetNodeIndexInfo(ANode: PVirtualNode; var ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer): Boolean;
+function TfrObjectInspector.GetNodeIndexInfo(ANode: PVirtualNode; out ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer): Boolean;
 var
   CategoryNodeData, PropertyNodeData, NodeData: PNodeDataPropertyRec;
 begin
   NodeData := vstOI.GetNodeData(ANode);
   Result := False;
 
-  if NodeData = nil then
-    Exit;
-
   ANodeLevel := -1;
   ACategoryIndex := -1;
   APropertyIndex := -1;
   APropertyItemIndex := -1;
+
+  if NodeData = nil then
+    Exit;
 
   ANodeLevel := NodeData^.Level;
 
@@ -2331,7 +2334,8 @@ begin
   if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
     Exit;
 
-  DoOnOITextEditorMouseMove(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Sender, Shift, X, Y);
+  if DoOnOITextEditorMouseMove(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Sender, Shift, X, Y) then
+    FEditingText := FTextEditorEditBox.Text;
 end;
 
 
