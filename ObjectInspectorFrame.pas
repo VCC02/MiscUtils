@@ -48,6 +48,7 @@ type
   TOIEditorType = (
     etNone,               //No editor button, editbox or combobox is displayed
     etText,               //The built-in VirtualTreeView editbox
+    etTextWithArrow,      //The built-in VirtualTreeView editbox. Next to it, there is down arrow button, which can open a menu.
     etSpinText,           //The built-in VirtualTreeView editbox with an updown button
     etFilePath,           //A "..." browse button with local file open dialog
     etDirPath,            //A "..." browse button with local directory open dialog
@@ -119,6 +120,8 @@ type
   TOnOIBrowseFile = function(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     AFilter, ADialogInitDir: string; var Handled: Boolean; AReturnMultipleFiles: Boolean = False): string of object;
 
+  TOnAfterSpinTextEditorChanging = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; ANewValue: string) of object;
+
   { TfrObjectInspector }
 
   TfrObjectInspector = class(TFrame)
@@ -142,6 +145,7 @@ type
     FBtnItemsProperty: TButton;
     FupdownTextEditor: TUpDown;
     FBtnArrowProperty: TBitBtn;
+    FSpdBtnArrowProperty: TSpeedButton;
 
     FEditingText: string;
     FPropHitInfo: THitInfo;
@@ -190,6 +194,7 @@ type
     FOnOIUserEditorClick: TOnOIUserEditorClick;
 
     FOnOIBrowseFile: TOnOIBrowseFile;
+    FOnAfterSpinTextEditorChanging: TOnAfterSpinTextEditorChanging;
 
     procedure SetDataTypeVisible(Value: Boolean);
     procedure SetExtraInfoVisible(Value: Boolean);
@@ -245,6 +250,8 @@ type
     function DoOnOIBrowseFile(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       AFilter, ADialogInitDir: string; var Handled: Boolean; AReturnMultipleFiles: Boolean = False): string;
 
+    procedure DoOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; ANewValue: string);
+
     procedure edtColorPropertyExit(Sender: TObject);
     procedure edtColorPropertyKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 
@@ -266,6 +273,9 @@ type
 
     procedure btnArrowPropertyExit(Sender: TObject);
     procedure btnArrowPropertyClick(Sender: TObject);
+
+    procedure spdbtnArrowPropertyExit(Sender: TObject);
+    procedure spdbtnArrowPropertyClick(Sender: TObject);
 
     procedure TextEditorMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure TextEditorMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -371,6 +381,7 @@ type
     property OnOIUserEditorClick: TOnOIUserEditorClick write FOnOIUserEditorClick;
 
     property OnOIBrowseFile: TOnOIBrowseFile write FOnOIBrowseFile;
+    property OnAfterSpinTextEditorChanging: TOnAfterSpinTextEditorChanging write FOnAfterSpinTextEditorChanging;
   end;
 
 
@@ -380,6 +391,7 @@ const
   COIEditorTypeStr: TOIEditorTypeStr = (   //editor names for debugging
     'etNone',
     'etText',
+    'etTextWithArrow',
     'etSpinText',
     'etFilePath',
     'etDirPath',
@@ -405,6 +417,7 @@ const
   CTextEditorSpacing = 5;
   CEmptySpaceForIcon = '       ';
   CMinComboWidth = 30;  //minimum combobox width, to be displayed
+  CDefaultArrowButonWidth = 21;
 
 
 function ValidHexColor(ColorStr: string): Boolean;
@@ -653,6 +666,7 @@ begin
   FOnOIUserEditorClick := nil;
 
   FOnOIBrowseFile := nil;
+  FOnAfterSpinTextEditorChanging := nil;
 
   FListItemsVisible := True;
   FDataTypeVisible := True;
@@ -732,26 +746,50 @@ var
 begin
   tmrSetEditBox.Enabled := False;
 
-  SetTextEditorEditPosAndSize;
   NodeData := vstOI.GetNodeData(FEditingNode);
   if NodeData = nil then
     Exit;
 
-  if NodeData^.EditorType = etSpinText then
-  begin
-    FupdownTextEditor := TUpDown.Create(Self);
-    FupdownTextEditor.Parent := FTextEditorEditBox.Parent;//Self;
-    FupdownTextEditor.Width := 17;
-    FupdownTextEditor.Height := FTextEditorEditBox.Height - 4;
-    FupdownTextEditor.Left := GetLocalEditorLeft(FupdownTextEditor.Width, GetVertScrollBarWidth) - CTextEditorSpacing; //vstOI.Left + vstOI.Header.Columns.Items[2].Left - FupdownTextEditor.Width - CTextEditorSpacing; ///////////////////// - icon width - icon spacing
-    FupdownTextEditor.Top := FTextEditorEditBox.Top + 2;
-    FupdownTextEditor.Flat := True;
-    FupdownTextEditor.ParentColor := False;
-    FupdownTextEditor.OnChangingEx := updownTextEditorChangingEx;
+  SetTextEditorEditPosAndSize;
 
-    FupdownTextEditor.Visible := True;
-    FupdownTextEditor.BringToFront;
-  end;
+  case NodeData^.EditorType of
+    etSpinText:
+    begin
+      FupdownTextEditor := TUpDown.Create(Self);
+      FupdownTextEditor.Parent := FTextEditorEditBox.Parent;//Self;
+      FupdownTextEditor.Width := 17;
+      FupdownTextEditor.Height := FTextEditorEditBox.Height - 4;
+      FupdownTextEditor.Left := GetLocalEditorLeft(FupdownTextEditor.Width, GetVertScrollBarWidth) - CTextEditorSpacing; //vstOI.Left + vstOI.Header.Columns.Items[2].Left - FupdownTextEditor.Width - CTextEditorSpacing; ///////////////////// - icon width - icon spacing
+      FupdownTextEditor.Top := FTextEditorEditBox.Top + 2;
+      FupdownTextEditor.Flat := True;
+      FupdownTextEditor.ParentColor := False;
+      FupdownTextEditor.OnChangingEx := updownTextEditorChangingEx;
+
+      FupdownTextEditor.Visible := True;
+      FupdownTextEditor.BringToFront;
+    end;
+
+    etTextWithArrow:
+    begin
+      //CreateArrowButton(FEditingNode, GetVertScrollBarWidth, etTextWithArrow);
+      FSpdBtnArrowProperty := TSpeedButton.Create(Self);
+      FSpdBtnArrowProperty.Parent := FTextEditorEditBox; //using the edtibox as parent, to automatically move the arrow button on scrolling
+      FSpdBtnArrowProperty.Width := 17;
+      FSpdBtnArrowProperty.Height := FTextEditorEditBox.Height - 4;
+      FSpdBtnArrowProperty.Left := FTextEditorEditBox.Width - FSpdBtnArrowProperty.Width - 4; ///////////////////// - icon width - icon spacing
+      FSpdBtnArrowProperty.Top := 0;
+      FSpdBtnArrowProperty.Flat := True;
+      FSpdBtnArrowProperty.Glyph.Assign(imgDownArrow.Picture.Bitmap);
+      FSpdBtnArrowProperty.OnClick := spdbtnArrowPropertyClick;
+      FSpdBtnArrowProperty.Anchors := [akRight, akTop];
+
+      FSpdBtnArrowProperty.Visible := True;
+      FSpdBtnArrowProperty.BringToFront;
+    end
+
+    else
+      ;
+  end; //case
 end;
 
 
@@ -1077,6 +1115,15 @@ begin
 end;
 
 
+procedure TfrObjectInspector.DoOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; ANewValue: string);
+begin
+  if not Assigned(FOnAfterSpinTextEditorChanging) then
+    Exit;  //Do not raise exception for this event. It is not mandatory.
+
+  FOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, ANewValue);
+end;
+
+
 procedure TfrObjectInspector.ReloadContent;
 var
   i, j, k: Integer;
@@ -1084,6 +1131,8 @@ var
   CategoryNode, PropertyNode, PropertyItemNode: PVirtualNode;
   NodeData: PNodeDataPropertyRec;
 begin
+  vstOI.CancelEditNode; //destroy the text editor, to avoid updating to a new value
+
   vstOI.BeginUpdate;
   try
     vstOI.Clear;
@@ -1188,6 +1237,8 @@ begin
   if PropertyNode = nil then
     Exit;
 
+  vstOI.CancelEditNode; //destroy the text editor, to avoid updating to a new value
+
   vstOI.DeleteChildren(PropertyNode);
   PropertyItemCount := DoOnOIGetListPropertyItemCount(ACategoryIndex, APropertyIndex);
 
@@ -1275,6 +1326,12 @@ begin
   if Assigned(FupdownTextEditor) then
     FreeAndNil(FupdownTextEditor);
 
+  //if FBtnArrowProperty <> nil then   //not sure if needed
+  //  FreeAndNil(FBtnArrowProperty);
+
+  if FSpdBtnArrowProperty <> nil then
+    FreeAndNil(FSpdBtnArrowProperty);
+
   //if Assigned(FTextEditorEditBox) then
   //  FreeAndNil(FTextEditorEditBox);    //this is freed by the VST itself, so it should not be freed again here
   FTextEditorEditBox := nil; //it has to be set to nil, though
@@ -1292,6 +1349,12 @@ begin
 
   if Assigned(FupdownTextEditor) then
     FreeAndNil(FupdownTextEditor);
+
+  //if FBtnArrowProperty <> nil then   //not sure if needed
+  //  FreeAndNil(FBtnArrowProperty);
+
+  if FSpdBtnArrowProperty <> nil then
+    FreeAndNil(FSpdBtnArrowProperty);
 
   FTextEditorEditBox := nil;
 end;
@@ -1499,7 +1562,7 @@ begin
     Exit;
   end;
 
-  FBtnArrowProperty.Width := 21;
+  FBtnArrowProperty.Width := CDefaultArrowButonWidth;
   FBtnArrowProperty.Left := FBtnItemsProperty.Left - FBtnArrowProperty.Width + 1;
   FBtnArrowProperty.Top := vstOI.GetDisplayRect(Node, 1, False).Top + vstOI.Top {+ vstOI.Header.Height} + 3;
   FBtnArrowProperty.Height := vstOI.NodeHeight[Node] - 2; //vstOI.DefaultNodeHeight - 2;
@@ -1716,7 +1779,7 @@ begin
       Exit;
     end;
 
-    etText, etSpinText:
+    etText, etSpinText, etTextWithArrow:
       Allowed := Column = 1;
 
     etBooleanCombo:
@@ -2131,6 +2194,35 @@ begin
 end;
 
 
+procedure TfrObjectInspector.spdbtnArrowPropertyExit(Sender: TObject);
+begin
+  if FSpdBtnArrowProperty = nil then
+    Exit;
+
+  if Assigned(FTextEditorEditBox) then
+  begin
+    if FTextEditorEditBox.Focused then
+      Exit;
+
+    //FreeAndNil(FTextEditorEditBox);    //do not destroy the VST text editor here
+  end;
+
+  FreeAndNil(FSpdBtnArrowProperty);
+  vstOI.Header.Options := vstOI.Header.Options + [hoColumnResize];
+end;
+
+
+procedure TfrObjectInspector.spdbtnArrowPropertyClick(Sender: TObject);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOIArrowEditorClick(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex);
+end;
+
+
 procedure TfrObjectInspector.vstOIGetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
   Column: TColumnIndex; TextType: TVSTTextType; var CellText: {$IFDEF FPC} string {$ELSE} WideString {$ENDIF});
 var
@@ -2264,6 +2356,8 @@ end;
 
 
 procedure TfrObjectInspector.FreeEditorComponents;
+//var
+//  NodeData: PNodeDataPropertyRec;
 begin
   if FColcmbProperty <> nil then
     FreeAndNil(FColcmbProperty);
@@ -2286,8 +2380,14 @@ begin
   //if FupdownTextEditor <> nil then
   //  FreeAndNil(FupdownTextEditor);    //this has to stay commented, because the editor should not be freed on tree scrolling, while its built-in editbox still exists
 
+
   if FBtnArrowProperty <> nil then
     FreeAndNil(FBtnArrowProperty);
+
+  //NodeData := vstOI.GetNodeData(FEditingNode);
+  if not Assigned(FTextEditorEditBox) then
+    if FSpdBtnArrowProperty <> nil then       // and Assigned(NodeData) and (NodeData^.EditorType <> etTextWithArrow) then
+      FreeAndNil(FSpdBtnArrowProperty);
 end;
 
 
@@ -2370,10 +2470,17 @@ const
 
 procedure TfrObjectInspector.updownTextEditorChangingEx(Sender: TObject;
   var AllowChange: Boolean; NewValue: SmallInt; Direction: TUpDownDirection);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
 begin
   FTextEditorEditBox.Text := IntToStr(StrToIntDef(FTextEditorEditBox.Text, 0) + CDirIncrement[Direction]);
   FEditingText := FTextEditorEditBox.Text;
   SetTextEditorEditPosAndSize;  //restore, although EditBox.OnChange may set the width back to a smaller value
+
+  if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnAfterSpinTextEditorChanging(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, FEditingText);
 end;
 
 
