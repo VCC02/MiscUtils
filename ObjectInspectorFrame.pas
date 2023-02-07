@@ -120,7 +120,7 @@ type
   TOnOIBrowseFile = function(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     AFilter, ADialogInitDir: string; var Handled: Boolean; AReturnMultipleFiles: Boolean = False): string of object;
 
-  TOnAfterSpinTextEditorChanging = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; ANewValue: string) of object;
+  TOnAfterSpinTextEditorChanging = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string) of object;
 
   { TfrObjectInspector }
 
@@ -250,7 +250,7 @@ type
     function DoOnOIBrowseFile(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       AFilter, ADialogInitDir: string; var Handled: Boolean; AReturnMultipleFiles: Boolean = False): string;
 
-    procedure DoOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; ANewValue: string);
+    procedure DoOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string);
 
     procedure edtColorPropertyExit(Sender: TObject);
     procedure edtColorPropertyKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -318,7 +318,12 @@ type
     function GetColcmbPropertyAsText: string;
     function GetPropertyValueForEditor(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; ACurrentEditorType: TOIEditorType): string;
     procedure AssignPopupMenuAndTooltipToEditor(AEditor: TControl);
+
+    function GetCategoryNodeByIndex(ACategoryIndex: Integer): PVirtualNode;
     function GetPropertyNodeByIndex(ACategoryIndex, APropertyIndex: Integer): PVirtualNode;
+    function GetPropertyItemNodeByIndex(ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer): PVirtualNode;
+    function GetNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer): PVirtualNode;
+
     function GetLocalEditorLeft(AEditorWidth, AVertScrollBarWidth: Integer): Integer;
     function GetLocalComboEditorLeft: Integer;
     function GetLocalComboEditorWidth(AVertScrollBarWidth: Integer): Integer;
@@ -338,6 +343,8 @@ type
 
     procedure ReloadContent;
     procedure ReloadPropertyItems(ACategoryIndex, APropertyIndex: Integer);
+    procedure RepaintNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True);
+    procedure CancelCurrentEditing; //usually the text editor   - this is called by ReloadContent and ReloadPropertyItems
 
     property ListItemsVisible: Boolean read FListItemsVisible write FListItemsVisible; //to be set before calling ReloadContent
     property DataTypeVisible: Boolean read FDataTypeVisible write SetDataTypeVisible;    //to be set before calling ReloadContent
@@ -1115,12 +1122,18 @@ begin
 end;
 
 
-procedure TfrObjectInspector.DoOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; ANewValue: string);
+procedure TfrObjectInspector.DoOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string);
 begin
   if not Assigned(FOnAfterSpinTextEditorChanging) then
     Exit;  //Do not raise exception for this event. It is not mandatory.
 
   FOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, ANewValue);
+end;
+
+
+procedure TfrObjectInspector.CancelCurrentEditing;
+begin
+  vstOI.CancelEditNode; //destroy the text editor, to avoid updating to a new value
 end;
 
 
@@ -1131,7 +1144,7 @@ var
   CategoryNode, PropertyNode, PropertyItemNode: PVirtualNode;
   NodeData: PNodeDataPropertyRec;
 begin
-  vstOI.CancelEditNode; //destroy the text editor, to avoid updating to a new value
+  CancelCurrentEditing;
 
   vstOI.BeginUpdate;
   try
@@ -1180,9 +1193,9 @@ begin
 end;
 
 
-function TfrObjectInspector.GetPropertyNodeByIndex(ACategoryIndex, APropertyIndex: Integer): PVirtualNode;
+function TfrObjectInspector.GetCategoryNodeByIndex(ACategoryIndex: Integer): PVirtualNode;
 var
-  CategoryNode, PropertyNode: PVirtualNode;
+  CategoryNode: PVirtualNode;
   NodeData: PNodeDataPropertyRec;
 begin
   Result := nil;
@@ -1197,30 +1210,108 @@ begin
 
     if NodeData^.PropertyIndex = ACategoryIndex then
     begin
-      PropertyNode := vstOI.GetFirstChild(CategoryNode);
-      if PropertyNode = nil then
-        Exit;
-
-      repeat
-        NodeData := vstOI.GetNodeData(PropertyNode);
-        if not Assigned(NodeData) then
-          Continue;
-
-        if NodeData^.PropertyIndex = APropertyIndex then
-        begin  //Found the node
-          Result := PropertyNode;
-          Break;
-        end;
-
-        PropertyNode := PropertyNode^.NextSibling;
-      until PropertyNode = nil;
-
+      Result := CategoryNode;
       Break;
     end;
 
     CategoryNode := CategoryNode^.NextSibling;
   until CategoryNode = nil;
 end;
+
+
+function TfrObjectInspector.GetPropertyNodeByIndex(ACategoryIndex, APropertyIndex: Integer): PVirtualNode;
+var
+  CategoryNode, PropertyNode: PVirtualNode;
+  NodeData: PNodeDataPropertyRec;
+begin
+  Result := nil;
+  CategoryNode := GetCategoryNodeByIndex(ACategoryIndex);
+  if CategoryNode = nil then
+    Exit;
+
+  PropertyNode := vstOI.GetFirstChild(CategoryNode);
+  if PropertyNode = nil then
+    Exit;
+
+  repeat
+    NodeData := vstOI.GetNodeData(PropertyNode);
+    if not Assigned(NodeData) then
+      Continue;
+
+    if NodeData^.PropertyIndex = APropertyIndex then
+    begin  //Found the node
+      Result := PropertyNode;
+      Break;
+    end;
+
+    PropertyNode := PropertyNode^.NextSibling;
+  until PropertyNode = nil;
+end;
+
+
+function TfrObjectInspector.GetPropertyItemNodeByIndex(ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer): PVirtualNode;
+var
+  PropertyNode, ItemNode: PVirtualNode;
+  NodeData: PNodeDataPropertyRec;
+begin
+  Result := nil;
+  PropertyNode := GetPropertyNodeByIndex(ACategoryIndex, APropertyIndex);
+  if PropertyNode = nil then
+    Exit;
+
+  ItemNode := vstOI.GetFirstChild(PropertyNode);
+  if ItemNode = nil then
+    Exit;
+
+  repeat
+    NodeData := vstOI.GetNodeData(ItemNode);
+    if not Assigned(NodeData) then
+      Continue;
+
+    if NodeData^.PropertyIndex = APropertyItemIndex then
+    begin  //Found the node
+      Result := ItemNode;
+      Break;
+    end;
+
+    ItemNode := ItemNode^.NextSibling;
+  until ItemNode = nil;
+end;
+
+
+function TfrObjectInspector.GetNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer): PVirtualNode;
+begin
+  case ANodeLevel of
+    CCategoryLevel:
+      Result := GetCategoryNodeByIndex(ACategoryIndex);
+
+    CPropertyLevel:
+      Result := GetPropertyNodeByIndex(ACategoryIndex, APropertyIndex);
+
+    CPropertyItemLevel:
+      Result := GetPropertyItemNodeByIndex(ACategoryIndex, APropertyIndex, APropertyItemIndex);
+
+    else
+      Result := nil;
+  end;
+end;
+
+
+procedure TfrObjectInspector.RepaintNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True);
+var
+  Node: PVirtualNode;
+begin
+  Node := GetNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex);
+  if Node = nil then
+    Exit;
+
+  vstOI.InvalidateNode(Node);
+  if AScrollIntoView then
+    vstOI.ScrollIntoView(Node, False);
+end;
+
+//there can be an optimization by caching all pointers to nodes, into arrays of arrays, which can be indexed by ACategoryIndex, APropertyIndex, APropertyItemIndex
+//this cache has to be rebuilt on every call to ReloadPropertyItems and ReloadContent. (and adding / removing various items like files)
 
 
 procedure TfrObjectInspector.ReloadPropertyItems(ACategoryIndex, APropertyIndex: Integer);
@@ -1237,7 +1328,7 @@ begin
   if PropertyNode = nil then
     Exit;
 
-  vstOI.CancelEditNode; //destroy the text editor, to avoid updating to a new value
+  CancelCurrentEditing;
 
   vstOI.DeleteChildren(PropertyNode);
   PropertyItemCount := DoOnOIGetListPropertyItemCount(ACategoryIndex, APropertyIndex);
@@ -2472,6 +2563,7 @@ procedure TfrObjectInspector.updownTextEditorChangingEx(Sender: TObject;
   var AllowChange: Boolean; NewValue: SmallInt; Direction: TUpDownDirection);
 var
   NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+  NewEditingText: string;
 begin
   FTextEditorEditBox.Text := IntToStr(StrToIntDef(FTextEditorEditBox.Text, 0) + CDirIncrement[Direction]);
   FEditingText := FTextEditorEditBox.Text;
@@ -2480,7 +2572,14 @@ begin
   if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
     Exit;
 
-  DoOnAfterSpinTextEditorChanging(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, FEditingText);
+  NewEditingText := FEditingText;
+  DoOnAfterSpinTextEditorChanging(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, NewEditingText);
+  if NewEditingText <> FEditingText then
+  begin
+    FTextEditorEditBox.Text := NewEditingText;
+    FEditingText := NewEditingText;
+    SetTextEditorEditPosAndSize;
+  end;
 end;
 
 
