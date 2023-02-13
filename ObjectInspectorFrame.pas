@@ -967,7 +967,14 @@ begin
   if not Assigned(FOnOIEditedText) then
     raise Exception.Create('OnOIEditedText not assigned.')
   else
-    FOnOIEditedText(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, ANewText);
+  begin
+    try
+      FOnOIEditedText(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, ANewText);
+    except
+      on E: Exception do
+        MessageBox(Handle, PChar(E.Message), PChar(Application.Title), MB_ICONERROR);
+    end;
+  end;
 end;
 
 
