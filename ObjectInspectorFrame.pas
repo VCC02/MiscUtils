@@ -110,7 +110,7 @@ type
   TOnOITextEditorKeyDown = TOnOITextEditorKeyUp;
 
   TOnOIEditorAssignMenuAndTooltip = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
-    var APopupMenu: TPopupMenu; var AHint: string; var AShowHint: Boolean) of object;
+    Sender: TObject; var APopupMenu: TPopupMenu; var AHint: string; var AShowHint: Boolean) of object;
 
   TOnOIGetFileDialogSettings = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var AFilter, AInitDir: string) of object;
 
@@ -241,7 +241,7 @@ type
       Sender: TObject; var Key: Word; Shift: TShiftState);
 
     procedure DoOnOIEditorAssignMenuAndTooltip(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
-      var APopupMenu: TPopupMenu; var AHint: string; var AShowHint: Boolean);
+      Sender: TObject; var APopupMenu: TPopupMenu; var AHint: string; var AShowHint: Boolean);
 
     procedure DoOnOIGetFileDialogSettings(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var AFilter, AInitDir: string);
     procedure DoOnOIArrowEditorClick(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer);
@@ -350,6 +350,7 @@ type
     property DataTypeVisible: Boolean read FDataTypeVisible write SetDataTypeVisible;    //to be set before calling ReloadContent
     property ExtraInfoVisible: Boolean read FExtraInfoVisible write SetExtraInfoVisible; //to be set before calling ReloadContent
 
+    property EditingText: string read FEditingText write FEditingText; //do not move this to published, it's a runtime thing
   published
     property ColorFormat: TOIColorFormat read FColorFormat write FColorFormat;  //affects ColorBox editors when getting selected color
     property PropertyItemHeight: Integer read FPropertyItemHeight write SetPropertyItemHeight;
@@ -1074,12 +1075,12 @@ end;
 
 
 procedure TfrObjectInspector.DoOnOIEditorAssignMenuAndTooltip(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
-  var APopupMenu: TPopupMenu; var AHint: string; var AShowHint: Boolean);
+  Sender: TObject; var APopupMenu: TPopupMenu; var AHint: string; var AShowHint: Boolean);
 begin
   if not Assigned(FOnOIEditorAssignMenuAndTooltip) then
     Exit; //Do not raise exception for this event. It is not mandatory.
 
-  FOnOIEditorAssignMenuAndTooltip(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, APopupMenu, AHint, AShowHint);
+  FOnOIEditorAssignMenuAndTooltip(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, Sender, APopupMenu, AHint, AShowHint);
 end;
 
 
@@ -1375,7 +1376,7 @@ begin
   EditorPopupMenu := nil;
   EditorHint := '';
   EditorShowHint := False;
-  DoOnOIEditorAssignMenuAndTooltip(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, EditorPopupMenu, EditorHint, EditorShowHint);
+  DoOnOIEditorAssignMenuAndTooltip(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, AEditor, EditorPopupMenu, EditorHint, EditorShowHint);
   AEditor.PopupMenu := EditorPopupMenu;
   AEditor.ShowHint := EditorShowHint;
   AEditor.Hint := EditorHint;
