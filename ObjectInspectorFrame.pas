@@ -342,7 +342,7 @@ type
     destructor Destroy; override;
 
     procedure ReloadContent;
-    procedure ReloadPropertyItems(ACategoryIndex, APropertyIndex: Integer);
+    procedure ReloadPropertyItems(ACategoryIndex, APropertyIndex: Integer; ACloseItemEditor: Boolean = False);
     procedure RepaintNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True);
     procedure CancelCurrentEditing; //usually the text editor   - this is called by ReloadContent and ReloadPropertyItems
 
@@ -1322,7 +1322,7 @@ end;
 //this cache has to be rebuilt on every call to ReloadPropertyItems and ReloadContent. (and adding / removing various items like files)
 
 
-procedure TfrObjectInspector.ReloadPropertyItems(ACategoryIndex, APropertyIndex: Integer);
+procedure TfrObjectInspector.ReloadPropertyItems(ACategoryIndex, APropertyIndex: Integer; ACloseItemEditor: Boolean = False);
 var
   PropertyNode, PropertyItemNode: PVirtualNode;
   i: Integer;
@@ -1337,6 +1337,9 @@ begin
     Exit;
 
   CancelCurrentEditing;
+
+  if ACloseItemEditor then
+    FreeEditorComponents;
 
   vstOI.DeleteChildren(PropertyNode);
   PropertyItemCount := DoOnOIGetListPropertyItemCount(ACategoryIndex, APropertyIndex);
@@ -2435,7 +2438,7 @@ procedure TfrObjectInspector.vstOIMouseDown(Sender: TObject; Button: TMouseButto
 begin
   vstOI.GetHitTestInfoAt(X, Y, True, FPropHitInfo);
 
-  if Shift = [ssLeft] then
+  if (Button = mbLeft) and (FPropHitInfo.HitColumn = 1) then
     tmrEditingProperty.Enabled := True;
 
   //tmrUpdateOIDescription.Enabled := True;
