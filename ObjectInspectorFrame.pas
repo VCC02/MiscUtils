@@ -146,6 +146,7 @@ type
     FupdownTextEditor: TUpDown;
     FBtnArrowProperty: TBitBtn;
     FSpdBtnArrowProperty: TSpeedButton;
+    FEdtPath: TEdit; //used for etFilePath and etDirPath
 
     FEditingText: string;
     FPropHitInfo: THitInfo;
@@ -277,6 +278,8 @@ type
     procedure spdbtnArrowPropertyExit(Sender: TObject);
     procedure spdbtnArrowPropertyClick(Sender: TObject);
 
+    procedure EdtPathExit(Sender: TObject);
+
     procedure TextEditorMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure TextEditorMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure TextEditorKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -333,7 +336,7 @@ type
     procedure SetTextEditorEditPosAndSize;
 
     procedure CreateBooleanComboBox(Node: PVirtualNode; VertScrollBarWidth: Integer);
-    procedure CreateBrowseEditorButton(Node: PVirtualNode; VertScrollBarWidth: Integer; AUsedForComboBox: Boolean = False);
+    procedure CreateBrowseEditorButton(Node: PVirtualNode; VertScrollBarWidth: Integer; AUsedForComboBox, AUsedForPath: Boolean);
     procedure CreateArrowButton(Node: PVirtualNode; VertScrollBarWidth: Integer);
     procedure CreateColorComboBox(Node: PVirtualNode; VertScrollBarWidth: Integer);
     procedure CreateEnumComboBox(Node: PVirtualNode; VertScrollBarWidth: Integer; ACreateBrowseButton: Boolean = False);
@@ -1569,7 +1572,7 @@ begin
   if FCmbBooleanProperty = nil then
     FCmbBooleanProperty := TComboBox.Create(Self);
 
-  FCmbBooleanProperty.Visible := False;
+  //FCmbBooleanProperty.Visible := False;  //sometimes, this causes AV
   FCmbBooleanProperty.Parent := Self;
   FCmbBooleanProperty.Style := csOwnerDrawFixed; //for boolean
   FCmbBooleanProperty.ParentFont := False;
@@ -1608,14 +1611,16 @@ begin
 end;
 
 
-procedure TfrObjectInspector.CreateBrowseEditorButton(Node: PVirtualNode; VertScrollBarWidth: Integer; AUsedForComboBox: Boolean = False);
+procedure TfrObjectInspector.CreateBrowseEditorButton(Node: PVirtualNode; VertScrollBarWidth: Integer; AUsedForComboBox, AUsedForPath: Boolean);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
 begin
   vstOI.Header.Options := vstOI.Header.Options - [hoColumnResize];
 
   if FBtnItemsProperty = nil then
     FBtnItemsProperty := TButton.Create(Self);
 
-  FBtnItemsProperty.Visible := False;
+  //FBtnItemsProperty.Visible := False;   //sometimes, this causes AV
   FBtnItemsProperty.Parent := Self;
   FBtnItemsProperty.ParentFont := False;
   FBtnItemsProperty.Font.Style := [];
@@ -1641,9 +1646,33 @@ begin
 
   AssignPopupMenuAndTooltipToEditor(FBtnItemsProperty);
 
+  if AUsedForPath then
+  begin
+    FEdtPath := TEdit.Create(Self);
+    FEdtPath.Parent := Self;
+    FEdtPath.Width := GetLocalComboEditorWidth(VertScrollBarWidth) - FBtnItemsProperty.Width - 1;
+    FEdtPath.Left := GetLocalComboEditorLeft;
+    FEdtPath.Top := FBtnItemsProperty.Top;
+    FEdtPath.Height := FBtnItemsProperty.Height;
+
+    if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+      Exit; //prevent AV
+
+    FEdtPath.Text := GetPropertyValueForEditor(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, etFilePath);  //can also be etDirPath;
+
+    FEdtPath.OnExit := EdtPathExit;
+
+    //AssignPopupMenuAndTooltipToEditor(FEdtPath);
+    FEdtPath.Visible := True;
+    FEdtPath.BringToFront;
+  end;
+
   FBtnItemsProperty.Visible := True;
   FBtnItemsProperty.BringToFront;
   FBtnItemsProperty.SetFocus;
+
+  if AUsedForPath then
+    FEdtPath.SetFocus;
 end;
 
 
@@ -1654,7 +1683,7 @@ begin
   if FBtnArrowProperty = nil then
     FBtnArrowProperty := TBitBtn.Create(Self);
 
-  FBtnArrowProperty.Visible := False;
+  //FBtnArrowProperty.Visible := False; //sometimes, this causes AV
   FBtnArrowProperty.Parent := Self;
 
   if FBtnItemsProperty = nil then
@@ -1709,7 +1738,7 @@ begin
     FreeAndNil(FEdtColorProperty);
 
   FColcmbProperty := TColorBox.Create(Self);
-  FColcmbProperty.Visible := False;
+  FColcmbProperty.Visible := False;    //sometimes, this causes AV
   FColcmbProperty.ParentFont := False;
   FColcmbProperty.Font.Style := [];
   FColcmbProperty.Parent := Self;
@@ -1775,7 +1804,7 @@ begin
   //FColcmbProperty.SetFocus;   //this call prevents proper creation of the editbox below
 
   FEdtColorProperty := TEdit.Create(Self);
-  FEdtColorProperty.Visible := False;
+  FEdtColorProperty.Visible := False;  //sometimes, this causes AV
   FEdtColorProperty.Parent := Self;
   FEdtColorProperty.Left := FColcmbProperty.Left;
   FEdtColorProperty.Top := FColcmbProperty.Top;
@@ -1806,7 +1835,7 @@ begin
   vstOI.Header.Options := vstOI.Header.Options - [hoColumnResize];
 
   FCmbMiscEnumProperty := TComboBox.Create(Self);
-  FCmbMiscEnumProperty.Visible := False;
+  FCmbMiscEnumProperty.Visible := False;   //sometimes, this causes AV
   FCmbMiscEnumProperty.Parent := Self;
   FCmbMiscEnumProperty.Style := csOwnerDrawFixed; //for misc "enum" properties
   FCmbMiscEnumProperty.ParentFont := False;
@@ -1822,7 +1851,7 @@ begin
 
   if ACreateBrowseButton then
   begin
-    CreateBrowseEditorButton(Node, VertScrollBarWidth, True);
+    CreateBrowseEditorButton(Node, VertScrollBarWidth, True, False);
     FCmbMiscEnumProperty.Width := FCmbMiscEnumProperty.Width - FBtnItemsProperty.Width - 1;
   end;
 
@@ -1891,16 +1920,23 @@ begin
       Exit;
     end;
 
-    etFilePath, etDirPath, etUserEditor:
+    etFilePath, etDirPath:
     begin
-      CreateBrowseEditorButton(Node, VertScrollBarWidth);
+      CreateBrowseEditorButton(Node, VertScrollBarWidth, False, True);
+      Allowed := False;
+      Exit;
+    end;
+
+    etUserEditor:
+    begin
+      CreateBrowseEditorButton(Node, VertScrollBarWidth, False, False);
       Allowed := False;
       Exit;
     end;
 
     etFilePathWithArrow:
     begin
-      CreateBrowseEditorButton(Node, VertScrollBarWidth);
+      CreateBrowseEditorButton(Node, VertScrollBarWidth, False, False);
       CreateArrowButton(Node, VertScrollBarWidth);
       Allowed := False;
       Exit;
@@ -2131,6 +2167,14 @@ begin
     FreeAndNil(FBtnArrowProperty);
   end;
 
+  if Assigned(FEdtPath) then
+  begin
+    if FEdtPath.Focused then
+      Exit;
+
+    FreeAndNil(FEdtPath);
+  end;
+
   FreeAndNil(FBtnItemsProperty);
   vstOI.Header.Options := vstOI.Header.Options + [hoColumnResize];
 end;
@@ -2184,12 +2228,20 @@ begin
           etFilePath, etFilePathWithArrow:
           begin
             EditAsFileName(vstOI.ChildCount[FEditingNode] > 0);  ////////////////////////////// this will change this part of the tree
+
+            if Assigned(FEdtPath) and (NewFileName <> '') then
+              FEdtPath.Text := NewFileName;
+
             Exit;
           end;
 
           etDirPath:
           begin
             EditAsDirName(vstOI.ChildCount[FEditingNode] > 0);   ////////////////////////////// this will change this part of the tree
+
+            if Assigned(FEdtPath) and (NewFileName <> '') then
+              FEdtPath.Text := NewFileName;
+
             Exit;
           end;
 
@@ -2322,6 +2374,27 @@ begin
     Exit;
 
   DoOnOIArrowEditorClick(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex);
+end;
+
+
+procedure TfrObjectInspector.EdtPathExit(Sender: TObject);
+begin
+  if Assigned(FBtnItemsProperty) then
+  begin
+    if FBtnItemsProperty.Focused then
+      Exit;
+
+    FreeAndNil(FBtnItemsProperty);
+  end;
+
+  if not Assigned(FEdtPath) then
+    Exit;
+
+  FEditingText := FEdtPath.Text;
+  vstOIEdited(vstOI, FEditingNode, 1);
+
+  FreeAndNil(FEdtPath);
+  vstOI.Header.Options := vstOI.Header.Options + [hoColumnResize];
 end;
 
 
@@ -2490,6 +2563,9 @@ begin
   if not Assigned(FTextEditorEditBox) then
     if FSpdBtnArrowProperty <> nil then       // and Assigned(NodeData) and (NodeData^.EditorType <> etTextWithArrow) then
       FreeAndNil(FSpdBtnArrowProperty);
+
+  if FEdtPath <> nil then
+    FreeAndNil(FEdtPath);
 end;
 
 
