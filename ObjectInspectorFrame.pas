@@ -98,6 +98,9 @@ type
   TOnOIPaintText = procedure(ANodeData: TNodeDataPropertyRec; ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer;
     const TargetCanvas: TCanvas; Column: TColumnIndex; var TextType: TVSTTextType) of object;
 
+  TOnOIBeforeCellPaint = procedure(ANodeData: TNodeDataPropertyRec; ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer;
+    TargetCanvas: TCanvas; Column: TColumnIndex; CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect) of object;
+
   TOnOITextEditorMouseDown = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer) of object;
 
@@ -183,6 +186,7 @@ type
     FOnOIGetEnumConst: TOnOIGetEnumConst;
 
     FOnOIPaintText: TOnOIPaintText;
+    FOnOIBeforeCellPaint: TOnOIBeforeCellPaint;
 
     FOnOITextEditorMouseDown: TOnOITextEditorMouseDown;
     FOnOITextEditorMouseMove: TOnOITextEditorMouseMove;
@@ -228,6 +232,9 @@ type
 
     procedure DoOnOIPaintText(ANodeData: TNodeDataPropertyRec; ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer;
       const TargetCanvas: TCanvas; Column: TColumnIndex; var TextType: TVSTTextType);
+
+    procedure DoOnOIBeforeCellPaint(ANodeData: TNodeDataPropertyRec; ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer;
+      TargetCanvas: TCanvas; Column: TColumnIndex; CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
 
     procedure DoOnOITextEditorMouseDown(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -299,6 +306,8 @@ type
     procedure vstOIHeaderMouseDown(Sender: TVTHeader; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 
     procedure vstOIPaintText(Sender: TBaseVirtualTree; const TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType);
+    procedure vstOIBeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+      CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
 
     procedure vstOIGetImageIndex(
       Sender: TBaseVirtualTree; Node: PVirtualNode; Kind: TVTImageKind;
@@ -380,6 +389,7 @@ type
     property OnOIGetEnumConst: TOnOIGetEnumConst write FOnOIGetEnumConst;
 
     property OnOIPaintText: TOnOIPaintText write FOnOIPaintText;
+    property OnOIBeforeCellPaint: TOnOIBeforeCellPaint write FOnOIBeforeCellPaint;
 
     property OnOITextEditorMouseDown: TOnOITextEditorMouseDown write FOnOITextEditorMouseDown;
     property OnOITextEditorMouseMove: TOnOITextEditorMouseMove write FOnOITextEditorMouseMove;
@@ -589,6 +599,7 @@ begin
   vstOI.OnGetText := vstOIGetText;
   vstOI.OnHeaderMouseDown := vstOIHeaderMouseDown;
   vstOI.OnPaintText := vstOIPaintText;
+  vstOI.OnBeforeCellPaint := vstOIBeforeCellPaint;
   vstOI.OnGetImageIndex := vstOIGetImageIndex;
   vstOI.OnGetImageIndexEx := vstOIGetImageIndexEx;
   vstOI.OnMouseDown := vstOIMouseDown;
@@ -665,6 +676,7 @@ begin
   FOnOIGetEnumConst := nil;
 
   FOnOIPaintText := nil;
+  FOnOIBeforeCellPaint := nil;
 
   FOnOITextEditorMouseDown := nil;
   FOnOITextEditorMouseMove := nil;
@@ -1034,6 +1046,16 @@ begin
     raise Exception.Create('OnOIPaintText not assigned.')
   else
     FOnOIPaintText(ANodeData, ACategoryIndex, APropertyIndex, APropertyItemIndex, TargetCanvas, Column, TextType);
+end;
+
+
+procedure TfrObjectInspector.DoOnOIBeforeCellPaint(ANodeData: TNodeDataPropertyRec; ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer;
+  TargetCanvas: TCanvas; Column: TColumnIndex; CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
+begin
+  if not Assigned(FOnOIBeforeCellPaint) then
+    raise Exception.Create('OnOIBeforeCellPaint not assigned.')
+  else
+    FOnOIBeforeCellPaint(ANodeData, ACategoryIndex, APropertyIndex, APropertyItemIndex, TargetCanvas, Column, CellPaintMode, CellRect, ContentRect);
 end;
 
 
@@ -1572,7 +1594,10 @@ begin
   if FCmbBooleanProperty = nil then
     FCmbBooleanProperty := TComboBox.Create(Self);
 
-  //FCmbBooleanProperty.Visible := False;  //sometimes, this causes AV
+  try
+    FCmbBooleanProperty.Visible := False;  //sometimes, this causes AV
+  except
+  end;
   FCmbBooleanProperty.Parent := Self;
   FCmbBooleanProperty.Style := csOwnerDrawFixed; //for boolean
   FCmbBooleanProperty.ParentFont := False;
@@ -1738,7 +1763,10 @@ begin
     FreeAndNil(FEdtColorProperty);
 
   FColcmbProperty := TColorBox.Create(Self);
-  FColcmbProperty.Visible := False;    //sometimes, this causes AV
+  try
+    FColcmbProperty.Visible := False;    //sometimes, this causes AV
+  except
+  end;
   FColcmbProperty.ParentFont := False;
   FColcmbProperty.Font.Style := [];
   FColcmbProperty.Parent := Self;
@@ -1804,7 +1832,10 @@ begin
   //FColcmbProperty.SetFocus;   //this call prevents proper creation of the editbox below
 
   FEdtColorProperty := TEdit.Create(Self);
-  FEdtColorProperty.Visible := False;  //sometimes, this causes AV
+  try
+    FEdtColorProperty.Visible := False;  //sometimes, this causes AV
+  except
+  end;
   FEdtColorProperty.Parent := Self;
   FEdtColorProperty.Left := FColcmbProperty.Left;
   FEdtColorProperty.Top := FColcmbProperty.Top;
@@ -1835,7 +1866,10 @@ begin
   vstOI.Header.Options := vstOI.Header.Options - [hoColumnResize];
 
   FCmbMiscEnumProperty := TComboBox.Create(Self);
-  FCmbMiscEnumProperty.Visible := False;   //sometimes, this causes AV
+  try
+    FCmbMiscEnumProperty.Visible := False;   //sometimes, this causes AV
+  except
+  end;
   FCmbMiscEnumProperty.Parent := Self;
   FCmbMiscEnumProperty.Style := csOwnerDrawFixed; //for misc "enum" properties
   FCmbMiscEnumProperty.ParentFont := False;
@@ -2482,6 +2516,20 @@ begin
 
   NodeData := Sender.GetNodeData(Node);
   DoOnOIPaintText(NodeData^, CategoryIndex, PropertyIndex, PropertyItemIndex, TargetCanvas, Column, TextType);
+end;
+
+
+procedure TfrObjectInspector.vstOIBeforeCellPaint(Sender: TBaseVirtualTree; TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
+  CellPaintMode: TVTCellPaintMode; CellRect: TRect; var ContentRect: TRect);
+var
+  NodeData: PNodeDataPropertyRec;
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  NodeData := Sender.GetNodeData(Node);
+  DoOnOIBeforeCellPaint(NodeData^, CategoryIndex, PropertyIndex, PropertyItemIndex, TargetCanvas, Column, CellPaintMode, CellRect, ContentRect);
 end;
 
 
