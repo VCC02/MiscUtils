@@ -2,10 +2,10 @@ object frObjectInspector: TfrObjectInspector
   Left = 0
   Height = 240
   Top = 0
-  Width = 397
+  Width = 360
   Anchors = [akTop, akLeft, akRight, akBottom]
   ClientHeight = 240
-  ClientWidth = 397
+  ClientWidth = 360
   Color = 7993855
   ParentBackground = False
   ParentColor = False
@@ -14,9 +14,9 @@ object frObjectInspector: TfrObjectInspector
   DesignTop = 85
   object pnlvstOI: TPanel
     Left = 0
-    Height = 214
+    Height = 216
     Top = 0
-    Width = 397
+    Width = 360
     Anchors = [akTop, akLeft, akRight, akBottom]
     BevelOuter = bvNone
     Caption = 'pnlvstOI'
@@ -26,7 +26,7 @@ object frObjectInspector: TfrObjectInspector
     Visible = False
   end
   object imgDownArrow: TImage
-    Left = 216
+    Left = 336
     Height = 5
     Top = 224
     Width = 11
@@ -41,6 +41,20 @@ object frObjectInspector: TfrObjectInspector
       39841A39841A39841AFFFFFFFFFFFF000000FFFFFF39841A39841A39841A3984
       1A39841A39841A39841A39841A39841AFFFFFF000000
     }
+    Visible = False
+  end
+  object edtSearch: TEdit
+    Left = 0
+    Height = 23
+    Hint = 'The tree does not work properly.'#13#10'After searching for a string, the vertical scrollbar does not scroll to the last item.'
+    Top = 216
+    Width = 320
+    Anchors = [akLeft, akRight, akBottom]
+    OnChange = edtSearchChange
+    ParentShowHint = False
+    ShowHint = True
+    TabOrder = 1
+    TextHint = 'Search'
     Visible = False
   end
   object imglstOIColorIcons: TImageList
@@ -67,5 +81,20 @@ object frObjectInspector: TfrObjectInspector
     OnTimer = tmrSetEditBoxTimer
     Left = 128
     Top = 112
+  end
+  object tmrSearch: TTimer
+    Enabled = False
+    Interval = 200
+    OnTimer = tmrSearchTimer
+    Left = 272
+    Top = 32
+  end
+  object pmOI: TPopupMenu
+    Left = 128
+    Top = 32
+    object MenuItem_ShowHideSearchBox: TMenuItem
+      Caption = 'Show / Hide SearchBox'
+      OnClick = MenuItem_ShowHideSearchBoxClick
+    end
   end
 end

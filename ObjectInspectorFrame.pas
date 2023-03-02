@@ -66,6 +66,7 @@ type
     PropertyIndex: Integer;
     Level: Integer; //like node level
     EditorType: TOIEditorType;        //Not used for categories, because they are not editable.
+    ItemVisible: Boolean;
   end;
   PNodeDataPropertyRec = ^TNodeDataPropertyRec;
 
@@ -128,14 +129,21 @@ type
   { TfrObjectInspector }
 
   TfrObjectInspector = class(TFrame)
+    edtSearch: TEdit;
     imgDownArrow: TImage;
     imglstOIColorIcons: TImageList;
+    MenuItem_ShowHideSearchBox: TMenuItem;
     pnlvstOI: TPanel;
+    pmOI: TPopupMenu;
+    tmrSearch: TTimer;
     tmrSetEditBox: TTimer;
     tmrColCmbDropped: TTimer;
     tmrEditingProperty: TTimer;
+    procedure edtSearchChange(Sender: TObject);
+    procedure MenuItem_ShowHideSearchBoxClick(Sender: TObject);
     procedure tmrColCmbDroppedTimer(Sender: TObject);
     procedure tmrEditingPropertyTimer(Sender: TObject);
+    procedure tmrSearchTimer(Sender: TObject);
     procedure tmrSetEditBoxTimer(Sender: TObject);
   private
     vstOI: TVirtualStringTree;
@@ -330,6 +338,9 @@ type
     function GetColcmbPropertyAsText: string;
     function GetPropertyValueForEditor(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; ACurrentEditorType: TOIEditorType): string;
     procedure AssignPopupMenuAndTooltipToEditor(AEditor: TControl);
+
+    procedure ResetItemVisibleFlagOnAllFiles;
+    procedure MarkAllParentNodesAsVisible(ACurrentNode: PVirtualNode);
 
     function GetCategoryNodeByIndex(ACategoryIndex: Integer): PVirtualNode;
     function GetPropertyNodeByIndex(ACategoryIndex, APropertyIndex: Integer): PVirtualNode;
@@ -560,7 +571,7 @@ begin
   vstOI.Left := 0;
   vstOI.Top := 0;
   vstOI.Width := pnlvstOI.Width;
-  vstOI.Height := pnlvstOI.Height;
+  vstOI.Height := Height;
   vstOI.Constraints.MinWidth := vstOI.Width;
   vstOI.Constraints.MinHeight := vstOI.Height;
   vstOI.DefaultNodeHeight := 22; //the default value, 18, should be enough, but the TEdit has a bigger default height
@@ -581,7 +592,7 @@ begin
   vstOI.Header.Style := hsFlatButtons;
   vstOI.Indent := 12;
   vstOI.ParentShowHint := False;
-  vstOI.PopupMenu := nil;
+  vstOI.PopupMenu := pmOI;
   vstOI.ShowHint := True;
   vstOI.StateImages := imglstOIColorIcons;
   vstOI.TabOrder := 0;
@@ -606,6 +617,7 @@ begin
   vstOI.OnNewText := vstOINewText;
   vstOI.OnScroll := vstOIScroll;
 
+  //vstOI.PopupMenu;
   vstOI.Colors.GridLineColor := clGray;
   vstOI.Colors.UnfocusedSelectionColor := clGradientInactiveCaption;
 
@@ -613,7 +625,7 @@ begin
   NewColum.MinWidth := 150;
   NewColum.Options := [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, {coFixed,} coAllowFocus];
   NewColum.Position := 0;
-  NewColum.Width := 190;
+  NewColum.Width := 240;
   NewColum.Text := 'Property';
 
   NewColum := vstOI.Header.Columns.Add;
@@ -720,6 +732,111 @@ begin
 
   if FPropHitInfo.HitColumn = 1 then
     vstOI.EditNode(FPropHitInfo.HitNode, FPropHitInfo.HitColumn);
+end;
+
+
+procedure TfrObjectInspector.ResetItemVisibleFlagOnAllFiles;
+var
+  Node: PVirtualNode;
+  NodeData: PNodeDataPropertyRec;
+begin
+  Node := vstOI.GetFirst;
+  if Node = nil then
+    Exit;
+
+  repeat
+    NodeData := vstOI.GetNodeData(Node);
+    NodeData^.ItemVisible := False;
+
+    Node := vstOI.GetNext(Node);
+  until Node = nil;
+end;
+
+
+
+procedure TfrObjectInspector.MarkAllParentNodesAsVisible(ACurrentNode: PVirtualNode);
+var
+  NodeData: PNodeDataPropertyRec;
+  Level: Integer;
+begin
+  if ACurrentNode = nil then
+    Exit;
+
+  while ACurrentNode^.Parent <> nil do  //unfortunately (for this algorithm), nodes at level 0 do not have a nil parent
+  begin
+    Level := vstOI.GetNodeLevel(ACurrentNode);
+    if Level > 0 then
+      ACurrentNode := ACurrentNode^.Parent;
+
+    NodeData := vstOI.GetNodeData(ACurrentNode);
+    NodeData^.ItemVisible := True;
+
+    if Level = 0 then
+      Break;
+  end;
+end;
+
+
+procedure TfrObjectInspector.tmrSearchTimer(Sender: TObject);
+var
+  Node: PVirtualNode;
+  NodeData: PNodeDataPropertyRec;
+  PropName, SearchString: string;
+  Visibility: Boolean;
+
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  tmrSearch.Enabled := False;
+
+  //This is not an efficient algorithm, but it should do the job for most projects.
+  vstOI.BeginUpdate;
+  try
+    Node := vstOI.GetLast;
+    if Node = nil then
+      Exit;
+
+    ResetItemVisibleFlagOnAllFiles;
+
+    SearchString := UpperCase(edtSearch.Text);
+
+    repeat
+      NodeData := vstOI.GetNodeData(Node);
+
+      if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+        PropName := 'NoInfo'
+      else
+      begin
+        case NodeLevel of
+          CCategoryLevel:
+            PropName := DoOnOIGetCategory(CategoryIndex);
+
+          CPropertyLevel:
+            PropName := DoOnOIGetPropertyName(CategoryIndex, PropertyIndex);
+
+          CPropertyItemLevel:
+            PropName := DoOnOIGetListPropertyItemName(CategoryIndex, PropertyIndex, PropertyItemIndex);
+
+          else
+            PropName := 'PropNameNotFound';
+        end;
+      end;
+
+      PropName := UpperCase(PropName);
+
+      Visibility := (SearchString = '') or (Pos(SearchString, PropName) > 0);
+      vstOI.IsVisible[Node] := Visibility or NodeData^.ItemVisible;
+
+      if Visibility then //mark all parent nodes as visible, so they won't be hidden later
+        MarkAllParentNodesAsVisible(Node);
+
+      Node := vstOI.GetPrevious(Node);
+    until Node = nil;
+  finally
+    vstOI.EndUpdate;
+    vstOI.UpdateRanges;
+    vstOI.UpdateScrollBars(True);
+    vstOI.Repaint;
+  end;
 end;
 
 
@@ -832,6 +949,23 @@ begin
   FreeAndNil(FColcmbProperty);
   FreeAndNil(FEdtColorProperty);
   vstOI.Header.Options := vstOI.Header.Options + [hoColumnResize];
+end;
+
+
+procedure TfrObjectInspector.edtSearchChange(Sender: TObject);
+begin
+  tmrSearch.Enabled := True;
+end;
+
+
+procedure TfrObjectInspector.MenuItem_ShowHideSearchBoxClick(Sender: TObject);
+begin
+  edtSearch.Visible := not edtSearch.Visible;
+
+  if edtSearch.Visible then
+    vstOI.Height := pnlvstOI.Height
+  else
+    vstOI.Height := Height;
 end;
 
 
@@ -2436,59 +2570,49 @@ procedure TfrObjectInspector.vstOIGetText(Sender: TBaseVirtualTree; Node: PVirtu
   Column: TColumnIndex; TextType: TVSTTextType; var CellText: {$IFDEF FPC} string {$ELSE} WideString {$ENDIF});
 var
   vst: TVirtualStringTree;
-  CategoryNodeData, PropertyNodeData, NodeData: PNodeDataPropertyRec;
+  NodeData: PNodeDataPropertyRec;
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
 begin
   vst := Sender as TVirtualStringTree;
+
+  if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+  begin
+    CellText := '=bug';
+    Exit;
+  end;
+
+  NodeData := vst.GetNodeData(Node);
+  if NodeData = nil then
+    Exit;
+
   try
-    NodeData := vst.GetNodeData(Node);
-    case NodeData^.Level of
+    case NodeLevel of
       CCategoryLevel:
       begin
         case Column of
-          0: CellText := DoOnOIGetCategory(NodeData^.PropertyIndex);
+          0: CellText := DoOnOIGetCategory(CategoryIndex);
           1, 2: CellText := '';
-          3: CellText := DoOnUIGetExtraInfo(NodeData^.PropertyIndex, NodeData^.PropertyIndex, NodeData^.PropertyIndex);
+          3: CellText := DoOnUIGetExtraInfo(CategoryIndex, PropertyIndex, PropertyItemIndex);
         end;
       end;
 
       CPropertyLevel:
       begin
-        CategoryNodeData := vst.GetNodeData(Node^.Parent);
-        if CategoryNodeData = nil then
-        begin
-          CellText := '-bug';
-          Exit;
-        end;
-
         case Column of
-          0: CellText := DoOnOIGetPropertyName(CategoryNodeData^.PropertyIndex, NodeData^.PropertyIndex);
-          1: CellText := DoOnOIGetPropertyValue(CategoryNodeData^.PropertyIndex, NodeData^.PropertyIndex, NodeData^.EditorType);
-          2: CellText := DoOnUIGetDataTypeName(CategoryNodeData^.PropertyIndex, NodeData^.PropertyIndex, NodeData^.PropertyIndex);
-          3: CellText := DoOnUIGetExtraInfo(CategoryNodeData^.PropertyIndex, NodeData^.PropertyIndex, NodeData^.PropertyIndex);
+          0: CellText := DoOnOIGetPropertyName(CategoryIndex, PropertyIndex);
+          1: CellText := DoOnOIGetPropertyValue(CategoryIndex, PropertyIndex, NodeData^.EditorType);
+          2: CellText := DoOnUIGetDataTypeName(CategoryIndex, PropertyIndex, PropertyItemIndex);
+          3: CellText := DoOnUIGetExtraInfo(CategoryIndex, PropertyIndex, PropertyItemIndex);
         end;
       end;
 
       CPropertyItemLevel:
       begin
-        PropertyNodeData := vst.GetNodeData(Node^.Parent);
-        if PropertyNodeData = nil then
-        begin
-          CellText := '-bug';
-          Exit;
-        end;
-
-        CategoryNodeData := vst.GetNodeData(Node^.Parent^.Parent);
-        if CategoryNodeData = nil then
-        begin
-          CellText := '--bug';
-          Exit;
-        end;
-
         case Column of
-          0: CellText := DoOnOIGetListPropertyItemName(CategoryNodeData^.PropertyIndex, PropertyNodeData^.PropertyIndex, NodeData^.PropertyIndex);
-          1: CellText := DoOnOIGetListPropertyItemValue(CategoryNodeData^.PropertyIndex, PropertyNodeData^.PropertyIndex, NodeData^.PropertyIndex, NodeData^.EditorType);
-          2: CellText := DoOnUIGetDataTypeName(CategoryNodeData^.PropertyIndex, PropertyNodeData^.PropertyIndex, NodeData^.PropertyIndex);
-          3: CellText := DoOnUIGetExtraInfo(CategoryNodeData^.PropertyIndex, PropertyNodeData^.PropertyIndex, NodeData^.PropertyIndex);
+          0: CellText := DoOnOIGetListPropertyItemName(CategoryIndex, PropertyIndex, PropertyItemIndex);
+          1: CellText := DoOnOIGetListPropertyItemValue(CategoryIndex, PropertyIndex, PropertyItemIndex, NodeData^.EditorType);
+          2: CellText := DoOnUIGetDataTypeName(CategoryIndex, PropertyIndex, PropertyItemIndex);
+          3: CellText := DoOnUIGetExtraInfo(CategoryIndex, PropertyIndex, PropertyItemIndex);
         end;
       end;
     end; //case
