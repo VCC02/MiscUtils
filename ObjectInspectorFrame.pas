@@ -2054,6 +2054,9 @@ begin
   if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
     Exit; //prevent AV
 
+  if Column <> 1 then
+    Exit;
+
   Allowed := True;
 
   if NodeLevel = 0 then
