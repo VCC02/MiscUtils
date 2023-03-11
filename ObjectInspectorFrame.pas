@@ -72,6 +72,7 @@ type
 
   TOnOIGetCategoryCount = function: Integer of object;
   TOnOIGetCategory = function(AIndex: Integer): string of object;
+  TOnOIGetCategoryValue = function(ACategoryIndex: Integer; var AEditorType: TOIEditorType): string of object;
 
   TOnOIGetPropertyCount = function(ACategoryIndex: Integer): Integer of object;
   TOnOIGetPropertyName = function(ACategoryIndex, APropertyIndex: Integer): string of object;
@@ -108,6 +109,9 @@ type
   TOnOITextEditorMouseMove = function(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     Sender: TObject; Shift: TShiftState; X, Y: Integer): Boolean of object;
 
+  TOnOITextEditorMouseUp = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
+    Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer) of object;
+
   TOnOITextEditorKeyUp = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     Sender: TObject; var Key: Word; Shift: TShiftState) of object;
 
@@ -124,7 +128,8 @@ type
   TOnOIBrowseFile = function(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     AFilter, ADialogInitDir: string; var Handled: Boolean; AReturnMultipleFiles: Boolean = False): string of object;
 
-  TOnAfterSpinTextEditorChanging = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string) of object;
+  TOnOIAfterSpinTextEditorChanging = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string) of object;
+  TOnOISelectedNode = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column: Integer; Button: TMouseButton; Shift: TShiftState; X, Y: Integer) of object;
 
   { TfrObjectInspector }
 
@@ -174,6 +179,7 @@ type
 
     FOnOIGetCategoryCount: TOnOIGetCategoryCount;
     FOnOIGetCategory: TOnOIGetCategory;
+    FOnOIGetCategoryValue: TOnOIGetCategoryValue;
     FOnOIGetPropertyCount: TOnOIGetPropertyCount;
     FOnOIGetPropertyName: TOnOIGetPropertyName;
     FOnOIGetPropertyValue: TOnOIGetPropertyValue;
@@ -198,6 +204,8 @@ type
 
     FOnOITextEditorMouseDown: TOnOITextEditorMouseDown;
     FOnOITextEditorMouseMove: TOnOITextEditorMouseMove;
+    FOnOITextEditorMouseUp: TOnOITextEditorMouseUp;
+
     FOnOITextEditorKeyUp: TOnOITextEditorKeyUp;
     FOnOITextEditorKeyDown: TOnOITextEditorKeyDown;
 
@@ -207,7 +215,8 @@ type
     FOnOIUserEditorClick: TOnOIUserEditorClick;
 
     FOnOIBrowseFile: TOnOIBrowseFile;
-    FOnAfterSpinTextEditorChanging: TOnAfterSpinTextEditorChanging;
+    FOnOIAfterSpinTextEditorChanging: TOnOIAfterSpinTextEditorChanging;
+    FOnOISelectedNode: TOnOISelectedNode;
 
     procedure SetDataTypeVisible(Value: Boolean);
     procedure SetExtraInfoVisible(Value: Boolean);
@@ -215,6 +224,7 @@ type
 
     function DoOnOIGetCategoryCount: Integer;
     function DoOnOIGetCategory(AIndex: Integer): string;
+    function DoOnOIGetCategoryValue(ACategoryIndex: Integer; var AEditorType: TOIEditorType): string;
 
     function DoOnOIGetPropertyCount(ACategoryIndex: Integer): Integer;
     function DoOnOIGetPropertyName(ACategoryIndex, APropertyIndex: Integer): string;
@@ -250,6 +260,9 @@ type
     function DoOnOITextEditorMouseMove(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       Sender: TObject; Shift: TShiftState; X, Y: Integer): Boolean;
 
+    procedure DoOnOITextEditorMouseUp(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
+      Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+
     procedure DoOnOITextEditorKeyUp(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       Sender: TObject; var Key: Word; Shift: TShiftState);
 
@@ -266,7 +279,9 @@ type
     function DoOnOIBrowseFile(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       AFilter, ADialogInitDir: string; var Handled: Boolean; AReturnMultipleFiles: Boolean = False): string;
 
-    procedure DoOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string);
+    procedure DoOnOIAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string);
+
+    procedure DoOnOISelectedNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column: Integer; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 
     procedure edtColorPropertyExit(Sender: TObject);
     procedure edtColorPropertyKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -297,6 +312,7 @@ type
 
     procedure TextEditorMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure TextEditorMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+    procedure TextEditorMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure TextEditorKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure TextEditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure updownTextEditorChangingEx(Sender: TObject; var AllowChange: Boolean; NewValue: SmallInt; Direction: TUpDownDirection);
@@ -328,6 +344,7 @@ type
 
     procedure vstOIMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure vstOIMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+    procedure vstOIMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure vstOINewText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; const NewText: String);
     procedure vstOIScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: Integer);
     procedure vstOIShowScrollbar(Sender: TBaseVirtualTree; Bar: Integer; AShow: Boolean);
@@ -380,6 +397,7 @@ type
 
     property OnOIGetCategoryCount: TOnOIGetCategoryCount write FOnOIGetCategoryCount;
     property OnOIGetCategory: TOnOIGetCategory write FOnOIGetCategory;
+    property OnOIGetCategoryValue: TOnOIGetCategoryValue write FOnOIGetCategoryValue;
     property OnOIGetPropertyCount: TOnOIGetPropertyCount write FOnOIGetPropertyCount;
     property OnOIGetPropertyName: TOnOIGetPropertyName write FOnOIGetPropertyName;
     property OnOIGetPropertyValue: TOnOIGetPropertyValue write FOnOIGetPropertyValue;
@@ -404,6 +422,8 @@ type
 
     property OnOITextEditorMouseDown: TOnOITextEditorMouseDown write FOnOITextEditorMouseDown;
     property OnOITextEditorMouseMove: TOnOITextEditorMouseMove write FOnOITextEditorMouseMove;
+    property OnOITextEditorMouseUp: TOnOITextEditorMouseUp write FOnOITextEditorMouseUp;
+
     property OnOITextEditorKeyUp: TOnOITextEditorKeyUp write FOnOITextEditorKeyUp;
     property OnOITextEditorKeyDown: TOnOITextEditorKeyDown write FOnOITextEditorKeyDown;
 
@@ -413,7 +433,8 @@ type
     property OnOIUserEditorClick: TOnOIUserEditorClick write FOnOIUserEditorClick;
 
     property OnOIBrowseFile: TOnOIBrowseFile write FOnOIBrowseFile;
-    property OnAfterSpinTextEditorChanging: TOnAfterSpinTextEditorChanging write FOnAfterSpinTextEditorChanging;
+    property OnOIAfterSpinTextEditorChanging: TOnOIAfterSpinTextEditorChanging write FOnOIAfterSpinTextEditorChanging;
+    property OnOISelectedNode: TOnOISelectedNode write FOnOISelectedNode;
   end;
 
 
@@ -614,6 +635,8 @@ begin
   vstOI.OnGetImageIndex := vstOIGetImageIndex;
   vstOI.OnGetImageIndexEx := vstOIGetImageIndexEx;
   vstOI.OnMouseDown := vstOIMouseDown;
+  vstOI.OnMouseMove := vstOIMouseMove;
+  vstOI.OnMouseUp := vstOIMouseUp;
   vstOI.OnNewText := vstOINewText;
   vstOI.OnScroll := vstOIScroll;
 
@@ -668,6 +691,7 @@ begin
 
   FOnOIGetCategoryCount := nil;
   FOnOIGetCategory := nil;
+  FOnOIGetCategoryValue := nil;
   FOnOIGetPropertyCount := nil;
   FOnOIGetPropertyName := nil;
   FOnOIGetPropertyValue := nil;
@@ -692,6 +716,7 @@ begin
 
   FOnOITextEditorMouseDown := nil;
   FOnOITextEditorMouseMove := nil;
+  FOnOITextEditorMouseUp := nil;
   FOnOITextEditorKeyUp := nil;
   FOnOITextEditorKeyDown := nil;
 
@@ -701,7 +726,8 @@ begin
   FOnOIUserEditorClick := nil;
 
   FOnOIBrowseFile := nil;
-  FOnAfterSpinTextEditorChanging := nil;
+  FOnOIAfterSpinTextEditorChanging := nil;
+  FOnOISelectedNode := nil;
 
   FListItemsVisible := True;
   FDataTypeVisible := True;
@@ -1030,6 +1056,15 @@ begin
 end;
 
 
+function TfrObjectInspector.DoOnOIGetCategoryValue(ACategoryIndex: Integer; var AEditorType: TOIEditorType): string;
+begin
+  if not Assigned(FOnOIGetCategoryValue) then
+    Exit; //not all ObjectInspectors have to implement editable categories, so exist instead of raising an exception
+
+  Result := FOnOIGetCategoryValue(ACategoryIndex, AEditorType);
+end;
+
+
 function TfrObjectInspector.DoOnOIGetPropertyCount(ACategoryIndex: Integer): Integer;
 begin
   if not Assigned(FOnOIGetPropertyCount) then
@@ -1213,6 +1248,18 @@ begin
 end;
 
 
+procedure TfrObjectInspector.DoOnOITextEditorMouseUp(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
+  Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  if not Assigned(FOnOITextEditorMouseUp) then
+  begin
+    //raise Exception.Create('OnOITextEditorMouseUp not assigned.')  //uncommented if really needed
+  end
+  else
+    FOnOITextEditorMouseUp(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, Sender, Button, Shift, X, Y);
+end;
+
+
 procedure TfrObjectInspector.DoOnOITextEditorKeyUp(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
@@ -1289,12 +1336,21 @@ begin
 end;
 
 
-procedure TfrObjectInspector.DoOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string);
+procedure TfrObjectInspector.DoOnOIAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string);
 begin
-  if not Assigned(FOnAfterSpinTextEditorChanging) then
+  if not Assigned(FOnOIAfterSpinTextEditorChanging) then
     Exit;  //Do not raise exception for this event. It is not mandatory.
 
-  FOnAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, ANewValue);
+  FOnOIAfterSpinTextEditorChanging(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, ANewValue);
+end;
+
+
+procedure TfrObjectInspector.DoOnOISelectedNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column: Integer; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  if not Assigned(FOnOISelectedNode) then
+    Exit;  //Do not raise exception for this event. It is not mandatory.
+
+  FOnOISelectedNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column, Button, Shift, X, Y);
 end;
 
 
@@ -1558,6 +1614,7 @@ begin
 
   FTextEditorEditBox.OnMouseDown := TextEditorMouseDown;
   FTextEditorEditBox.OnMouseMove := TextEditorMouseMove;
+  FTextEditorEditBox.OnMouseUp := TextEditorMouseUp;
   FTextEditorEditBox.OnKeyUp := TextEditorKeyUp;
   FTextEditorEditBox.OnKeyDown := TextEditorKeyDown;
 
@@ -1685,7 +1742,7 @@ begin
 
   case ANodeLevel of
     CCategoryLevel:
-      Result := '';
+      Result := DoOnOIGetCategoryValue(ACategoryIndex, ACurrentEditorType);
 
     CPropertyLevel:
       Result := DoOnOIGetPropertyValue(ACategoryIndex, APropertyIndex, ACurrentEditorType);
@@ -2059,7 +2116,7 @@ begin
 
   Allowed := True;
 
-  if NodeLevel = 0 then
+  if (NodeLevel = 0) and not Assigned(FOnOIGetCategoryValue) then
   begin
     Allowed := False;
     Exit;
@@ -2594,7 +2651,13 @@ begin
       begin
         case Column of
           0: CellText := DoOnOIGetCategory(CategoryIndex);
-          1, 2: CellText := '';
+          1:
+          begin
+            if Assigned(FOnOIGetCategoryValue) then
+              CellText := DoOnOIGetCategoryValue(CategoryIndex, NodeData^.EditorType);
+          end;
+
+          2: CellText := '';
           3: CellText := DoOnUIGetExtraInfo(CategoryIndex, PropertyIndex, PropertyItemIndex);
         end;
       end;
@@ -2699,6 +2762,17 @@ begin
 end;
 
 
+procedure TfrObjectInspector.vstOIMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin                     //using the MouseDown hit node, because this is the selected node
+  if not GetNodeIndexInfo(FPropHitInfo.HitNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+                                                                                 //HitColumn may not be the same as the point of X, Y
+  DoOnOISelectedNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, FPropHitInfo.HitColumn, Button, Shift, X, Y);
+end;
+
+
 procedure TfrObjectInspector.vstOINewText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; const NewText: String);
 begin
   FEditingText := NewText;
@@ -2792,6 +2866,18 @@ begin
 end;
 
 
+procedure TfrObjectInspector.TextEditorMouseUp(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOITextEditorMouseUp(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Sender, Button, Shift, X, Y);
+end;
+
+
 procedure TfrObjectInspector.TextEditorKeyUp(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 var
@@ -2835,7 +2921,7 @@ begin
     Exit;
 
   NewEditingText := FEditingText;
-  DoOnAfterSpinTextEditorChanging(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, NewEditingText);
+  DoOnOIAfterSpinTextEditorChanging(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, NewEditingText);
   if NewEditingText <> FEditingText then
   begin
     FTextEditorEditBox.Text := NewEditingText;
