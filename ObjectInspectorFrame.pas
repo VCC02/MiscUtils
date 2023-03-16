@@ -221,6 +221,8 @@ type
     procedure SetDataTypeVisible(Value: Boolean);
     procedure SetExtraInfoVisible(Value: Boolean);
     procedure SetPropertyItemHeight(Value: Integer);
+    function GetColumnWidth(Index: Integer): Integer;
+    procedure SetColumnWidth(Index, Value: Integer);
 
     function DoOnOIGetCategoryCount: Integer;
     function DoOnOIGetCategory(AIndex: Integer): string;
@@ -394,6 +396,7 @@ type
   published
     property ColorFormat: TOIColorFormat read FColorFormat write FColorFormat;  //affects ColorBox editors when getting selected color
     property PropertyItemHeight: Integer read FPropertyItemHeight write SetPropertyItemHeight;
+    property ColumnWidths[Index: Integer]: Integer read GetColumnWidth write SetColumnWidth;
 
     property OnOIGetCategoryCount: TOnOIGetCategoryCount write FOnOIGetCategoryCount;
     property OnOIGetCategory: TOnOIGetCategory write FOnOIGetCategory;
@@ -593,7 +596,7 @@ begin
   vstOI.Top := 0;
   vstOI.Width := pnlvstOI.Width;
   vstOI.Height := Height;
-  vstOI.Constraints.MinWidth := vstOI.Width;
+  vstOI.Constraints.MinWidth := 100;
   vstOI.Constraints.MinHeight := vstOI.Height;
   vstOI.DefaultNodeHeight := 22; //the default value, 18, should be enough, but the TEdit has a bigger default height
   vstOI.Anchors := [akBottom, akLeft, akRight, akTop];
@@ -645,26 +648,26 @@ begin
   vstOI.Colors.UnfocusedSelectionColor := clGradientInactiveCaption;
 
   NewColum := vstOI.Header.Columns.Add;
-  NewColum.MinWidth := 150;
+  NewColum.MinWidth := 50;
   NewColum.Options := [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, {coFixed,} coAllowFocus];
   NewColum.Position := 0;
   NewColum.Width := 240;
   NewColum.Text := 'Property';
 
   NewColum := vstOI.Header.Columns.Add;
-  NewColum.MinWidth := 150;
+  NewColum.MinWidth := 50;
   NewColum.Position := 1;
   NewColum.Width := 150;
   NewColum.Text := 'Value';
 
   NewColum := vstOI.Header.Columns.Add;
-  NewColum.MinWidth := 200;
+  NewColum.MinWidth := 50;
   NewColum.Position := 2;
   NewColum.Width := 200;
   NewColum.Text := 'DataType';
 
   NewColum := vstOI.Header.Columns.Add;
-  NewColum.MinWidth := 300;
+  NewColum.MinWidth := 50;
   NewColum.Position := 3;
   NewColum.Width := 300;
   NewColum.Text := 'Extra info';
@@ -1038,6 +1041,24 @@ begin
 end;
 
 
+function TfrObjectInspector.GetColumnWidth(Index: Integer): Integer;
+begin
+  if (Index < 0) or (Index > vstOI.Header.Columns.Count - 1) then
+    raise Exception.Create('Index out of bounds when getting column width.');
+
+  Result := vstOI.Header.Columns.Items[Index].Width;
+end;
+
+
+procedure TfrObjectInspector.SetColumnWidth(Index, Value: Integer);
+begin
+  if (Index < 0) or (Index > vstOI.Header.Columns.Count - 1) then
+    raise Exception.Create('Index out of bounds when setting column width.');
+
+  vstOI.Header.Columns.Items[Index].Width := Value;
+end;
+
+
 function TfrObjectInspector.DoOnOIGetCategoryCount: Integer;
 begin
   if not Assigned(FOnOIGetCategoryCount) then
@@ -1368,6 +1389,7 @@ var
   NodeData: PNodeDataPropertyRec;
 begin
   CancelCurrentEditing;
+  FreeEditorComponents;
 
   vstOI.BeginUpdate;
   try
