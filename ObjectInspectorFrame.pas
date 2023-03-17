@@ -32,7 +32,7 @@ interface
 
 uses
   LCLIntf, LCLType, Classes, SysUtils, Forms, Controls, ExtCtrls, Graphics, ImgList,
-  ColorBox, StdCtrls, Dialogs, ComCtrls, Menus, Buttons, VirtualTrees;
+  ColorBox, StdCtrls, Dialogs, ComCtrls, Menus, Buttons, VirtualTrees, ActiveX;
 
 
 const
@@ -131,6 +131,11 @@ type
   TOnOIAfterSpinTextEditorChanging = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; var ANewValue: string) of object;
   TOnOISelectedNode = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column: Integer; Button: TMouseButton; Shift: TShiftState; X, Y: Integer) of object;
 
+  TOnOIDragAllowed = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var Allowed: Boolean) of object;
+  TOnOIDragOver = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean) of object;
+  TOnOIDragDrop = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode) of object;
+
+
   { TfrObjectInspector }
 
   TfrObjectInspector = class(TFrame)
@@ -218,6 +223,10 @@ type
     FOnOIAfterSpinTextEditorChanging: TOnOIAfterSpinTextEditorChanging;
     FOnOISelectedNode: TOnOISelectedNode;
 
+    FOnOIDragAllowed: TOnOIDragAllowed;
+    FOnOIDragOver: TOnOIDragOver;
+    FOnOIDragDrop: TOnOIDragDrop;
+
     procedure SetDataTypeVisible(Value: Boolean);
     procedure SetExtraInfoVisible(Value: Boolean);
     procedure SetPropertyItemHeight(Value: Integer);
@@ -285,6 +294,10 @@ type
 
     procedure DoOnOISelectedNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column: Integer; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 
+    procedure DoOnOIDragAllowed(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var Allowed: Boolean);
+    procedure DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
+    procedure DoOnOIDragDrop(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
+
     procedure edtColorPropertyExit(Sender: TObject);
     procedure edtColorPropertyKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 
@@ -350,6 +363,9 @@ type
     procedure vstOINewText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; const NewText: String);
     procedure vstOIScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: Integer);
     procedure vstOIShowScrollbar(Sender: TBaseVirtualTree; Bar: Integer; AShow: Boolean);
+    procedure vstOIDragAllowed(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; var Allowed: Boolean);
+    procedure vstOIDragOver(Sender: TBaseVirtualTree; Source: TObject; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
+    procedure vstOIDragDrop(Sender: TBaseVirtualTree; Source: TObject; DataObject: IDataObject; Formats: TFormatArray; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
 
     procedure CreateRemainingUIComponents;
     procedure FreeEditorComponents;
@@ -438,6 +454,10 @@ type
     property OnOIBrowseFile: TOnOIBrowseFile write FOnOIBrowseFile;
     property OnOIAfterSpinTextEditorChanging: TOnOIAfterSpinTextEditorChanging write FOnOIAfterSpinTextEditorChanging;
     property OnOISelectedNode: TOnOISelectedNode write FOnOISelectedNode;
+
+    property OnOIDragAllowed: TOnOIDragAllowed write FOnOIDragAllowed;
+    property OnOIDragOver: TOnOIDragOver write FOnOIDragOver;
+    property OnOIDragDrop: TOnOIDragDrop write FOnOIDragDrop;
   end;
 
 
@@ -624,7 +644,7 @@ begin
   vstOI.TreeOptions.AutoOptions := [toAutoDropExpand, toAutoScrollOnExpand, toAutoTristateTracking, toAutoDeleteMovedNodes, toDisableAutoscrollOnFocus, toDisableAutoscrollOnEdit];
   vstOI.TreeOptions.MiscOptions := [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning];
   vstOI.TreeOptions.PaintOptions := [toShowButtons, toShowDropmark, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines];
-  vstOI.TreeOptions.SelectionOptions := [toFullRowSelect, toRightClickSelect];
+  vstOI.TreeOptions.SelectionOptions := [toExtendedFocus, toFullRowSelect, toRightClickSelect];
   vstOI.OnCompareNodes := vstOICompareNodes;
   vstOI.OnCreateEditor := vstOICreateEditor;
   vstOI.OnDblClick := vstOIDblClick;
@@ -642,6 +662,9 @@ begin
   vstOI.OnMouseUp := vstOIMouseUp;
   vstOI.OnNewText := vstOINewText;
   vstOI.OnScroll := vstOIScroll;
+  vstOI.OnDragAllowed := vstOIDragAllowed;
+  vstOI.OnDragOver := vstOIDragOver;
+  vstOI.OnDragDrop := vstOIDragDrop;
 
   //vstOI.PopupMenu;
   vstOI.Colors.GridLineColor := clGray;
@@ -731,6 +754,10 @@ begin
   FOnOIBrowseFile := nil;
   FOnOIAfterSpinTextEditorChanging := nil;
   FOnOISelectedNode := nil;
+
+  FOnOIDragAllowed := nil;
+  FOnOIDragOver := nil;
+  FOnOIDragDrop := nil;
 
   FListItemsVisible := True;
   FDataTypeVisible := True;
@@ -1372,6 +1399,33 @@ begin
     Exit;  //Do not raise exception for this event. It is not mandatory.
 
   FOnOISelectedNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column, Button, Shift, X, Y);
+end;
+
+
+procedure TfrObjectInspector.DoOnOIDragAllowed(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var Allowed: Boolean);
+begin
+  if not Assigned(FOnOIDragAllowed) then
+    Exit;  //Do not raise exception for this event. It is not mandatory.
+
+  FOnOIDragAllowed(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Allowed);
+end;
+
+
+procedure TfrObjectInspector.DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
+begin
+  if not Assigned(FOnOIDragOver) then
+    Exit;  //Do not raise exception for this event. It is not mandatory.
+
+  FOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Shift, State, Pt, Mode, Effect, Accept);
+end;
+
+
+procedure TfrObjectInspector.DoOnOIDragDrop(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
+begin
+  if not Assigned(FOnOIDragDrop) then
+    Exit;  //Do not raise exception for this event. It is not mandatory.
+
+  FOnOIDragDrop(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex, Shift, Pt, Effect, Mode);
 end;
 
 
@@ -2860,6 +2914,78 @@ procedure TfrObjectInspector.vstOIShowScrollbar(Sender: TBaseVirtualTree;
 begin
   if Bar = SB_Vert then
     FVstVertScrollBarVisible := AShow;
+end;
+
+
+procedure TfrObjectInspector.vstOIDragAllowed(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex; var Allowed: Boolean);
+var
+  AllowedFromUser: Boolean;
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  if not GetNodeIndexInfo(FPropHitInfo.HitNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  AllowedFromUser := False;
+  DoOnOIDragAllowed(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, AllowedFromUser);
+
+  Allowed := (Column = 0) and AllowedFromUser;
+end;
+
+
+procedure TfrObjectInspector.vstOIDragOver(Sender: TBaseVirtualTree;
+  Source: TObject; Shift: TShiftState; State: TDragState; const Pt: TPoint;
+  Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
+var
+  Node: PVirtualNode;
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  Accept := False;
+
+  if Sender <> Source then
+    Exit;
+
+  Node := (Sender as TVirtualStringTree).DropTargetNode;
+
+  if not Assigned(Node) then
+    Exit;
+
+  if not Assigned(FOnOIDragOver) then //Do this verification here, because vstOIDragOver is called pretty often and will call GetNodeIndexInfo below, although FOnOIDragOver might not be set.
+    Exit;
+
+  if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Shift, State, Pt, Mode, Effect, Accept);
+end;
+
+
+procedure TfrObjectInspector.vstOIDragDrop(Sender: TBaseVirtualTree;
+  Source: TObject; DataObject: IDataObject; Formats: TFormatArray;
+  Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
+var
+  Node, SrcNode: PVirtualNode;
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+  SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer;
+begin
+  if Sender <> Source then
+    Exit;
+
+  Node := (Sender as TVirtualStringTree).DropTargetNode;
+  SrcNode := (Source as TVirtualStringTree).FocusedNode;
+
+  if not Assigned(Node) or not Assigned(SrcNode) then
+    Exit;
+
+  if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  if not GetNodeIndexInfo(SrcNode, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex) then
+    Exit;
+
+  DoOnOIDragDrop(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex,
+                 SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex,
+                 Shift, Pt, Effect, Mode);
 end;
 
 
