@@ -132,7 +132,7 @@ type
   TOnOISelectedNode = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column: Integer; Button: TMouseButton; Shift: TShiftState; X, Y: Integer) of object;
 
   TOnOIDragAllowed = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var Allowed: Boolean) of object;
-  TOnOIDragOver = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean) of object;
+  TOnOIDragOver = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean) of object;
   TOnOIDragDrop = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode) of object;
 
 
@@ -295,7 +295,7 @@ type
     procedure DoOnOISelectedNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Column: Integer; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 
     procedure DoOnOIDragAllowed(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var Allowed: Boolean);
-    procedure DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
+    procedure DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
     procedure DoOnOIDragDrop(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
 
     procedure edtColorPropertyExit(Sender: TObject);
@@ -641,7 +641,7 @@ begin
   vstOI.StateImages := imglstOIColorIcons;
   vstOI.TabOrder := 0;
   vstOI.TextMargin := 2;
-  vstOI.TreeOptions.AutoOptions := [toAutoDropExpand, toAutoScrollOnExpand, toAutoTristateTracking, toAutoDeleteMovedNodes, toDisableAutoscrollOnFocus, toDisableAutoscrollOnEdit];
+  vstOI.TreeOptions.AutoOptions := [toAutoScrollOnExpand, toAutoTristateTracking, toAutoDeleteMovedNodes, toDisableAutoscrollOnFocus, toDisableAutoscrollOnEdit];
   vstOI.TreeOptions.MiscOptions := [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning];
   vstOI.TreeOptions.PaintOptions := [toShowButtons, toShowDropmark, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines];
   vstOI.TreeOptions.SelectionOptions := [toExtendedFocus, toFullRowSelect, toRightClickSelect];
@@ -1411,12 +1411,12 @@ begin
 end;
 
 
-procedure TfrObjectInspector.DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
+procedure TfrObjectInspector.DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
 begin
   if not Assigned(FOnOIDragOver) then
     Exit;  //Do not raise exception for this event. It is not mandatory.
 
-  FOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Shift, State, Pt, Mode, Effect, Accept);
+  FOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex, Shift, State, Pt, Mode, Effect, Accept);
 end;
 
 
@@ -2937,8 +2937,9 @@ procedure TfrObjectInspector.vstOIDragOver(Sender: TBaseVirtualTree;
   Source: TObject; Shift: TShiftState; State: TDragState; const Pt: TPoint;
   Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
 var
-  Node: PVirtualNode;
+  Node, SrcNode: PVirtualNode;
   NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+  SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer;
 begin
   Accept := False;
 
@@ -2946,8 +2947,9 @@ begin
     Exit;
 
   Node := (Sender as TVirtualStringTree).DropTargetNode;
+  SrcNode := (Source as TVirtualStringTree).FocusedNode;
 
-  if not Assigned(Node) then
+  if not Assigned(Node) or not Assigned(SrcNode) then
     Exit;
 
   if not Assigned(FOnOIDragOver) then //Do this verification here, because vstOIDragOver is called pretty often and will call GetNodeIndexInfo below, although FOnOIDragOver might not be set.
@@ -2956,7 +2958,12 @@ begin
   if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
     Exit;
 
-  DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Shift, State, Pt, Mode, Effect, Accept);
+  if not GetNodeIndexInfo(SrcNode, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex) then
+    Exit;
+
+  DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex,
+                 SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex,
+                 Shift, State, Pt, Mode, Effect, Accept);
 end;
 
 
