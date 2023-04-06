@@ -403,6 +403,7 @@ type
     procedure ReloadPropertyItems(ACategoryIndex, APropertyIndex: Integer; ACloseItemEditor: Boolean = False);
     procedure RepaintNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True);
     procedure CancelCurrentEditing; //usually the text editor   - this is called by ReloadContent and ReloadPropertyItems
+    procedure SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
 
     property ListItemsVisible: Boolean read FListItemsVisible write FListItemsVisible; //to be set before calling ReloadContent
     property DataTypeVisible: Boolean read FDataTypeVisible write SetDataTypeVisible;    //to be set before calling ReloadContent
@@ -1648,6 +1649,17 @@ begin
 
   vstOI.InvalidateNode(PropertyNode);
   vstOI.Expanded[PropertyNode] := True;
+end;
+
+
+procedure TfrObjectInspector.SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
+var
+  NodeToBeSelected: PVirtualNode;
+begin
+  NodeToBeSelected := GetNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex);
+
+  if NodeToBeSelected <> nil then
+    vstOI.Selected[NodeToBeSelected] := True;
 end;
 
 
