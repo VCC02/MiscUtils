@@ -1,0 +1,16 @@
+program TestDynArrays;
+
+{$mode objfpc}{$H+}
+
+uses
+  Interfaces, Forms, GuiTestRunner, TestDynArraysMainCase, DynArrays,
+  Expectations;
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.CreateForm(TGuiTestRunner, TestRunner);
+  Application.Run;
+end.
+

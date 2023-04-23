@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="12"/>
+    <BuildModes Active="Default"/>
+    <Units>
+      <Unit>
+        <Filename Value="TestDynArrays.ppr"/>
+        <FRMtype Value="0"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="23"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="179"/>
+        <CursorPos X="27" Y="188"/>
+        <UsageCount Value="23"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\DynArrays.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="20"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\Expectations.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="20"/>
+      </Unit>
+    </Units>
+    <JumpHistory HistoryIndex="19">
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="121" TopLine="101"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="101" Column="44" TopLine="86"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="161" Column="31" TopLine="141"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="103" Column="39" TopLine="68"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="168" TopLine="131"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="22" Column="15" TopLine="4"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="196" Column="59" TopLine="164"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="29" Column="59" TopLine="5"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="204" Column="15" TopLine="186"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="30" Column="12" TopLine="12"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="225" Column="20" TopLine="203"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="220" TopLine="182"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="34" Column="27" TopLine="18"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="235" TopLine="217"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="26" Column="15" TopLine="8"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="249" TopLine="220"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="27" Column="15" TopLine="9"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="263" TopLine="246"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="33" Column="35" TopLine="10"/>
+      </Position>
+      <Position>
+        <Filename Value="TestDynArraysMainCase.pas"/>
+        <Caret Line="274" Column="14" TopLine="247"/>
+      </Position>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>
