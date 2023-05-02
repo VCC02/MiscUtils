@@ -72,6 +72,7 @@ type
 procedure InitDynArrayToEmpty(var AArr: TDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 function DynLength(var AArr: TDynArrayOfByte): TDynArrayLength;
 function SetDynLength(var AArr: TDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
+procedure FreeDynArray(var AArr: TDynArrayOfByte);
 function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 
 
@@ -117,7 +118,7 @@ end;
 
 function SetDynLength(var AArr: TDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: PIntPtr;
+  OldPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
   {$IFDEF FPC}
     CheckInitializedArray(AArr);
@@ -137,17 +138,16 @@ begin
 
   {$IFnDEF FPC}
     GetMem(AArr.Content, ANewLength);
-    if MM_error then
+    if MM_error or (AArr.Content = nil) then
     begin
       Result := False;
       Exit;
     end;
 
-    memcpy.....
-    if ANewLength < AArr.Len then
-      MemMove(OldPointer^, AArr.Content^, ANewLength)   //the new array is smaller
+    if ANewLength < AArr.Len then                     //OldPointer = src, AArr.Content = dest
+      MemMove(AArr.Content, OldPointer, ANewLength)   //the new array is smaller
     else
-      MemMove(OldPointer^, AArr.Content^, AArr.Len);    //the new array is larger  - the rest of the content is not initialized
+      MemMove(AArr.Content, OldPointer, AArr.Len);    //the new array is larger  - the rest of the content is not initialized
   {$ELSE}
     try
       GetMem(AArr.Content, ANewLength);
@@ -168,10 +168,20 @@ begin
 end;
 
 
+procedure FreeDynArray(var AArr: TDynArrayOfByte);
+begin
+  {$IFDEF FPC}
+    CheckInitializedArray(AArr);
+  {$ENDIF}
+
+  SetDynLength(AArr, 0);
+end;
+
+
 function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 var
   NewLen: DWord;
-  NewPointer: PIntPtr;
+  NewPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
   OldArr1Len: DWord;
 begin
   {$IFDEF FPC}
@@ -196,7 +206,8 @@ begin
   Result := SetDynLength(AArr1, NewLen);
 
   {$IFnDEF FPC}
-    memcpy.....
+    NewPointer := DWord(AArr1.Content) + OldArr1Len);
+    MemMove(NewPointer, AArr2.Content, AArr2.Len);
   {$ELSE}
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len));  //NewPointer := @AArr1.Content^[OldArr1Len];
     Move(AArr2.Content^, NewPointer^, AArr2.Len);

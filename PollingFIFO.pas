@@ -23,7 +23,9 @@
 
 unit PollingFIFO;
 
-{$mode ObjFPC}{$H+}
+{$IFDEF FPC}
+  {$mode ObjFPC}{$H+}
+{$ENDIF}  
 
 interface
 
@@ -58,15 +60,24 @@ constructor TPollingFIFO.Create;
 begin
   inherited Create;
   FFIFO := TStringList.Create;
-  InitCriticalSection(FCritSec);
+
+  {$IFDEF FPC}
+    InitCriticalSection(FCritSec);
+  {$ELSE}
+    InitializeCriticalSection(FCritSec);
+  {$ENDIF}
 end;
 
+
+{$IFnDEF FPC}
+  function GetTickCount64: DWORD; stdcall; external kernel32 name 'GetTickCount64';  //available on Vista and newer, according to SysUtils from FP
+{$ENDIF}
 
 destructor TPollingFIFO.Destroy;
 var
   RawCount: Integer;
   FoundLock: Boolean;
-  tk: QWord;
+  tk: UInt64;
 begin
   tk := GetTickCount64;
   repeat
@@ -79,7 +90,12 @@ begin
     Sleep(2);
   until not FoundLock or (GetTickCount64 - tk > 5000);
 
-  DoneCriticalSection(FCritSec);
+  {$IFDEF FPC}   
+    DoneCriticalSection(FCritSec);
+  {$ELSE}
+    DeleteCriticalSection(FCritSec);
+  {$ENDIF}
+
   inherited Destroy;
 end;
 

@@ -35,6 +35,9 @@ type
   TStrArr = array[0..0] of string;
   PStrArr = ^TStrArr;
 
+  TConstByteArr = array[0..0] of Byte;
+  PConstByteArr = ^TConstByteArr;
+
   TExpect = class;
 
 
@@ -56,12 +59,14 @@ type
     FActualValueStringList: TStringList;
     FActualValuePointer: Pointer;
     FActualValueBoolean: Boolean;
+    FActualValueConstByteArr: TBytes;
   public
     constructor Create;
 
     procedure ToBe(ExpectedValue: string; ExtraMessage: string = ''); overload;
     procedure ToBe(ExpectedValue: Integer; ExtraMessage: string = ''); overload;
     procedure ToBe(ExpectedValue: Boolean; ExtraMessage: string = ''); overload;
+    procedure ToBe(ExpectedValue: PConstByteArr; ExtraMessage: string = ''); overload;
     procedure ToBeGreaterThan(ExpectedValue: Integer; ExtraMessage: string = '');
     procedure ToBeGreaterThanOrEqualTo(ExpectedValue: Integer; ExtraMessage: string = '');
     procedure ToBeLessThan(ExpectedValue: Integer; ExtraMessage: string = '');
@@ -84,6 +89,7 @@ function Expect(ActualValue: Integer): TExpect; overload;
 function Expect(ActualValue: Boolean): TExpect; overload;
 function Expect(ActualValue: TStringList): TExpect; overload;
 function Expect(ActualValue: Pointer): TExpect; overload;
+function Expect(ActualValue: PConstByteArr; ALen: Integer): TExpect; overload;
 
 
 implementation
@@ -148,6 +154,27 @@ begin
 end;
 
 
+procedure ExpectConstByteArr(var ActualValue: TBytes; ExpectedValue: PConstByteArr; ExtraMsg: string = '');
+var
+  i: Integer;
+  s: string;
+begin
+  s := '';
+
+  for i := 0 to Length(ActualValue) - 1 do
+    if ExpectedValue^[i] <> ActualValue[i] then
+    begin
+      if s <> '' then
+        s := s + #13#10;
+
+      s := s + 'Expected ' + IntToStr(ExpectedValue^[i]) + ', but is was ' + IntToStr(ActualValue[i]) + ' at index ' + IntToStr(i) + '.  ' + ExtraMsg;
+    end;
+
+  if s <> '' then
+    raise Exception.Create(s);
+end;
+
+
 procedure ExpectIntDifferent(ActualValue, ExpectedValue: Integer; ExtraMsg: string = '');
 begin
   if ExpectedValue = ActualValue then
@@ -195,6 +222,17 @@ begin
   try
     ExpectBoolean(FActualValueBoolean, ExpectedValue, ExtraMessage);
   finally
+    Free;
+  end;
+end;
+
+
+procedure TExpect.ToBe(ExpectedValue: PConstByteArr; ExtraMessage: string = ''); overload;
+begin
+  try
+    ExpectConstByteArr(FActualValueConstByteArr, ExpectedValue, ExtraMessage);
+  finally
+    SetLength(FActualValueConstByteArr, 0);
     Free;
   end;
 end;
@@ -389,6 +427,13 @@ begin
   Result.FActualValue := '0x' + IntToHex(Int64(ActualValue));
 end;
 
+
+function Expect(ActualValue: PConstByteArr; ALen: Integer): TExpect; overload;
+begin
+  Result := TExpect.Create;
+  SetLength(Result.FActualValueConstByteArr, ALen);
+  Move(ActualValue^[0], Result.FActualValueConstByteArr[0], Length(Result.FActualValueConstByteArr));
+end;
 
 end.
 
