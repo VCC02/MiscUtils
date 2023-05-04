@@ -45,6 +45,11 @@ unit DynArrays;
     If the new length is greater than the current length, more memory is required. See implementation.
 
   - Accessing array elements can be done as Arr.Content^[<index>] := <value>;
+
+//ToDo:
+  - test with MM(.mpas) and on various cases of fragmentation error and memory full error.
+    In case of fragmentation errors, the memory manager becomes unusable, so the allocated data will be lost
+  - test on mP that for loops on empty arrays, behave as expected, when TDynArrayLength is DWord instead of LongInt. If not, this has to be changed.
 }
 
 interface
@@ -69,6 +74,20 @@ type
   PDynArrayOfByte = ^TDynArrayOfByte;
 
 
+  TDynArrayOfTDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of PDynArrayOfByte;
+  PDynArrayOfTDynArrayOfByteContent = ^TDynArrayOfTDynArrayOfByteContent;
+
+  TDynArrayOfTDynArrayOfByte = record
+    Len: TDynArrayLength;
+    Content: PDynArrayOfTDynArrayOfByteContent;
+    {$IFDEF FPC}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfTDynArrayOfByte = ^TDynArrayOfTDynArrayOfByte;
+
+
 procedure InitDynArrayToEmpty(var AArr: TDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 function DynLength(var AArr: TDynArrayOfByte): TDynArrayLength;
 function SetDynLength(var AArr: TDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
@@ -76,12 +95,25 @@ procedure FreeDynArray(var AArr: TDynArrayOfByte);
 function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 
 
+procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
+function DynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte): TDynArrayLength;
+function SetDynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
+procedure FreeDynOfDynOfByteArray(var AArr: TDynArrayOfTDynArrayOfByte);
+function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; var ANewArr: TDynArrayOfByte): Boolean;
+
+
+{$IFDEF FPC}
+  //This check is not available in mP, but is is useful as a debugging means on Desktop.
+  procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
+  procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
+{$ENDIF}
+
 implementation
 
 
 {$IFDEF FPC}
   uses
-    SysUtils;
+    SysUtils, Math;
 {$ENDIF}
 
 
@@ -98,7 +130,14 @@ end;
 
 {$IFDEF FPC}
   //This check is not available in mP, but is is useful as a debugging means on Desktop.
-  procedure CheckInitializedArray(var AArr: TDynArrayOfByte);
+  procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
+  begin
+    if AArr.Initialized = '' then
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+  end;
+
+  //This check is not available in mP, but is is useful as a debugging means on Desktop.
+  procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
   begin
     if AArr.Initialized = '' then
       raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
@@ -109,7 +148,7 @@ end;
 function DynLength(var AArr: TDynArrayOfByte): TDynArrayLength;
 begin
   {$IFDEF FPC}
-    CheckInitializedArray(AArr);
+    CheckInitializedDynArray(AArr);
   {$ENDIF}
 
   Result := AArr.Len;
@@ -121,7 +160,7 @@ var
   OldPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
   {$IFDEF FPC}
-    CheckInitializedArray(AArr);
+    CheckInitializedDynArray(AArr);
   {$ENDIF}
 
   Result := True;
@@ -131,6 +170,7 @@ begin
     if AArr.Len > 0 then
       Freemem(AArr.Content, AArr.Len);
 
+    AArr.Len := 0;
     Exit;
   end;
 
@@ -152,7 +192,7 @@ begin
     try
       GetMem(AArr.Content, ANewLength);
 
-      if ANewLength < AArr.Len then
+      if ANewLength < AArr.Len then   //AArr.Len is still the old array length. Only the Content field points somewhere else.
         Move(OldPointer^, AArr.Content^, ANewLength)   //the new array is smaller
       else
         Move(OldPointer^, AArr.Content^, AArr.Len);    //the new array is larger  - the rest of the content is not initialized
@@ -171,7 +211,7 @@ end;
 procedure FreeDynArray(var AArr: TDynArrayOfByte);
 begin
   {$IFDEF FPC}
-    CheckInitializedArray(AArr);
+    CheckInitializedDynArray(AArr);
   {$ENDIF}
 
   SetDynLength(AArr, 0);
@@ -185,8 +225,8 @@ var
   OldArr1Len: DWord;
 begin
   {$IFDEF FPC}
-    CheckInitializedArray(AArr1);
-    CheckInitializedArray(AArr2);
+    CheckInitializedDynArray(AArr1);
+    CheckInitializedDynArray(AArr2);
   {$ENDIF}
 
   if AArr2.Len = 0 then
@@ -212,6 +252,147 @@ begin
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len));  //NewPointer := @AArr1.Content^[OldArr1Len];
     Move(AArr2.Content^, NewPointer^, AArr2.Len);
   {$ENDIF}
+end;
+
+
+// array of array
+
+procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
+begin
+  AArr.Len := 0;       //this is required when allocating a new array
+  AArr.Content := nil; //probably, not needed, since Len is set to 0
+
+  {$IFDEF FPC}
+    AArr.Initialized := 'init';  //some string, different than ''
+  {$ENDIF}
+end;
+
+
+function DynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte): TDynArrayLength;
+begin
+  {$IFDEF FPC}
+    CheckInitializedDynOfDynArray(AArr);
+  {$ENDIF}
+
+  Result := AArr.Len;
+end;
+
+
+function SetDynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
+var
+  OldPointer: PDynArrayOfTDynArrayOfByteContent;
+  i, MaxCopyIdx: LongInt;
+begin
+  {$IFDEF FPC}
+    CheckInitializedDynOfDynArray(AArr);
+  {$ENDIF}
+
+  Result := True;
+
+  if ANewLength = 0 then
+  begin
+    if AArr.Len > 0 then
+    begin
+      for i := 0 to LongInt(AArr.Len) - 1 do
+      begin
+        FreeDynArray(AArr.Content^[i]^);
+
+        {$IFnDEF FPC}
+          Freemem(AArr.Content^[i], SizeOf(TDynArrayOfByte));
+        {$ELSE}
+          Dispose(AArr.Content^[i]);
+        {$ENDIF}
+      end;
+
+      Freemem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfByte));
+    end;
+
+    AArr.Len := 0;
+    Exit;
+  end;
+
+  {$IFnDEF FPC}
+    OldPointer := DWord(AArr.Content);
+  {$ELSE}
+    OldPointer := PDynArrayOfTDynArrayOfByteContent(AArr.Content);
+  {$ENDIF}
+
+  {$IFnDEF FPC}
+    GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte));    //SizeOf pointer
+    if MM_error or (AArr.Content = nil) then
+    begin
+      Result := False;
+      Exit;
+    end;
+
+    for i := 0 to ANewLength - 1 do
+    begin
+      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
+      if MM_error or (AArr.Content = nil) then
+      begin
+        Result := False;
+        Exit;
+      end;
+    end;
+  {$ELSE}
+    try
+      GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte));   //SizeOf pointer
+                                              /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
+      for i := 0 to ANewLength - 1 do
+        New(AArr.Content^[i]);           //SizeOf struct    //Using New instead of GetMem, to properly initialize the "Initialized" field (string). GetMem doesn't do any form of initialization to the allocated structure.
+    except
+      Result := False;
+    end;
+  {$ENDIF}
+
+  MaxCopyIdx := LongInt(Min(AArr.Len, ANewLength)) - 1;
+  for i := 0 to MaxCopyIdx do
+  begin
+    InitDynArrayToEmpty(AArr.Content^[i]^);
+    ConcatDynArrays(AArr.Content^[i]^, OldPointer^[i]^);   /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
+  end;
+
+  if AArr.Len > 0 then
+  begin
+    for i := 0 to LongInt(AArr.Len) - 1 do
+    begin
+      FreeDynArray(OldPointer^[i]^);    /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
+
+      {$IFnDEF FPC}
+        Freemem(OldPointer^[i], SizeOf(TDynArrayOfByte));
+      {$ELSE}
+        Dispose(OldPointer^[i]);
+      {$ENDIF}
+    end;
+
+    Freemem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+  end;
+
+  if ANewLength > AArr.Len then
+    for i := AArr.Len to ANewLength - 1 do
+      InitDynArrayToEmpty(AArr.Content^[i]^);
+
+  AArr.Len := ANewLength;
+end;
+
+
+function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; var ANewArr: TDynArrayOfByte): Boolean;
+begin
+  Result := SetDynOfDynOfByteLength(AArr, AArr.Len + 1);
+  if not Result then
+    Exit;
+
+  Result := ConcatDynArrays(AArr.Content^[AArr.Len - 1]^, ANewArr);
+end;
+
+
+procedure FreeDynOfDynOfByteArray(var AArr: TDynArrayOfTDynArrayOfByte);
+begin
+  {$IFDEF FPC}
+    CheckInitializedDynOfDynArray(AArr);
+  {$ENDIF}
+
+  SetDynOfDynOfByteLength(AArr, 0);
 end;
 
 end.

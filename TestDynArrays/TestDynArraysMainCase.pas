@@ -50,6 +50,8 @@ type
     procedure Test_CallSetDynLength_WithoutInitDynArray;
     procedure Test_CallConcatDynArrays_WithoutFirstInitDynArray;
     procedure Test_CallConcatDynArrays_WithoutSecondInitDynArray;
+
+    procedure TestDoubleFree;
   end;
 
 
@@ -73,7 +75,7 @@ begin
     Expect(Byte(AllocationResult)).ToBe(Byte(True));
     Expect(Arr.Len).ToBe(7);
   finally
-    SetDynLength(Arr, 0);  //the array has to be manually freed, because there is no reference counting
+    FreeDynArray(Arr);  //the array has to be manually freed, because there is no reference counting
   end;
 end;
 
@@ -88,7 +90,7 @@ begin
     Arr.Content^[17] := 80;
     Expect(Arr.Content^[17]).ToBe(80);
   finally
-    SetDynLength(Arr, 0);
+    FreeDynArray(Arr);
   end;
 end;
 
@@ -109,7 +111,7 @@ begin
     for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
       Expect(Arr.Content^[i]).ToBe(i * 10);
   finally
-    SetDynLength(Arr, 0);
+    FreeDynArray(Arr);
   end;
 end;
 
@@ -130,7 +132,7 @@ begin
     for i := 0 to 10 - 1 do  //test up to the old length, as this content has to be valid only
       Expect(Arr.Content^[i]).ToBe(i * 10);
   finally
-    SetDynLength(Arr, 0);
+    FreeDynArray(Arr);
   end;
 end;
 
@@ -167,8 +169,8 @@ begin
     for i := 20 to 35 - 1 do  //test up to the old length, as this content has to be valid only
       Expect(Arr1.Content^[i]).ToBe((i - 20) * 10);
   finally
-    SetDynLength(Arr1, 0);
-    SetDynLength(Arr2, 0);
+    FreeDynArray(Arr1);
+    FreeDynArray(Arr2);
   end;
 end;
 
@@ -194,8 +196,8 @@ begin
     for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
       Expect(Arr1.Content^[i]).ToBe(i * 10);
   finally
-    SetDynLength(Arr1, 0);
-    SetDynLength(Arr2, 0);
+    FreeDynArray(Arr1);
+    FreeDynArray(Arr2);
   end;
 end;
 
@@ -221,8 +223,8 @@ begin
     for i := 0 to 15 - 1 do  //test up to the old length, as this content has to be valid only
       Expect(Arr1.Content^[i]).ToBe(i * 10);
   finally
-    SetDynLength(Arr1, 0);
-    SetDynLength(Arr2, 0);
+    FreeDynArray(Arr1);
+    FreeDynArray(Arr2);
   end;
 end;
 
@@ -240,8 +242,8 @@ begin
     Expect(AllocationResult).ToBe(True);
     Expect(Arr1.Len).ToBe(0);
   finally
-    SetDynLength(Arr1, 0);
-    SetDynLength(Arr2, 0);
+    FreeDynArray(Arr1);
+    FreeDynArray(Arr2);
   end;
 end;
 
@@ -286,7 +288,7 @@ begin
       Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg);
   end;
 
-  SetDynLength(Arr2, 0);
+  FreeDynArray(Arr2);
 end;
 
 
@@ -304,7 +306,29 @@ begin
       Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg);
   end;
 
-  SetDynLength(Arr1, 0);
+  FreeDynArray(Arr1);
+end;
+
+
+procedure TTestDynArrays.TestDoubleFree;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+
+  FreeDynArray(Arr);
+  Expect(Arr.Len).ToBe(0);
+  Expect(Arr.Content).ToBe(nil);
+
+  try                            //Free again. The structure should stay the same. No exception is expected.
+    FreeDynArray(Arr);
+    Expect(Arr.Len).ToBe(0);
+    Expect(Arr.Content).ToBe(nil);
+  except
+    on E: Exception do
+      Expect(E.Message).ToBe('No exception is expected!');
+  end;
 end;
 
 

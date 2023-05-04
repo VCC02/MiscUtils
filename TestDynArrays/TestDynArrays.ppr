@@ -4,7 +4,7 @@ program TestDynArrays;
 
 uses
   Interfaces, Forms, GuiTestRunner, TestDynArraysMainCase, DynArrays,
-  Expectations;
+  Expectations, TestDynOfDynOfByteCase;
 
 {$R *.res}
 
