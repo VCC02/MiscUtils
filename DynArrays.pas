@@ -56,8 +56,11 @@ interface
 
 const
   CMaxDynArrayLength = 65536;  //bytes
+  CMaxDynArrayOfDWordLength = 255;  //DWords  ///255 should be enough
 
 type
+
+  //array of byte
   TDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of Byte;
   PDynArrayOfByteContent = ^TDynArrayOfByteContent;
 
@@ -74,6 +77,7 @@ type
   PDynArrayOfByte = ^TDynArrayOfByte;
 
 
+  //array of array of byte
   TDynArrayOfTDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of PDynArrayOfByte;
   PDynArrayOfTDynArrayOfByteContent = ^TDynArrayOfTDynArrayOfByteContent;
 
@@ -87,6 +91,22 @@ type
 
   PDynArrayOfTDynArrayOfByte = ^TDynArrayOfTDynArrayOfByte;
 
+
+  //array of DWord
+  TDynArrayOfDWordContent = array[0..CMaxDynArrayOfDWordLength - 1] of DWord;
+  PDynArrayOfDWordContent = ^TDynArrayOfDWordContent;
+
+  TDynArrayOfDWordLength = DWord; // {$IFDEF FPC} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+
+  TDynArrayOfDWord = record
+    Len: TDynArrayOfDWordLength;
+    Content: PDynArrayOfDWordContent;
+    {$IFDEF FPC}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfDWord = ^TDynArrayOfDWord;
 
 procedure InitDynArrayToEmpty(var AArr: TDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 function DynLength(var AArr: TDynArrayOfByte): TDynArrayLength;
@@ -102,10 +122,19 @@ procedure FreeDynOfDynOfByteArray(var AArr: TDynArrayOfTDynArrayOfByte);
 function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; var ANewArr: TDynArrayOfByte): Boolean;
 
 
+procedure InitDynArrayOfDWordToEmpty(var AArr: TDynArrayOfDWord); //do not call this on an array, which is already allocated, because it results in memory leaks
+function DynOfDWordLength(var AArr: TDynArrayOfDWord): TDynArrayOfDWordLength;
+function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayOfDWordLength): Boolean; //returns True if successful, or False if it can't allocate memory
+procedure FreeDynArrayOfDWord(var AArr: TDynArrayOfDWord);
+function ConcatDynArraysOfDWord(var AArr1, AArr2: TDynArrayOfDWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+function AddDWordToDynArraysOfDWord(var AArr: TDynArrayOfDWord; ANewDWord: DWord): Boolean;
+
+
 {$IFDEF FPC}
   //This check is not available in mP, but is is useful as a debugging means on Desktop.
   procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
   procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
+  procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
 {$ENDIF}
 
 implementation
@@ -114,8 +143,29 @@ implementation
 {$IFDEF FPC}
   uses
     SysUtils, Math;
+
+  //These checks are not available in mP, but are useful as a debugging means on Desktop.
+  procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
+  begin
+    if AArr.Initialized = '' then
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+  end;
+
+  procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
+  begin
+    if AArr.Initialized = '' then
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+  end;
+
+  procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
+  begin
+    if AArr.Initialized = '' then
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+  end;
 {$ENDIF}
 
+
+//array of byte
 
 procedure InitDynArrayToEmpty(var AArr: TDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 begin
@@ -126,23 +176,6 @@ begin
     AArr.Initialized := 'init';  //some string, different than ''
   {$ENDIF}
 end;
-
-
-{$IFDEF FPC}
-  //This check is not available in mP, but is is useful as a debugging means on Desktop.
-  procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
-  begin
-    if AArr.Initialized = '' then
-      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
-  end;
-
-  //This check is not available in mP, but is is useful as a debugging means on Desktop.
-  procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
-  begin
-    if AArr.Initialized = '' then
-      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
-  end;
-{$ENDIF}
 
 
 function DynLength(var AArr: TDynArrayOfByte): TDynArrayLength;
@@ -184,18 +217,13 @@ begin
       Exit;
     end;
 
-    if ANewLength < AArr.Len then                     //OldPointer = src, AArr.Content = dest
-      MemMove(AArr.Content, OldPointer, ANewLength)   //the new array is smaller
-    else
-      MemMove(AArr.Content, OldPointer, AArr.Len);    //the new array is larger  - the rest of the content is not initialized
+    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len))   //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       GetMem(AArr.Content, ANewLength);
 
-      if ANewLength < AArr.Len then   //AArr.Len is still the old array length. Only the Content field points somewhere else.
-        Move(OldPointer^, AArr.Content^, ANewLength)   //the new array is smaller
-      else
-        Move(OldPointer^, AArr.Content^, AArr.Len);    //the new array is larger  - the rest of the content is not initialized
+      //AArr.Len is still the old array length. Only the Content field points somewhere else.
+      Move(OldPointer^, AArr.Content^, Min(ANewLength, AArr.Len))   // the rest of the content is not initialized
     except
       Result := False;
     end;
@@ -255,7 +283,7 @@ begin
 end;
 
 
-// array of array
+// array of array of byte
 
 procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 begin
@@ -393,6 +421,134 @@ begin
   {$ENDIF}
 
   SetDynOfDynOfByteLength(AArr, 0);
+end;
+
+
+//array of DWord
+
+procedure InitDynArrayOfDWordToEmpty(var AArr: TDynArrayOfDWord); //do not call this on an array, which is already allocated, because it results in memory leaks
+begin
+  AArr.Len := 0;       //this is required when allocating a new array
+  AArr.Content := nil; //probably, not needed, since Len is set to 0
+
+  {$IFDEF FPC}
+    AArr.Initialized := 'init';  //some string, different than ''
+  {$ENDIF}
+end;
+
+
+function DynOfDWordLength(var AArr: TDynArrayOfDWord): TDynArrayOfDWordLength;
+begin
+  {$IFDEF FPC}
+    CheckInitializedDynArrayOfDWord(AArr);
+  {$ENDIF}
+
+  Result := AArr.Len;
+end;
+
+
+function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayOfDWordLength): Boolean; //returns True if successful, or False if it can't allocate memory
+var
+  OldPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  {$IFDEF FPC}
+    CheckInitializedDynArrayOfDWord(AArr);
+  {$ENDIF}
+
+  Result := True;
+
+  if ANewLength = 0 then
+  begin
+    if AArr.Len > 0 then
+      Freemem(AArr.Content, AArr.Len shl 2);
+
+    AArr.Len := 0;
+    Exit;
+  end;
+
+  OldPointer := PIntPtr(AArr.Content);
+
+  {$IFnDEF FPC}
+    GetMem(AArr.Content, ANewLength shl 2);
+    if MM_error or (AArr.Content = nil) then
+    begin
+      Result := False;
+      Exit;
+    end;
+
+    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl 2);  //OldPointer = src, AArr.Content = dest
+  {$ELSE}
+    try
+      GetMem(AArr.Content, ANewLength shl 2);
+
+      //AArr.Len is still the old array length. Only the Content field points somewhere else.
+      Move(OldPointer^, AArr.Content^, Min(ANewLength, AArr.Len) shl 2);   // the rest of the content is not initialized
+    except
+      Result := False;
+    end;
+  {$ENDIF}
+
+  if AArr.Len > 0 then
+    Freemem(OldPointer, AArr.Len shl 2);
+
+  AArr.Len := ANewLength;
+end;
+
+
+procedure FreeDynArrayOfDWord(var AArr: TDynArrayOfDWord);
+begin
+  {$IFDEF FPC}
+    CheckInitializedDynArrayOfDWord(AArr);
+  {$ENDIF}
+
+  SetDynOfDWordLength(AArr, 0);
+end;
+
+
+function ConcatDynArraysOfDWord(var AArr1, AArr2: TDynArrayOfDWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+var
+  NewLen: DWord;
+  NewPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  OldArr1Len: DWord;
+begin
+  {$IFDEF FPC}
+    CheckInitializedDynArrayOfDWord(AArr1);
+    CheckInitializedDynArrayOfDWord(AArr2);
+  {$ENDIF}
+
+  if AArr2.Len = 0 then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  NewLen := DWord(AArr1.Len) + DWord(AArr2.Len);
+  if NewLen > 65535 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  OldArr1Len := AArr1.Len;
+  Result := SetDynOfDWordLength(AArr1, NewLen);
+
+  {$IFnDEF FPC}
+    NewPointer := DWord(AArr1.Content) + OldArr1Len shl 2);
+    MemMove(NewPointer, AArr2.Content, AArr2.Len shl 2);
+  {$ELSE}
+    NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len shl 2));  //NewPointer := @AArr1.Content^[OldArr1Len shl 2];
+    Move(AArr2.Content^, NewPointer^, AArr2.Len shl 2);
+  {$ENDIF}
+end;
+
+
+function AddDWordToDynArraysOfDWord(var AArr: TDynArrayOfDWord; ANewDWord: DWord): Boolean;
+begin
+  Result := SetDynOfDWordLength(AArr, AArr.Len + 1);
+  if not Result then
+    Exit;
+
+  AArr.Content^[AArr.Len - 1] := ANewDWord;
 end;
 
 end.

@@ -194,6 +194,9 @@ begin
   FActualValue := '';
   FActualValueInt := -22; //some unusual, undefault value
   FActualValueStringList := nil;
+  FActualValuePointer := nil;
+  FActualValueBoolean := False;
+  SetLength(FActualValueConstByteArr, 0);
 end;
 
 
@@ -431,6 +434,10 @@ end;
 function Expect(ActualValue: PConstByteArr; ALen: Integer): TExpect; overload;
 begin
   Result := TExpect.Create;
+
+  if ActualValue = nil then
+    raise Exception.Create('Actual pointer to array is nil.');
+
   SetLength(Result.FActualValueConstByteArr, ALen);
   Move(ActualValue^[0], Result.FActualValueConstByteArr[0], Length(Result.FActualValueConstByteArr));
 end;
