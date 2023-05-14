@@ -113,6 +113,7 @@ function DynLength(var AArr: TDynArrayOfByte): TDynArrayLength;
 function SetDynLength(var AArr: TDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 procedure FreeDynArray(var AArr: TDynArrayOfByte);
 function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+function AddByteToDynArray(AByte: Byte; var AArr: TDynArrayOfByte): Boolean;
 
 
 procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -136,6 +137,16 @@ function AddDWordToDynArraysOfDWord(var AArr: TDynArrayOfDWord; ANewDWord: DWord
   procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
 {$ENDIF}
+
+function StringToDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
+procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF FPC} overload; {$ENDIF}
+function AddStringToDynOfDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
+
+{$IFDEF FPC}
+  function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF FPC} overload; {$ENDIF}
+  function DynOfDynArrayOfByteToString(var AArr: TDynArrayOfTDynArrayOfByte; ASeparator: string = #13#10): string;
+{$ENDIF}
+
 
 implementation
 
@@ -161,6 +172,71 @@ implementation
   begin
     if AArr.Initialized = '' then
       raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+  end;
+{$ENDIF}
+
+
+function StringToDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
+var
+  TempLen: TDynArrayLength;
+begin
+  TempLen := TDynArrayLength(Length(AString));
+  Result := SetDynLength(ADest, TempLen);
+
+  if not Result then
+    Exit;
+
+  {$IFDEF FPC}
+    Move(AString[1], ADest.Content^[0], TempLen);
+  {$ELSE}
+    MemMove(AString[0]
+  {$ENDIF}
+end;
+
+
+procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string);  {$IFDEF FPC} overload; {$ENDIF}
+begin
+  {$IFDEF FPC}
+    CheckInitializedDynArray(AArr);
+    SetLength(ADestStr, AArr.Len);
+    Move(AArr.Content^[0], ADestStr[1], AArr.Len);
+  {$ELSE}
+    MemMove(ADestStr, AArr.Content, AArr.Len);
+  {$ENDIF}
+end;
+
+
+function AddStringToDynOfDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
+var
+  TempArr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(TempArr);
+  Result := StringToDynArrayOfByte(AStr, TempArr);
+  Result := Result and AddDynArrayOfByteToDynOfDynOfByte(ADest, TempArr);
+  FreeDynArray(TempArr);
+end;
+
+
+{$IFDEF FPC}
+  function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string;  {$IFDEF FPC} overload; {$ENDIF}
+  begin
+    Result := 'no string content';
+    DynArrayOfByteToString(AArr, Result);
+  end;
+
+
+  function DynOfDynArrayOfByteToString(var AArr: TDynArrayOfTDynArrayOfByte; ASeparator: string = #13#10): string;
+  var
+    i: Integer;
+    TempStr: string;
+  begin
+    Result := '';
+    for i := 0 to LongInt(AArr.Len) - 1 do
+    begin
+      TempStr := 'some init value';
+      DynArrayOfByteToString(AArr.Content^[i]^, TempStr);
+      Result := Result + TempStr + ASeparator;
+    end;
   end;
 {$ENDIF}
 
@@ -280,6 +356,16 @@ begin
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len));  //NewPointer := @AArr1.Content^[OldArr1Len];
     Move(AArr2.Content^, NewPointer^, AArr2.Len);
   {$ENDIF}
+end;
+
+
+function AddByteToDynArray(AByte: Byte; var AArr: TDynArrayOfByte): Boolean;
+begin
+  Result := SetDynLength(AArr, AArr.Len + 1);
+  if not Result then
+    Exit;
+
+  AArr.Content^[AArr.Len - 1] := AByte;
 end;
 
 
