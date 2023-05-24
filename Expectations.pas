@@ -56,6 +56,7 @@ type
   private
     FActualValue: string;
     FActualValueInt: Integer;
+    FActualValueDWord: Integer;
     FActualValueStringList: TStringList;
     FActualValuePointer: Pointer;
     FActualValueBoolean: Boolean;
@@ -65,8 +66,10 @@ type
 
     procedure ToBe(ExpectedValue: string; ExtraMessage: string = ''); overload;
     procedure ToBe(ExpectedValue: Integer; ExtraMessage: string = ''); overload;
+    procedure ToBe(ExpectedValue: DWord; ExtraMessage: string = ''); overload;
     procedure ToBe(ExpectedValue: Boolean; ExtraMessage: string = ''); overload;
     procedure ToBe(ExpectedValue: PConstByteArr; ExtraMessage: string = ''); overload;
+    procedure ToBePointer(ExpectedValue: Pointer; ExtraMessage: string = ''); overload;
     procedure ToBeGreaterThan(ExpectedValue: Integer; ExtraMessage: string = '');
     procedure ToBeGreaterThanOrEqualTo(ExpectedValue: Integer; ExtraMessage: string = '');
     procedure ToBeLessThan(ExpectedValue: Integer; ExtraMessage: string = '');
@@ -75,6 +78,7 @@ type
     procedure ToMatchContentOfStringArray(ExpectedValue: PStrArr; ExpectedLength: Integer; ExtraMessage: string = '');
     procedure NotToBe(ExpectedValue: string; ExtraMessage: string = ''); overload;
     procedure NotToBe(ExpectedValue: Integer; ExtraMessage: string = ''); overload;
+    procedure NotToBe(ExpectedValue: DWord; ExtraMessage: string = ''); overload;
     procedure ToContain(ExpectedValue: string; ExtraMessage: string = ''); overload;
     function WithItem(ExpectedItemName: string; ExtraMessage: string = ''): TExpectedValue; overload;
   end;
@@ -86,6 +90,7 @@ function GetTextFileContent(APath: string): string;
 
 function Expect(ActualValue: string): TExpect; overload;
 function Expect(ActualValue: Integer): TExpect; overload;
+function Expect(ActualValue: DWord): TExpect; overload;
 function Expect(ActualValue: Boolean): TExpect; overload;
 function Expect(ActualValue: TStringList): TExpect; overload;
 function Expect(ActualValue: Pointer): TExpect; overload;
@@ -128,6 +133,13 @@ begin
 end;
 
 
+procedure ExpectDWord(ActualValue, ExpectedValue: DWord; ExtraMsg: string = '');
+begin
+  if ExpectedValue <> ActualValue then
+    raise Exception.Create('Expected ' + IntToStr(ExpectedValue) + ', but is was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
+end;
+
+
 procedure ExpectStr(ActualValue, ExpectedValue: string; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
@@ -154,6 +166,13 @@ begin
 end;
 
 
+procedure ExpectPointer(ActualValue, ExpectedValue: Pointer; ExtraMsg: string = '');
+begin
+  if ExpectedValue <> ActualValue then
+    raise Exception.Create('Expected $' + IntToHex(QWord(ExpectedValue), 8) + ', but is was $' + IntToHex(QWord(ActualValue), 8) + '.  ' + ExtraMsg);
+end;
+
+
 procedure ExpectConstByteArr(var ActualValue: TBytes; ExpectedValue: PConstByteArr; ExtraMsg: string = '');
 var
   i: Integer;
@@ -176,6 +195,13 @@ end;
 
 
 procedure ExpectIntDifferent(ActualValue, ExpectedValue: Integer; ExtraMsg: string = '');
+begin
+  if ExpectedValue = ActualValue then
+    raise Exception.Create('Expected ' + IntToStr(ExpectedValue) + ' to be different than ' + IntToStr(ActualValue) + ', but they are the same.  ' + ExtraMsg);
+end;
+
+
+procedure ExpectDWordDifferent(ActualValue, ExpectedValue: DWord; ExtraMsg: string = '');
 begin
   if ExpectedValue = ActualValue then
     raise Exception.Create('Expected ' + IntToStr(ExpectedValue) + ' to be different than ' + IntToStr(ActualValue) + ', but they are the same.  ' + ExtraMsg);
@@ -220,6 +246,16 @@ begin
 end;
 
 
+procedure TExpect.ToBe(ExpectedValue: DWord; ExtraMessage: string = ''); overload;
+begin
+  try
+    ExpectDWord(FActualValueDWord, ExpectedValue, ExtraMessage);
+  finally
+    Free;
+  end;
+end;
+
+
 procedure TExpect.ToBe(ExpectedValue: Boolean; ExtraMessage: string = ''); overload;
 begin
   try
@@ -239,6 +275,17 @@ begin
     Free;
   end;
 end;
+
+
+procedure TExpect.ToBePointer(ExpectedValue: Pointer; ExtraMessage: string = ''); overload;
+begin
+  try
+    ExpectPointer(FActualValuePointer, ExpectedValue, ExtraMessage);
+  finally
+    Free;
+  end;
+end;
+
 
 
 procedure TExpect.ToBeGreaterThan(ExpectedValue: Integer; ExtraMessage: string = '');
@@ -328,6 +375,16 @@ begin
 end;
 
 
+procedure TExpect.NotToBe(ExpectedValue: DWord; ExtraMessage: string = ''); overload;
+begin
+  try
+    ExpectDWordDifferent(FActualValueInt, ExpectedValue, ExtraMessage);
+  finally
+    Free;
+  end;
+end;
+
+
 procedure TExpect.ToContain(ExpectedValue: string; ExtraMessage: string = ''); overload;
 begin
   try
@@ -393,6 +450,7 @@ begin
   Result := TExpect.Create;
   Result.FActualValue := ActualValue;
   Result.FActualValueInt := StrToIntDef(ActualValue, MaxLongint);
+  Result.FActualValueDWord := Result.FActualValueInt;
   Result.FActualValueBoolean := Result.FActualValueInt = $FF;
 end;
 
@@ -401,6 +459,17 @@ function Expect(ActualValue: Integer): TExpect; overload;
 begin
   Result := TExpect.Create;
   Result.FActualValueInt := ActualValue;
+  Result.FActualValueDWord := ActualValue;
+  Result.FActualValue := IntToStr(ActualValue);
+  Result.FActualValueBoolean := ActualValue = $FF;
+end;
+
+
+function Expect(ActualValue: DWord): TExpect;
+begin
+  Result := TExpect.Create;
+  Result.FActualValueInt := ActualValue;
+  Result.FActualValueDWord := ActualValue;
   Result.FActualValue := IntToStr(ActualValue);
   Result.FActualValueBoolean := ActualValue = $FF;
 end;
@@ -411,6 +480,7 @@ begin
   Result := TExpect.Create;
   Result.FActualValueBoolean := ActualValue;
   Result.FActualValueInt := Integer(ActualValue);
+  Result.FActualValueDWord := DWord(ActualValue);;
   Result.FActualValue := IntToStr(Ord(ActualValue));
 end;
 
