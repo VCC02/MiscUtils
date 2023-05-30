@@ -121,6 +121,7 @@ function DynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte): TDynArrayLe
 function SetDynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 procedure FreeDynOfDynOfByteArray(var AArr: TDynArrayOfTDynArrayOfByte);
 function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; var ANewArr: TDynArrayOfByte): Boolean;
+function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
 
 
 procedure InitDynArrayOfDWordToEmpty(var AArr: TDynArrayOfDWord); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -189,7 +190,7 @@ begin
   {$IFDEF FPC}
     Move(AString[1], ADest.Content^[0], TempLen);
   {$ELSE}
-    MemMove(AString[0]
+    MemMove(ADest.Content, AString, TempLen);
   {$ENDIF}
 end;
 
@@ -497,6 +498,87 @@ begin
     Exit;
 
   Result := ConcatDynArrays(AArr.Content^[AArr.Len - 1]^, ANewArr);
+end;
+
+
+function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
+var
+  i: Integer;
+  OldPointer: PDynArrayOfTDynArrayOfByteContent;
+  NewLen: DWord;
+begin
+  Result := False;
+
+  if (ADelIndex < 0) or (ADelIndex > AArr.Len - 1) then
+  begin
+    {$IFDEF FPC}
+      raise Exception.Create('Index out of range when deleting item from DynOfDynArrayOfByte.');
+    {$ELSE}
+      Exit;
+    {$ENDIF}
+  end;
+
+  for i := ADelIndex to AArr.Len - 2 do
+  begin
+    FreeDynArray(AArr.Content^[i]^);
+
+    {$IFnDEF FPC}
+      Freemem(AArr.Content^[i], SizeOf(TDynArrayOfByte));
+    {$ELSE}
+      Dispose(AArr.Content^[i]);
+    {$ENDIF}
+
+    {$IFnDEF FPC}
+      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
+      if MM_error or (AArr.Content = nil) then
+      begin
+        Result := False;
+        Exit;
+      end;
+    {$ELSE}
+      New(AArr.Content^[i]);
+    {$ENDIF}
+
+    InitDynArrayToEmpty(AArr.Content^[i]^);
+    Result := ConcatDynArrays(AArr.Content^[i]^, AArr.Content^[i + 1]^);
+    if not Result then
+      Exit;
+  end;
+
+  FreeDynArray(AArr.Content^[AArr.Len - 1]^);
+
+  {$IFnDEF FPC}
+    Freemem(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfByte));
+  {$ELSE}
+    Dispose(AArr.Content^[AArr.Len - 1]);
+  {$ENDIF}
+
+  NewLen := AArr.Len - 1;
+  OldPointer := AArr.Content;
+
+  if NewLen > 0 then
+  begin
+    {$IFnDEF FPC}
+      GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfByte));    //SizeOf pointer
+      if MM_error or (AArr.Content = nil) then
+      begin
+        Result := False;
+        Exit;
+      end;
+    {$ELSE}
+      GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfByte));   //SizeOf pointer
+    {$ENDIF}
+  end;
+
+  {$IFnDEF FPC}
+    MemMove(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfByte));
+  {$ELSE}
+    Move(OldPointer^, AArr.Content^, NewLen * SizeOf(PDynArrayOfByte));
+  {$ENDIF}
+  Freemem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+
+  AArr.Len := AArr.Len - 1;
+  Result := True;
 end;
 
 

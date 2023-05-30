@@ -44,6 +44,16 @@ type
     procedure Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray;
     procedure Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray;
     procedure TestDoubleFree;
+
+    procedure TestDeleteItem_FromEmptyArray;
+    procedure TestDeleteItem_FromOneItemArray;
+
+    procedure TestDeleteFirstItem_FromTwoItemArray;
+    procedure TestDeleteSecondItem_FromTwoItemArray;
+
+    procedure TestDeleteFirstItem_FromThreeItemArray;
+    procedure TestDeleteSecondItem_FromThreeItemArray;
+    procedure TestDeleteThirdItem_FromThreeItemArray;
   end;
 
 
@@ -251,6 +261,141 @@ begin
   end;
 end;
 
+
+procedure TTestDynOfDynOfByteCase.TestDeleteItem_FromEmptyArray;
+var
+  Arr: TDynArrayOfTDynArrayOfByte;
+  ErrMsg: string;
+begin
+  InitDynOfDynOfByteToEmpty(Arr);
+  try
+    ErrMsg := 'no err';
+    try
+      Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(False);
+    except
+      on E: Exception do
+        ErrMsg := E.Message;
+    end;
+
+    Expect(ErrMsg).ToBe('Index out of range when deleting item from DynOfDynArrayOfByte.');
+
+    Expect(Arr.Len).ToBe(0, 'no action');
+  finally
+    FreeDynOfDynOfByteArray(Arr);
+  end;
+end;
+
+
+procedure TTestDynOfDynOfByteCase.TestDeleteItem_FromOneItemArray;
+var
+  Arr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynOfDynOfByteToEmpty(Arr);
+  try
+    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+
+    Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
+    Expect(Arr.Len).ToBe(0, 'successful deletion');
+  finally
+    FreeDynOfDynOfByteArray(Arr);
+  end;
+end;
+
+
+procedure TTestDynOfDynOfByteCase.TestDeleteFirstItem_FromTwoItemArray;
+var
+  Arr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynOfDynOfByteToEmpty(Arr);
+  try
+    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+
+    Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
+    Expect(Arr.Len).ToBe(1, 'successful deletion');
+    Expect(@Arr.Content^[0]^.Content^, 6).ToBe(@['Second']);
+  finally
+    FreeDynOfDynOfByteArray(Arr);
+  end;
+end;
+
+
+procedure TTestDynOfDynOfByteCase.TestDeleteSecondItem_FromTwoItemArray;
+var
+  Arr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynOfDynOfByteToEmpty(Arr);
+  try
+    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+
+    Expect(DeleteItemFromDynOfDynOfByte(Arr, 1)).ToBe(True);
+    Expect(Arr.Len).ToBe(1, 'successful deletion');
+    Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
+  finally
+    FreeDynOfDynOfByteArray(Arr);
+  end;
+end;
+
+
+procedure TTestDynOfDynOfByteCase.TestDeleteFirstItem_FromThreeItemArray;
+var
+  Arr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynOfDynOfByteToEmpty(Arr);
+  try
+    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
+
+    Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
+    Expect(Arr.Len).ToBe(2, 'successful deletion');
+    Expect(@Arr.Content^[0]^.Content^, 6).ToBe(@['Second']);
+    Expect(@Arr.Content^[1]^.Content^, 5).ToBe(@['Third']);
+  finally
+    FreeDynOfDynOfByteArray(Arr);
+  end;
+end;
+
+
+procedure TTestDynOfDynOfByteCase.TestDeleteSecondItem_FromThreeItemArray;
+var
+  Arr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynOfDynOfByteToEmpty(Arr);
+  try
+    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
+
+    Expect(DeleteItemFromDynOfDynOfByte(Arr, 1)).ToBe(True);
+    Expect(Arr.Len).ToBe(2, 'successful deletion');
+    Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
+    Expect(@Arr.Content^[1]^.Content^, 5).ToBe(@['Third']);
+  finally
+    FreeDynOfDynOfByteArray(Arr);
+  end;
+end;
+
+
+procedure TTestDynOfDynOfByteCase.TestDeleteThirdItem_FromThreeItemArray;
+var
+  Arr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynOfDynOfByteToEmpty(Arr);
+  try
+    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
+
+    Expect(DeleteItemFromDynOfDynOfByte(Arr, 2)).ToBe(True);
+    Expect(Arr.Len).ToBe(2, 'successful deletion');
+    Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
+    Expect(@Arr.Content^[1]^.Content^, 6).ToBe(@['Second']);
+  finally
+    FreeDynOfDynOfByteArray(Arr);
+  end;
+end;
 
 initialization
 
