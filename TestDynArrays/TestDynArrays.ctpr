@@ -53,6 +53,14 @@
         <Filename Value="TestDynOfDynOfByteCase.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit>
+      <Unit>
+        <Filename Value="D:\DynTFT\DynTFTTypes.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="D:\DynTFT\MemManager.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -63,7 +71,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..\.."/>
+      <OtherUnitFiles Value="..\..;D:\DynTFT\"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)\$(LCLWidgetType)"/>
     </SearchPaths>
     <Linking>
@@ -77,6 +85,10 @@
         </Win32>
       </Options>
     </Linking>
+    <Other>
+      <CustomOptions Value="-dMMFreeBlocks
+-d_UsingDynTFT"/>
+    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions>

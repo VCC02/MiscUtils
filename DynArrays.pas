@@ -24,13 +24,22 @@
 
 unit DynArrays;
 
+{$IFNDEF IsMCU}
+  {$DEFINE IsDesktop}
+{$ENDIF}
+
+
 {$IFDEF FPC}
   {$mode ObjFPC}{$H+}
 {$ELSE}
 
 {$ENDIF}
 
-//Dependencies:  MemManager  (see DynTFT repo for mP)
+//Dependencies:  MemManager  (see DynTFT repo for mP) if UsingDynTFT or IsMCU, directives are defined.
+//MemManager requirements:  open __Lib_MemManager.mpas (or MemManager.pas) and uncomment the header of MM_error function from the interface.
+//Whe using __Lib_MemManager.mpas (not MemManager.pas), the NR_FREE_BLOCKS may have to be moved to interface or set to a different value
+//Define MMFreeBlocks, for Memory Manager (requires MMFreeBlocks.inc). All the main tests should pass with a minimum value of 6 blocks (the library comes with a default value of 20).
+//reate MaxMM.inc, to define the heap size.
 
 {  How to use:
   - Before calling any of the DynLength, SetDynLength or ConcatDynArrays function, users have to call InitDynArrayToEmpty.
@@ -52,24 +61,56 @@ unit DynArrays;
   - test on mP that for loops on empty arrays, behave as expected, when TDynArrayLength is DWord instead of LongInt. If not, this has to be changed.
 }
 
-interface
+{$IFnDEF IsMCU}
+  interface
+{$ENDIF}
+
+
+//Desktop, with mP_MM (DynTFT types)  /  with FP_MM
+//MCU    , with mP_MM (DynTFT types)  /  with mP_MM (Built-in types)
+
+{$IFDEF IsMCU}
+  uses
+    {$IFDEF UsingDynTFT}
+      DynTFTTypes
+      ;
+    {$ELSE}
+       __Lib_MemManager
+       ;
+    {$ENDIF}
+{$ELSE}
+  //Desktop:
+  {$IFDEF UsingDynTFT}    //UsingDynTFT should be defined in all DynTFT projects (MCU or Desktop), which will include this unit (DynArrays).
+    uses
+      MemManager          //there is only the DynTFT type of MM for MCU
+      {$IFDEF UsingDynTFT}
+      , DynTFTTypes
+      ;
+      {$ENDIF}
+  {$ELSE}
+    {$IFDEF UsingMPMM} //mP's memoy manager
+      __Lib_MemManager  //users may still want to use the a different flavor of the same memoy manager, without the DynTFT dependencies
+    {$ELSE}
+      //this is FP's memory manager
+    {$ENDIF}
+  {$ENDIF}
+{$ENDIF}
 
 const
   CMaxDynArrayLength = 65536;  //bytes
   CMaxDynArrayOfDWordLength = 255;  //DWords  ///255 should be enough
 
 type
-
   //array of byte
   TDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of Byte;
   PDynArrayOfByteContent = ^TDynArrayOfByteContent;
 
-  TDynArrayLength = DWord; // {$IFDEF FPC} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+  TDynArrayLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
 
   TDynArrayOfByte = record
     Len: TDynArrayLength;
     Content: PDynArrayOfByteContent;
-    {$IFDEF FPC}
+    {$IFDEF IsDesktop}
       Initialized: string; //strings are automatically initialized to empty in FP
     {$ENDIF}
   end;
@@ -84,7 +125,7 @@ type
   TDynArrayOfTDynArrayOfByte = record
     Len: TDynArrayLength;
     Content: PDynArrayOfTDynArrayOfByteContent;
-    {$IFDEF FPC}
+    {$IFDEF IsDesktop}
       Initialized: string; //strings are automatically initialized to empty in FP
     {$ENDIF}
   end;
@@ -96,17 +137,76 @@ type
   TDynArrayOfDWordContent = array[0..CMaxDynArrayOfDWordLength - 1] of DWord;
   PDynArrayOfDWordContent = ^TDynArrayOfDWordContent;
 
-  TDynArrayOfDWordLength = DWord; // {$IFDEF FPC} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+  TDynArrayOfDWordLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
 
   TDynArrayOfDWord = record
     Len: TDynArrayOfDWordLength;
     Content: PDynArrayOfDWordContent;
-    {$IFDEF FPC}
+    {$IFDEF IsDesktop}
       Initialized: string; //strings are automatically initialized to empty in FP
     {$ENDIF}
   end;
 
   PDynArrayOfDWord = ^TDynArrayOfDWord;
+
+
+//directives section, copied from DynTFTTypes.pas:
+{$IFnDEF IsMCU}
+  {$DEFINE IsDesktop}
+
+  {$IFDEF CPU64} // works on FP
+    {$IFNDEF AppArch64}
+      {$DEFINE AppArch64}
+    {$ENDIF}
+  {$ENDIF}
+
+  {$IFNDEF AppArch64}
+    {$IFNDEF AppArch32}
+      {$DEFINE AppArch32}
+    {$ENDIF}
+  {$ENDIF}
+
+{$ELSE}
+  {$IFnDEF UsingDynTFT}
+    {$IFDEF AppArch32}     //PIC32
+      {$UNDEF AppArch32}
+    {$ENDIF}
+
+    {$IFDEF AppArch16}     //dsPIC / PIC24
+      {$UNDEF AppArch16}
+    {$ENDIF}
+
+    {$IFDEF P30}
+      {$DEFINE AppArch16}
+    {$ENDIF}
+
+    {$IFDEF P33}
+      {$DEFINE AppArch16}
+    {$ENDIF}
+
+    {$IFDEF P24}
+      {$DEFINE AppArch16}
+    {$ENDIF}
+
+    {$IFNDEF AppArch16}    //16-bit not defined,
+      {$DEFINE AppArch32}  //then it must be 32-bit !
+    {$ENDIF}
+
+    type
+      //PByte = ^Byte;
+      {$IFDEF AppArch16}
+        PByte = ^far const code Byte;
+      {$ELSE}
+        PByte = ^const code Byte;
+      {$ENDIF}
+  {$ENDIF}
+{$ENDIF}
+// end of copied section
+
+{$IFDEF IsMCU}
+  PIntPtr = PByte;
+{$ENDIF}
+
 
 procedure InitDynArrayToEmpty(var AArr: TDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 function DynLength(var AArr: TDynArrayOfByte): TDynArrayLength;
@@ -132,19 +232,19 @@ function ConcatDynArraysOfDWord(var AArr1, AArr2: TDynArrayOfDWord): Boolean; //
 function AddDWordToDynArraysOfDWord(var AArr: TDynArrayOfDWord; ANewDWord: DWord): Boolean;
 
 
-{$IFDEF FPC}
+{$IFDEF IsDesktop}
   //This check is not available in mP, but is is useful as a debugging means on Desktop.
   procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
   procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
 {$ENDIF}
 
-function StringToDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
-procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF FPC} overload; {$ENDIF}
-function AddStringToDynOfDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
+function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
+procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
+function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
 
-{$IFDEF FPC}
-  function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF FPC} overload; {$ENDIF}
+{$IFDEF IsDesktop}
+  function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynOfDynArrayOfByteToString(var AArr: TDynArrayOfTDynArrayOfByte; ASeparator: string = #13#10): string;
 {$ENDIF}
 
@@ -152,7 +252,7 @@ function AddStringToDynOfDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AStr: string;
 implementation
 
 
-{$IFDEF FPC}
+{$IFDEF IsDesktop}
   uses
     SysUtils, Math;
 
@@ -177,7 +277,7 @@ implementation
 {$ENDIF}
 
 
-function StringToDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
+function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 var
   TempLen: TDynArrayLength;
 begin
@@ -187,27 +287,27 @@ begin
   if not Result then
     Exit;
 
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     Move(AString[1], ADest.Content^[0], TempLen);
   {$ELSE}
-    MemMove(ADest.Content, AString, TempLen);
+    MemMove(PByte(ADest.Content), PByte(@AString[0]), TempLen);
   {$ENDIF}
 end;
 
 
-procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string);  {$IFDEF FPC} overload; {$ENDIF}
+procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string);  {$IFDEF IsDesktop} overload; {$ENDIF}
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynArray(AArr);
     SetLength(ADestStr, AArr.Len);
     Move(AArr.Content^[0], ADestStr[1], AArr.Len);
   {$ELSE}
-    MemMove(ADestStr, AArr.Content, AArr.Len);
+    MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len);
   {$ENDIF}
 end;
 
 
-function AddStringToDynOfDynArrayOfByte({$IFnDEF FPC} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
+function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
 var
   TempArr: TDynArrayOfByte;
 begin
@@ -218,8 +318,8 @@ begin
 end;
 
 
-{$IFDEF FPC}
-  function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string;  {$IFDEF FPC} overload; {$ENDIF}
+{$IFDEF IsDesktop}
+  function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string;  {$IFDEF IsDesktop} overload; {$ENDIF}
   begin
     Result := 'no string content';
     DynArrayOfByteToString(AArr, Result);
@@ -249,7 +349,7 @@ begin
   AArr.Len := 0;       //this is required when allocating a new array
   AArr.Content := nil; //probably, not needed, since Len is set to 0
 
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     AArr.Initialized := 'init';  //some string, different than ''
   {$ENDIF}
 end;
@@ -257,7 +357,7 @@ end;
 
 function DynLength(var AArr: TDynArrayOfByte): TDynArrayLength;
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynArray(AArr);
   {$ENDIF}
 
@@ -267,9 +367,9 @@ end;
 
 function SetDynLength(var AArr: TDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynArray(AArr);
   {$ENDIF}
 
@@ -278,7 +378,17 @@ begin
   if ANewLength = 0 then
   begin
     if AArr.Len > 0 then
-      Freemem(AArr.Content, AArr.Len);
+    begin
+      {$IFDEF UsingDynTFT}
+        {$IFDEF IsMCU}
+          FreeMem(AArr.Content, AArr.Len);
+        {$ELSE}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len);
+        {$ENDIF}
+      {$ELSE}
+        FreeMem(AArr.Content, AArr.Len);
+      {$ENDIF}
+    end;
 
     AArr.Len := 0;
     Exit;
@@ -286,7 +396,7 @@ begin
 
   OldPointer := PIntPtr(AArr.Content);
 
-  {$IFnDEF FPC}
+  {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength);
     if MM_error or (AArr.Content = nil) then
     begin
@@ -294,10 +404,19 @@ begin
       Exit;
     end;
 
-    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len))   //OldPointer = src, AArr.Content = dest
+    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len));   //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
-      GetMem(AArr.Content, ANewLength);
+      {$IFDEF UsingDynTFT}
+        GetMem(TPtrRec(AArr.Content), ANewLength);
+        if MM_error or (AArr.Content = nil) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      {$ELSE}
+        GetMem(AArr.Content, ANewLength);
+      {$ENDIF}
 
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
       Move(OldPointer^, AArr.Content^, Min(ANewLength, AArr.Len))   // the rest of the content is not initialized
@@ -307,7 +426,17 @@ begin
   {$ENDIF}
 
   if AArr.Len > 0 then
-    Freemem(OldPointer, AArr.Len);
+  begin
+    {$IFDEF UsingDynTFT}
+      {$IFDEF IsMCU}
+        FreeMem(TPtrRec(OldPointer), AArr.Len);
+      {$ELSE}
+        FreeMem(TPtrRec(OldPointer), AArr.Len);
+      {$ENDIF}
+    {$ELSE}
+      FreeMem(OldPointer, AArr.Len);
+    {$ENDIF}
+  end;
 
   AArr.Len := ANewLength;
 end;
@@ -315,7 +444,7 @@ end;
 
 procedure FreeDynArray(var AArr: TDynArrayOfByte);
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynArray(AArr);
   {$ENDIF}
 
@@ -326,10 +455,11 @@ end;
 function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 var
   NewLen: DWord;
-  NewPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  NewPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
   OldArr1Len: DWord;
 begin
-  {$IFDEF FPC}
+  Result := False;
+  {$IFDEF IsDesktop}
     CheckInitializedDynArray(AArr1);
     CheckInitializedDynArray(AArr2);
   {$ENDIF}
@@ -349,14 +479,18 @@ begin
 
   OldArr1Len := AArr1.Len;
   Result := SetDynLength(AArr1, NewLen);
+  if not Result then
+    Exit;
 
-  {$IFnDEF FPC}
-    NewPointer := DWord(AArr1.Content) + OldArr1Len);
+  {$IFnDEF IsDesktop}
+    NewPointer := DWord(AArr1.Content) + OldArr1Len;
     MemMove(NewPointer, AArr2.Content, AArr2.Len);
   {$ELSE}
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len));  //NewPointer := @AArr1.Content^[OldArr1Len];
     Move(AArr2.Content^, NewPointer^, AArr2.Len);
   {$ENDIF}
+
+  Result := True;
 end;
 
 
@@ -377,7 +511,7 @@ begin
   AArr.Len := 0;       //this is required when allocating a new array
   AArr.Content := nil; //probably, not needed, since Len is set to 0
 
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     AArr.Initialized := 'init';  //some string, different than ''
   {$ENDIF}
 end;
@@ -385,7 +519,7 @@ end;
 
 function DynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte): TDynArrayLength;
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynOfDynArray(AArr);
   {$ENDIF}
 
@@ -398,7 +532,7 @@ var
   OldPointer: PDynArrayOfTDynArrayOfByteContent;
   i, MaxCopyIdx: LongInt;
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynOfDynArray(AArr);
   {$ENDIF}
 
@@ -412,27 +546,35 @@ begin
       begin
         FreeDynArray(AArr.Content^[i]^);
 
-        {$IFnDEF FPC}
+        {$IFnDEF IsDesktop}
           Freemem(AArr.Content^[i], SizeOf(TDynArrayOfByte));
         {$ELSE}
           Dispose(AArr.Content^[i]);
         {$ENDIF}
       end;
 
-      Freemem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfByte));
+      {$IFDEF UsingDynTFT}
+        {$IFDEF IsMCU}
+          FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfByte));
+        {$ELSE}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len * SizeOf(PDynArrayOfByte));
+        {$ENDIF}
+      {$ELSE}
+        FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfByte));
+      {$ENDIF}
     end;
 
     AArr.Len := 0;
     Exit;
   end;
 
-  {$IFnDEF FPC}
+  {$IFnDEF IsDesktop}
     OldPointer := DWord(AArr.Content);
   {$ELSE}
     OldPointer := PDynArrayOfTDynArrayOfByteContent(AArr.Content);
   {$ENDIF}
 
-  {$IFnDEF FPC}
+  {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte));    //SizeOf pointer
     if MM_error or (AArr.Content = nil) then
     begin
@@ -451,7 +593,16 @@ begin
     end;
   {$ELSE}
     try
-      GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte));   //SizeOf pointer
+      {$IFDEF UsingDynTFT}
+        GetMem(TPtrRec(AArr.Content), ANewLength * SizeOf(PDynArrayOfByte)); //SizeOf pointer
+        if MM_error or (AArr.Content = nil) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      {$ELSE}
+        GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte)); //SizeOf pointer
+      {$ENDIF}
                                               /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
       for i := 0 to ANewLength - 1 do
         New(AArr.Content^[i]);           //SizeOf struct    //Using New instead of GetMem, to properly initialize the "Initialized" field (string). GetMem doesn't do any form of initialization to the allocated structure.
@@ -464,7 +615,11 @@ begin
   for i := 0 to MaxCopyIdx do
   begin
     InitDynArrayToEmpty(AArr.Content^[i]^);
-    ConcatDynArrays(AArr.Content^[i]^, OldPointer^[i]^);   /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
+    if not ConcatDynArrays(AArr.Content^[i]^, OldPointer^[i]^) then   /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
+    begin
+      Result := False;
+      Exit;
+    end;
   end;
 
   if AArr.Len > 0 then
@@ -473,14 +628,22 @@ begin
     begin
       FreeDynArray(OldPointer^[i]^);    /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
 
-      {$IFnDEF FPC}
+      {$IFnDEF IsDesktop}
         Freemem(OldPointer^[i], SizeOf(TDynArrayOfByte));
       {$ELSE}
         Dispose(OldPointer^[i]);
       {$ENDIF}
     end;
 
-    Freemem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+    {$IFDEF UsingDynTFT}
+      {$IFDEF IsMCU}
+        FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+      {$ELSE}
+        FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfByte));
+      {$ENDIF}
+    {$ELSE}
+      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+    {$ENDIF}
   end;
 
   if ANewLength > AArr.Len then
@@ -511,7 +674,7 @@ begin
 
   if (ADelIndex < 0) or (ADelIndex > AArr.Len - 1) then
   begin
-    {$IFDEF FPC}
+    {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynOfDynArrayOfByte.');
     {$ELSE}
       Exit;
@@ -522,13 +685,13 @@ begin
   begin
     FreeDynArray(AArr.Content^[i]^);
 
-    {$IFnDEF FPC}
+    {$IFnDEF IsDesktop}
       Freemem(AArr.Content^[i], SizeOf(TDynArrayOfByte));
     {$ELSE}
       Dispose(AArr.Content^[i]);
     {$ENDIF}
 
-    {$IFnDEF FPC}
+    {$IFnDEF IsDesktop}
       GetMem(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
       if MM_error or (AArr.Content = nil) then
       begin
@@ -547,7 +710,7 @@ begin
 
   FreeDynArray(AArr.Content^[AArr.Len - 1]^);
 
-  {$IFnDEF FPC}
+  {$IFnDEF IsDesktop}
     Freemem(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfByte));
   {$ELSE}
     Dispose(AArr.Content^[AArr.Len - 1]);
@@ -558,7 +721,7 @@ begin
 
   if NewLen > 0 then
   begin
-    {$IFnDEF FPC}
+    {$IFnDEF IsDesktop}
       GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfByte));    //SizeOf pointer
       if MM_error or (AArr.Content = nil) then
       begin
@@ -566,16 +729,34 @@ begin
         Exit;
       end;
     {$ELSE}
-      GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfByte));   //SizeOf pointer
+      {$IFDEF UsingDynTFT}
+        GetMem(TPtrRec(AArr.Content), NewLen * SizeOf(PDynArrayOfByte)); //SizeOf pointer
+        if MM_error or (AArr.Content = nil) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      {$ELSE}
+        GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfByte)); //SizeOf pointer
+      {$ENDIF}
     {$ENDIF}
   end;
 
-  {$IFnDEF FPC}
+  {$IFnDEF IsDesktop}
     MemMove(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfByte));
   {$ELSE}
     Move(OldPointer^, AArr.Content^, NewLen * SizeOf(PDynArrayOfByte));
   {$ENDIF}
-  Freemem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+
+  {$IFDEF UsingDynTFT}
+    {$IFDEF IsMCU}
+      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+    {$ELSE}
+      FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfByte));
+    {$ENDIF}
+  {$ELSE}
+    FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+  {$ENDIF}
 
   AArr.Len := AArr.Len - 1;
   Result := True;
@@ -584,7 +765,7 @@ end;
 
 procedure FreeDynOfDynOfByteArray(var AArr: TDynArrayOfTDynArrayOfByte);
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynOfDynArray(AArr);
   {$ENDIF}
 
@@ -599,7 +780,7 @@ begin
   AArr.Len := 0;       //this is required when allocating a new array
   AArr.Content := nil; //probably, not needed, since Len is set to 0
 
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     AArr.Initialized := 'init';  //some string, different than ''
   {$ENDIF}
 end;
@@ -607,7 +788,7 @@ end;
 
 function DynOfDWordLength(var AArr: TDynArrayOfDWord): TDynArrayOfDWordLength;
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfDWord(AArr);
   {$ENDIF}
 
@@ -617,9 +798,9 @@ end;
 
 function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayOfDWordLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfDWord(AArr);
   {$ENDIF}
 
@@ -628,7 +809,17 @@ begin
   if ANewLength = 0 then
   begin
     if AArr.Len > 0 then
-      Freemem(AArr.Content, AArr.Len shl 2);
+    begin
+      {$IFDEF UsingDynTFT}
+        {$IFDEF IsMCU}
+          FreeMem(AArr.Content, AArr.Len shl 2);
+        {$ELSE}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len shl 2);
+        {$ENDIF}
+      {$ELSE}
+        FreeMem(AArr.Content, AArr.Len shl 2);
+      {$ENDIF}
+    end;
 
     AArr.Len := 0;
     Exit;
@@ -636,7 +827,7 @@ begin
 
   OldPointer := PIntPtr(AArr.Content);
 
-  {$IFnDEF FPC}
+  {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength shl 2);
     if MM_error or (AArr.Content = nil) then
     begin
@@ -647,7 +838,16 @@ begin
     MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl 2);  //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
-      GetMem(AArr.Content, ANewLength shl 2);
+      {$IFDEF UsingDynTFT}
+        GetMem(TPtrRec(AArr.Content), ANewLength shl 2);
+        if MM_error or (AArr.Content = nil) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      {$ELSE}
+        GetMem(AArr.Content, ANewLength shl 2);
+      {$ENDIF}
 
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
       Move(OldPointer^, AArr.Content^, Min(ANewLength, AArr.Len) shl 2);   // the rest of the content is not initialized
@@ -657,7 +857,17 @@ begin
   {$ENDIF}
 
   if AArr.Len > 0 then
-    Freemem(OldPointer, AArr.Len shl 2);
+  begin
+    {$IFDEF UsingDynTFT}
+      {$IFDEF IsMCU}
+        FreeMem(TPtrRec(OldPointer), AArr.Len shl 2);
+      {$ELSE}
+        FreeMem(TPtrRec(OldPointer), AArr.Len shl 2);
+      {$ENDIF}
+    {$ELSE}
+      FreeMem(OldPointer, AArr.Len shl 2);
+    {$ENDIF}
+  end;
 
   AArr.Len := ANewLength;
 end;
@@ -665,7 +875,7 @@ end;
 
 procedure FreeDynArrayOfDWord(var AArr: TDynArrayOfDWord);
 begin
-  {$IFDEF FPC}
+  {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfDWord(AArr);
   {$ENDIF}
 
@@ -676,10 +886,11 @@ end;
 function ConcatDynArraysOfDWord(var AArr1, AArr2: TDynArrayOfDWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 var
   NewLen: DWord;
-  NewPointer: {$IFDEF FPC} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  NewPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
   OldArr1Len: DWord;
 begin
-  {$IFDEF FPC}
+  Result := False;
+  {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfDWord(AArr1);
     CheckInitializedDynArrayOfDWord(AArr2);
   {$ENDIF}
@@ -699,14 +910,18 @@ begin
 
   OldArr1Len := AArr1.Len;
   Result := SetDynOfDWordLength(AArr1, NewLen);
+  if not Result then
+    Exit;
 
-  {$IFnDEF FPC}
-    NewPointer := DWord(AArr1.Content) + OldArr1Len shl 2);
+  {$IFnDEF IsDesktop}
+    NewPointer := DWord(AArr1.Content) + OldArr1Len shl 2;
     MemMove(NewPointer, AArr2.Content, AArr2.Len shl 2);
   {$ELSE}
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len shl 2));  //NewPointer := @AArr1.Content^[OldArr1Len shl 2];
     Move(AArr2.Content^, NewPointer^, AArr2.Len shl 2);
   {$ENDIF}
+
+  Result := True;
 end;
 
 
@@ -719,5 +934,5 @@ begin
   AArr.Content^[AArr.Len - 1] := ANewDWord;
 end;
 
-end.
 
+end.

@@ -35,6 +35,9 @@ uses
 type
 
   TTestDynOfDynOfByteCase = class(TTestCase)
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
   published
     procedure TestSimpleAllocation;
     procedure TestWritingToArray;
@@ -59,10 +62,38 @@ type
 
 implementation
 
+{$IFDEF UsingDynTFT}
+  uses
+    MemManager;
+{$ELSE}
+  {$IFDEF UsingMPMM} //mP's memoy manager
+    __Lib_MemManager  //users may still want to use a different flavor of the same memoy manager, without the DynTFT dependencies
+  {$ELSE}
+    //this is FP's memory manager
+  {$ENDIF}
+{$ENDIF}
+
 
 const
   CUninitializedDynArrayErrMsg = 'The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.';
 
+
+procedure TTestDynOfDynOfByteCase.SetUp;
+begin
+  {$IFDEF UsingDynTFT}
+    MM_Init;
+  {$ENDIF}
+
+  {$IFDEF UsingMPMM}
+    MM_Init;
+  {$ENDIF}
+end;
+
+
+procedure TTestDynOfDynOfByteCase.TearDown;
+begin
+
+end;
 
 
 procedure TTestDynOfDynOfByteCase.TestSimpleAllocation;
@@ -99,7 +130,7 @@ begin
     begin
       SetDynLength(Arr.Content^[i]^, 3);
       Arr.Content^[i]^.Content^[2] := 80 + i;
-      Expect(Arr.Content^[i]^.Content^[2]).ToBe(80 + i);
+      Expect(Arr.Content^[i]^.Content^[2]).ToBe(DWord(80 + i));
     end;
   finally
     FreeDynOfDynOfByteArray(Arr);
@@ -117,17 +148,17 @@ begin
 
   for i := 0 to DynOfDynOfByteLength(Arr) - 1 do
   begin
-    SetDynLength(Arr.Content^[i]^, 3);
+    Expect(SetDynLength(Arr.Content^[i]^, 3)).ToBe(True, 'Internal array allocation');
 
     for j := 0 to 2 do
       Arr.Content^[i]^.Content^[j] := i * 10 + j;
   end;
 
-  SetDynOfDynOfByteLength(Arr, 30);
+  Expect(SetDynOfDynOfByteLength(Arr, 30)).ToBe(True, 'External array re-allocation');
   try
     for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
       for j := 0 to 2 do
-        Expect(Arr.Content^[i]^.Content^[j]).ToBe(i * 10 + j, ' at i = ' + IntToStr(i) + '  j = ' + IntToStr(j));
+        Expect(Arr.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), ' at i = ' + IntToStr(i) + '  j = ' + IntToStr(j));
   finally
     FreeDynOfDynOfByteArray(Arr);
   end;
@@ -154,7 +185,7 @@ begin
   try
     for i := 0 to 10 - 1 do  //test up to the old length, as this content has to be valid only
       for j := 0 to 2 do
-        Expect(Arr.Content^[i]^.Content^[j]).ToBe(i * 10 + j, ' at i = ' + IntToStr(i) + '  j = ' + IntToStr(j));
+        Expect(Arr.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), ' at i = ' + IntToStr(i) + '  j = ' + IntToStr(j));
   finally
     FreeDynOfDynOfByteArray(Arr);
   end;
@@ -168,37 +199,36 @@ var
   i, j: Integer;
 begin
   InitDynOfDynOfByteToEmpty(Arr);
-  try
-    SetDynOfDynOfByteLength(Arr, 20);
 
-    for i := 0 to DynOfDynOfByteLength(Arr) - 1 do
-    begin
-      SetDynLength(Arr.Content^[i]^, 3);
+  Expect(SetDynOfDynOfByteLength(Arr, 20)).ToBe(True);
 
-      for j := 0 to 2 do
-        Arr.Content^[i]^.Content^[j] := i * 10 + j;
-    end;
+  for i := 0 to DynOfDynOfByteLength(Arr) - 1 do
+  begin
+    Expect(SetDynLength(Arr.Content^[i]^, 3)).ToBe(True);
 
-    InitDynArrayToEmpty(NewArr);
-    SetDynLength(NewArr, 7);
-    for j := 0 to NewArr.Len - 1 do
-      NewArr.Content^[j] := 200 + j;
-
-    try
-      Expect(AddDynArrayOfByteToDynOfDynOfByte(Arr, NewArr)).ToBe(True);
-    finally
-      FreeDynArray(NewArr);
-    end;
-
-    for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
-      for j := 0 to 2 do
-        Expect(Arr.Content^[i]^.Content^[j]).ToBe(i * 10 + j, ' at i = ' + IntToStr(i) + '  j = ' + IntToStr(j));
-
-    Expect(Arr.Len).ToBe(21);
-    Expect(Arr.Content^[20]^.Content).ToBe(@[200, 201, 202, 203, 204, 205, 206]);
-  finally
-    FreeDynOfDynOfByteArray(Arr);
+    for j := 0 to 2 do
+      Arr.Content^[i]^.Content^[j] := i * 10 + j;
   end;
+
+  InitDynArrayToEmpty(NewArr);
+  Expect(SetDynLength(NewArr, 7)).ToBe(True);
+  for j := 0 to NewArr.Len - 1 do
+    NewArr.Content^[j] := 200 + j;
+
+  try
+    Expect(AddDynArrayOfByteToDynOfDynOfByte(Arr, NewArr)).ToBe(True);
+  finally
+    FreeDynArray(NewArr);
+  end;
+
+  for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
+    for j := 0 to 2 do
+      Expect(Arr.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), ' at i = ' + IntToStr(i) + '  j = ' + IntToStr(j));
+
+  Expect(Arr.Len).ToBe(21);
+  Expect(Arr.Content^[20]^.Content).ToBe(@[200, 201, 202, 203, 204, 205, 206]);
+
+  FreeDynOfDynOfByteArray(Arr); //freeing only if successfully allocated
 end;
 
 
@@ -268,21 +298,19 @@ var
   ErrMsg: string;
 begin
   InitDynOfDynOfByteToEmpty(Arr);
+
+  ErrMsg := 'no err';
   try
-    ErrMsg := 'no err';
-    try
-      Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(False);
-    except
-      on E: Exception do
-        ErrMsg := E.Message;
-    end;
-
-    Expect(ErrMsg).ToBe('Index out of range when deleting item from DynOfDynArrayOfByte.');
-
-    Expect(Arr.Len).ToBe(0, 'no action');
-  finally
-    FreeDynOfDynOfByteArray(Arr);
+    Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(False);
+  except
+    on E: Exception do
+      ErrMsg := E.Message;
   end;
+
+  Expect(ErrMsg).ToBe('Index out of range when deleting item from DynOfDynArrayOfByte.');
+  Expect(Arr.Len).ToBe(0, 'no action');
+
+  FreeDynOfDynOfByteArray(Arr);
 end;
 
 
@@ -291,14 +319,13 @@ var
   Arr: TDynArrayOfTDynArrayOfByte;
 begin
   InitDynOfDynOfByteToEmpty(Arr);
-  try
-    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
 
-    Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
-    Expect(Arr.Len).ToBe(0, 'successful deletion');
-  finally
-    FreeDynOfDynOfByteArray(Arr);
-  end;
+  Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+
+  Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
+  Expect(Arr.Len).ToBe(0, 'successful deletion');
+
+  FreeDynOfDynOfByteArray(Arr);
 end;
 
 
@@ -307,16 +334,15 @@ var
   Arr: TDynArrayOfTDynArrayOfByte;
 begin
   InitDynOfDynOfByteToEmpty(Arr);
-  try
-    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
-    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
 
-    Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
-    Expect(Arr.Len).ToBe(1, 'successful deletion');
-    Expect(@Arr.Content^[0]^.Content^, 6).ToBe(@['Second']);
-  finally
-    FreeDynOfDynOfByteArray(Arr);
-  end;
+  Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+  Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+
+  Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
+  Expect(Arr.Len).ToBe(1, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^, 6).ToBe(@['Second']);
+
+  FreeDynOfDynOfByteArray(Arr);
 end;
 
 
@@ -325,16 +351,15 @@ var
   Arr: TDynArrayOfTDynArrayOfByte;
 begin
   InitDynOfDynOfByteToEmpty(Arr);
-  try
-    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
-    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
 
-    Expect(DeleteItemFromDynOfDynOfByte(Arr, 1)).ToBe(True);
-    Expect(Arr.Len).ToBe(1, 'successful deletion');
-    Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
-  finally
-    FreeDynOfDynOfByteArray(Arr);
-  end;
+  Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+  Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+
+  Expect(DeleteItemFromDynOfDynOfByte(Arr, 1)).ToBe(True);
+  Expect(Arr.Len).ToBe(1, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
+
+  FreeDynOfDynOfByteArray(Arr);
 end;
 
 
@@ -343,18 +368,17 @@ var
   Arr: TDynArrayOfTDynArrayOfByte;
 begin
   InitDynOfDynOfByteToEmpty(Arr);
-  try
-    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
-    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
-    Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
 
-    Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
-    Expect(Arr.Len).ToBe(2, 'successful deletion');
-    Expect(@Arr.Content^[0]^.Content^, 6).ToBe(@['Second']);
-    Expect(@Arr.Content^[1]^.Content^, 5).ToBe(@['Third']);
-  finally
-    FreeDynOfDynOfByteArray(Arr);
-  end;
+  Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+  Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+  Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
+
+  Expect(DeleteItemFromDynOfDynOfByte(Arr, 0)).ToBe(True);
+  Expect(Arr.Len).ToBe(2, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^, 6).ToBe(@['Second']);
+  Expect(@Arr.Content^[1]^.Content^, 5).ToBe(@['Third']);
+
+  FreeDynOfDynOfByteArray(Arr);
 end;
 
 
@@ -363,18 +387,17 @@ var
   Arr: TDynArrayOfTDynArrayOfByte;
 begin
   InitDynOfDynOfByteToEmpty(Arr);
-  try
-    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
-    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
-    Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
 
-    Expect(DeleteItemFromDynOfDynOfByte(Arr, 1)).ToBe(True);
-    Expect(Arr.Len).ToBe(2, 'successful deletion');
-    Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
-    Expect(@Arr.Content^[1]^.Content^, 5).ToBe(@['Third']);
-  finally
-    FreeDynOfDynOfByteArray(Arr);
-  end;
+  Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+  Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+  Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
+
+  Expect(DeleteItemFromDynOfDynOfByte(Arr, 1)).ToBe(True);
+  Expect(Arr.Len).ToBe(2, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
+  Expect(@Arr.Content^[1]^.Content^, 5).ToBe(@['Third']);
+
+  FreeDynOfDynOfByteArray(Arr);
 end;
 
 
@@ -383,18 +406,17 @@ var
   Arr: TDynArrayOfTDynArrayOfByte;
 begin
   InitDynOfDynOfByteToEmpty(Arr);
-  try
-    Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
-    Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
-    Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
 
-    Expect(DeleteItemFromDynOfDynOfByte(Arr, 2)).ToBe(True);
-    Expect(Arr.Len).ToBe(2, 'successful deletion');
-    Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
-    Expect(@Arr.Content^[1]^.Content^, 6).ToBe(@['Second']);
-  finally
-    FreeDynOfDynOfByteArray(Arr);
-  end;
+  Expect(AddStringToDynOfDynArrayOfByte('First', Arr)).ToBe(True);
+  Expect(AddStringToDynOfDynArrayOfByte('Second', Arr)).ToBe(True);
+  Expect(AddStringToDynOfDynArrayOfByte('Third', Arr)).ToBe(True);
+
+  Expect(DeleteItemFromDynOfDynOfByte(Arr, 2)).ToBe(True);
+  Expect(Arr.Len).ToBe(2, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^, 5).ToBe(@['First']);
+  Expect(@Arr.Content^[1]^.Content^, 6).ToBe(@['Second']);
+
+  FreeDynOfDynOfByteArray(Arr);
 end;
 
 initialization

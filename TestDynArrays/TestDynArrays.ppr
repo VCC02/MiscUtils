@@ -3,8 +3,12 @@ program TestDynArrays;
 {$mode objfpc}{$H+}
 
 uses
+  {$IFDEF UsingDynTFT}
+    MemManager,
+  {$ENDIF}
+
   Interfaces, Forms, GuiTestRunner, TestDynArraysMainCase, DynArrays,
-  Expectations, TestDynOfDynOfByteCase;
+  Expectations, DynTFTTypes, TestDynOfDynOfByteCase;
 
 {$R *.res}
 

@@ -35,6 +35,9 @@ uses
 type
 
   TTestDynArrays= class(TTestCase)
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
   published
     procedure TestSimpleAllocation;
     procedure TestWritingToArray;
@@ -57,9 +60,38 @@ type
 
 implementation
 
+{$IFDEF UsingDynTFT}
+  uses
+    MemManager;
+{$ELSE}
+  {$IFDEF UsingMPMM} //mP's memoy manager
+    __Lib_MemManager  //users may still want to use a different flavor of the same memoy manager, without the DynTFT dependencies
+  {$ELSE}
+    //this is FP's memory manager
+  {$ENDIF}
+{$ENDIF}
+
 
 const
   CUninitializedDynArrayErrMsg = 'The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.';
+
+
+procedure TTestDynArrays.SetUp;
+begin
+  {$IFDEF UsingDynTFT}
+    MM_Init;
+  {$ENDIF}
+
+  {$IFDEF UsingMPMM}
+    MM_Init;
+  {$ENDIF}
+end;
+
+
+procedure TTestDynArrays.TearDown;
+begin
+
+end;
 
 
 procedure TTestDynArrays.TestSimpleAllocation;
@@ -101,15 +133,15 @@ var
   i: Integer;
 begin
   InitDynArrayToEmpty(Arr);
-  SetDynLength(Arr, 20);
+  Expect(SetDynLength(Arr, 20)).ToBe(True);
 
   for i := 0 to DynLength(Arr) - 1 do
     Arr.Content^[i] := i * 10;
 
-  SetDynLength(Arr, 30);
+  Expect(SetDynLength(Arr, 30)).ToBe(True, 'expecting successful reallocation');
   try
     for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
-      Expect(Arr.Content^[i]).ToBe(i * 10);
+      Expect(Arr.Content^[i]).ToBe(DWord(i * 10));
   finally
     FreeDynArray(Arr);
   end;
@@ -130,7 +162,7 @@ begin
   SetDynLength(Arr, 10);
   try
     for i := 0 to 10 - 1 do  //test up to the old length, as this content has to be valid only
-      Expect(Arr.Content^[i]).ToBe(i * 10);
+      Expect(Arr.Content^[i]).ToBe(DWord(i * 10));
   finally
     FreeDynArray(Arr);
   end;
@@ -148,26 +180,28 @@ begin
 
   try
     AllocationResult := SetDynLength(Arr1, 20);
+    Expect(Byte(AllocationResult)).ToBe(Byte(True), 'Allocation_20 should succeed.');
     for i := 0 to DynLength(Arr1) - 1 do
       Arr1.Content^[i] := i * 10;
     Expect(Byte(AllocationResult)).ToBe(Byte(True), 'First allocation Result is overwritten.');
 
     AllocationResult := SetDynLength(Arr2, 15);
+    Expect(Byte(AllocationResult)).ToBe(Byte(True), 'Allocation_15 should succeed.');
     for i := 0 to DynLength(Arr2) - 1 do
       Arr2.Content^[i] := i * 10;
     Expect(Byte(AllocationResult)).ToBe(Byte(True), 'Second allocation Result is overwritten.');
 
     AllocationResult := ConcatDynArrays(Arr1, Arr2);
 
-    Expect(Byte(AllocationResult)).ToBe(Byte(True), 'Concat Result is overwritten.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(True), 'Concat Result is overwritten or memory is full.');
     Expect(AllocationResult).ToBe(True);
     Expect(Arr1.Len).ToBe(35);
 
     for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
-      Expect(Arr1.Content^[i]).ToBe(i * 10);
+      Expect(Arr1.Content^[i]).ToBe(DWord(i * 10));
 
     for i := 20 to 35 - 1 do  //test up to the old length, as this content has to be valid only
-      Expect(Arr1.Content^[i]).ToBe((i - 20) * 10);
+      Expect(Arr1.Content^[i]).ToBe(DWord((i - 20) * 10));
   finally
     FreeDynArray(Arr1);
     FreeDynArray(Arr2);
@@ -194,7 +228,7 @@ begin
     Expect(Arr1.Len).ToBe(20);
 
     for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
-      Expect(Arr1.Content^[i]).ToBe(i * 10);
+      Expect(Arr1.Content^[i]).ToBe(DWord(i * 10));
   finally
     FreeDynArray(Arr1);
     FreeDynArray(Arr2);
@@ -221,7 +255,7 @@ begin
     Expect(Arr1.Len).ToBe(15);
 
     for i := 0 to 15 - 1 do  //test up to the old length, as this content has to be valid only
-      Expect(Arr1.Content^[i]).ToBe(i * 10);
+      Expect(Arr1.Content^[i]).ToBe(DWord(i * 10));
   finally
     FreeDynArray(Arr1);
     FreeDynArray(Arr2);
