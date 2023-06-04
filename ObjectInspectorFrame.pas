@@ -401,8 +401,9 @@ type
 
     procedure ReloadContent;
     procedure ReloadPropertyItems(ACategoryIndex, APropertyIndex: Integer; ACloseItemEditor: Boolean = False);
-    procedure RepaintNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True);
+    procedure RepaintNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True; ACenterIntoView: Boolean = False);
     procedure RepaintOI;
+    procedure FocusOI;
     procedure CancelCurrentEditing; //usually the text editor   - this is called by ReloadContent and ReloadPropertyItems
     procedure SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
 
@@ -1598,7 +1599,7 @@ begin
 end;
 
 
-procedure TfrObjectInspector.RepaintNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True);
+procedure TfrObjectInspector.RepaintNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True; ACenterIntoView: Boolean = False);
 var
   Node: PVirtualNode;
 begin
@@ -1608,7 +1609,7 @@ begin
 
   vstOI.InvalidateNode(Node);
   if AScrollIntoView then
-    vstOI.ScrollIntoView(Node, False);
+    vstOI.ScrollIntoView(Node, ACenterIntoView);
 end;
 
 
@@ -1617,6 +1618,11 @@ begin
   vstOI.Repaint;
 end;
 
+
+procedure TfrObjectInspector.FocusOI;
+begin
+  vstOI.SetFocus;
+end;
 
 //there can be an optimization by caching all pointers to nodes, into arrays of arrays, which can be indexed by ACategoryIndex, APropertyIndex, APropertyItemIndex
 //this cache has to be rebuilt on every call to ReloadPropertyItems and ReloadContent. (and adding / removing various items like files)
