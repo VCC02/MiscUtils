@@ -405,7 +405,8 @@ type
     procedure RepaintOI;
     procedure FocusOI;
     procedure CancelCurrentEditing; //usually the text editor   - this is called by ReloadContent and ReloadPropertyItems
-    procedure SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
+    procedure SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True; ACenterIntoView: Boolean = False);
+    procedure ClearNodeSelection;
 
     property ListItemsVisible: Boolean read FListItemsVisible write FListItemsVisible; //to be set before calling ReloadContent
     property DataTypeVisible: Boolean read FDataTypeVisible write SetDataTypeVisible;    //to be set before calling ReloadContent
@@ -1666,14 +1667,25 @@ begin
 end;
 
 
-procedure TfrObjectInspector.SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
+procedure TfrObjectInspector.SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True; ACenterIntoView: Boolean = False);
 var
   NodeToBeSelected: PVirtualNode;
 begin
   NodeToBeSelected := GetNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex);
 
   if NodeToBeSelected <> nil then
+  begin
     vstOI.Selected[NodeToBeSelected] := True;
+
+    if AScrollIntoView then
+      vstOI.ScrollIntoView(NodeToBeSelected, ACenterIntoView);
+  end;
+end;
+
+
+procedure TfrObjectInspector.ClearNodeSelection;
+begin
+  vstOI.ClearSelection;
 end;
 
 
