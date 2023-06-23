@@ -101,58 +101,10 @@ const
   CMaxDynArrayOfDWordLength = 255;  //DWords  ///255 should be enough
 
 type
-  //array of byte
-  TDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of Byte;
-  PDynArrayOfByteContent = ^TDynArrayOfByteContent;
-
-  TDynArrayLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
-
-  TDynArrayOfByte = record
-    Len: TDynArrayLength;
-    Content: PDynArrayOfByteContent;
-    {$IFDEF IsDesktop}
-      Initialized: string; //strings are automatically initialized to empty in FP
-    {$ENDIF}
-  end;
-
-  PDynArrayOfByte = ^TDynArrayOfByte;
-
-
-  //array of array of byte
-  TDynArrayOfTDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of PDynArrayOfByte;
-  PDynArrayOfTDynArrayOfByteContent = ^TDynArrayOfTDynArrayOfByteContent;
-
-  TDynArrayOfTDynArrayOfByte = record
-    Len: TDynArrayLength;
-    Content: PDynArrayOfTDynArrayOfByteContent;
-    {$IFDEF IsDesktop}
-      Initialized: string; //strings are automatically initialized to empty in FP
-    {$ENDIF}
-  end;
-
-  PDynArrayOfTDynArrayOfByte = ^TDynArrayOfTDynArrayOfByte;
-
-
-  //array of DWord
-  TDynArrayOfDWordContent = array[0..CMaxDynArrayOfDWordLength - 1] of DWord;
-  PDynArrayOfDWordContent = ^TDynArrayOfDWordContent;
-
-  TDynArrayOfDWordLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
-
-  TDynArrayOfDWord = record
-    Len: TDynArrayOfDWordLength;
-    Content: PDynArrayOfDWordContent;
-    {$IFDEF IsDesktop}
-      Initialized: string; //strings are automatically initialized to empty in FP
-    {$ENDIF}
-  end;
-
-  PDynArrayOfDWord = ^TDynArrayOfDWord;
-
 
 //directives section, copied from DynTFTTypes.pas:
 {$IFnDEF IsMCU}
-  {$DEFINE IsDesktop}
+  //{$DEFINE IsDesktop}  //already done, at the beginning of the unit
 
   {$IFDEF CPU64} // works on FP
     {$IFNDEF AppArch64}
@@ -205,7 +157,115 @@ type
 
 {$IFDEF IsMCU}
   PIntPtr = PByte;
+{$ELSE}
+  {$IFDEF ExtraType}
+    PIntPtr = PByte;
+  {$ENDIF}
 {$ENDIF}
+
+
+{$IFDEF DefineDWord}
+  DWord = Cardinal;
+{$ENDIF}
+
+
+{$IFDEF ExtraType}
+  {$IFDEF AppArch64}
+    {$IFnDEF FPC}
+      QWord = Int64; //If QWord is available in newer Delphi versions, this definition might cause further incompatibilities.
+    {$ENDIF}
+
+    PtrUInt = QWord;
+  {$ENDIF}
+  
+  {$IFDEF AppArch32}
+    PtrUInt = DWord;
+  {$ENDIF}
+
+  {$IFDEF AppArch16}
+    PtrUInt = Word;
+  {$ENDIF}
+{$ENDIF}
+
+  //array of byte
+  TDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of Byte;
+  PDynArrayOfByteContent = ^TDynArrayOfByteContent;
+
+  TDynArrayLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+
+  TDynArrayOfByte = record
+    Len: TDynArrayLength;
+    Content: PDynArrayOfByteContent;
+    {$IFDEF IsDesktop}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfByte = ^TDynArrayOfByte;
+
+
+  //array of array of byte
+  TDynArrayOfTDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of PDynArrayOfByte;
+  PDynArrayOfTDynArrayOfByteContent = ^TDynArrayOfTDynArrayOfByteContent;
+
+  TDynArrayOfTDynArrayOfByte = record
+    Len: TDynArrayLength;
+    Content: PDynArrayOfTDynArrayOfByteContent;
+    {$IFDEF IsDesktop}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfTDynArrayOfByte = ^TDynArrayOfTDynArrayOfByte;
+
+
+  //array of DWord
+  TDynArrayOfDWordContent = array[0..CMaxDynArrayOfDWordLength - 1] of DWord;
+  PDynArrayOfDWordContent = ^TDynArrayOfDWordContent;
+
+  TDynArrayOfDWordLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+
+  TDynArrayOfDWord = record
+    Len: TDynArrayOfDWordLength;
+    Content: PDynArrayOfDWordContent;
+    {$IFDEF IsDesktop}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfDWord = ^TDynArrayOfDWord;
+
+
+  //array of Pointer (PtrUInt)
+  TDynArrayOfPtrUIntContent = array[0..CMaxDynArrayOfDWordLength - 1] of PtrUInt;
+  PDynArrayOfPtrUIntContent = ^TDynArrayOfPtrUIntContent;
+
+  TDynArrayOfPtrUIntLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+
+  TDynArrayOfPtrUInt = record
+    Len: TDynArrayOfPtrUIntLength;
+    Content: PDynArrayOfPtrUIntContent;
+    {$IFDEF IsDesktop}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfPtrUInt = ^TDynArrayOfPtrUInt;
+
+
+const
+  {$IFDEF AppArch64}
+    CArchBitShift = 4;   //shl 4 means  multiply by SizeOf(Pointer)
+  {$ENDIF}
+
+  {$IFDEF AppArch32}
+    CArchBitShift = 2;   //shl 2 means  multiply by SizeOf(Pointer)
+  {$ENDIF}
+
+  {$IFDEF AppArch16}
+    CArchBitShift = 1;   //shl 1 means  multiply by SizeOf(Pointer)
+  {$ENDIF}
+
 
 
 procedure InitDynArrayToEmpty(var AArr: TDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -232,11 +292,20 @@ function ConcatDynArraysOfDWord(var AArr1, AArr2: TDynArrayOfDWord): Boolean; //
 function AddDWordToDynArraysOfDWord(var AArr: TDynArrayOfDWord; ANewDWord: DWord): Boolean;
 
 
+procedure InitDynArrayOfPtrUIntToEmpty(var AArr: TDynArrayOfPtrUInt); //do not call this on an array, which is already allocated, because it results in memory leaks
+function DynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt): TDynArrayOfPtrUIntLength;
+function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArrayOfPtrUIntLength): Boolean; //returns True if successful, or False if it can't allocate memory
+procedure FreeDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
+function ConcatDynArraysOfPtrUInt(var AArr1, AArr2: TDynArrayOfPtrUInt): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+function AddPtrUIntToDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ANewPtrUInt: PtrUInt): Boolean;
+
+
 {$IFDEF IsDesktop}
   //This check is not available in mP, but is is useful as a debugging means on Desktop.
   procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
   procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
+  procedure CheckInitializedDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
 {$ENDIF}
 
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
@@ -270,6 +339,12 @@ implementation
   end;
 
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
+  begin
+    if AArr.Initialized = '' then
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+  end;
+
+  procedure CheckInitializedDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
   begin
     if AArr.Initialized = '' then
       raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
@@ -458,7 +533,6 @@ var
   NewPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
   OldArr1Len: DWord;
 begin
-  Result := False;
   {$IFDEF IsDesktop}
     CheckInitializedDynArray(AArr1);
     CheckInitializedDynArray(AArr2);
@@ -672,7 +746,7 @@ var
 begin
   Result := False;
 
-  if (ADelIndex < 0) or (ADelIndex > AArr.Len - 1) then
+  if (ADelIndex < 0) or (ADelIndex > LongInt(AArr.Len) - 1) then
   begin
     {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynOfDynArrayOfByte.');
@@ -934,5 +1008,166 @@ begin
   AArr.Content^[AArr.Len - 1] := ANewDWord;
 end;
 
+
+//array of PtrUInt
+
+procedure InitDynArrayOfPtrUIntToEmpty(var AArr: TDynArrayOfPtrUInt); //do not call this on an array, which is already allocated, because it results in memory leaks
+begin
+  AArr.Len := 0;       //this is required when allocating a new array
+  AArr.Content := nil; //probably, not needed, since Len is set to 0
+
+  {$IFDEF IsDesktop}
+    AArr.Initialized := 'init';  //some string, different than ''
+  {$ENDIF}
+end;
+
+
+function DynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt): TDynArrayOfPtrUIntLength;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPtrUInt(AArr);
+  {$ENDIF}
+
+  Result := AArr.Len;
+end;
+
+
+function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArrayOfPtrUIntLength): Boolean; //returns True if successful, or False if it can't allocate memory
+var
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPtrUInt(AArr);
+  {$ENDIF}
+
+  Result := True;
+
+  if ANewLength = 0 then
+  begin
+    if AArr.Len > 0 then
+    begin
+      {$IFDEF UsingDynTFT}
+        {$IFDEF IsMCU}
+          FreeMem(AArr.Content, AArr.Len shl CArchBitShift); 
+        {$ELSE}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len shl CArchBitShift);
+        {$ENDIF}
+      {$ELSE}
+        FreeMem(AArr.Content, AArr.Len shl CArchBitShift);
+      {$ENDIF}
+    end;
+
+    AArr.Len := 0;
+    Exit;
+  end;
+
+  OldPointer := PIntPtr(AArr.Content);
+
+  {$IFnDEF IsDesktop}
+    GetMem(AArr.Content, ANewLength shl CArchBitShift);
+    if MM_error or (AArr.Content = nil) then
+    begin
+      Result := False;
+      Exit;
+    end;
+
+    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl CArchBitShift);  //OldPointer = src, AArr.Content = dest
+  {$ELSE}
+    try
+      {$IFDEF UsingDynTFT}
+        GetMem(TPtrRec(AArr.Content), ANewLength shl CArchBitShift);
+        if MM_error or (AArr.Content = nil) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      {$ELSE}
+        GetMem(AArr.Content, ANewLength shl CArchBitShift);
+      {$ENDIF}
+
+      //AArr.Len is still the old array length. Only the Content field points somewhere else.
+      Move(OldPointer^, AArr.Content^, Min(ANewLength, AArr.Len) shl CArchBitShift);   // the rest of the content is not initialized
+    except
+      Result := False;
+    end;
+  {$ENDIF}
+
+  if AArr.Len > 0 then
+  begin
+    {$IFDEF UsingDynTFT}
+      {$IFDEF IsMCU}
+        FreeMem(TPtrRec(OldPointer), AArr.Len shl CArchBitShift);
+      {$ELSE}
+        FreeMem(TPtrRec(OldPointer), AArr.Len shl CArchBitShift);
+      {$ENDIF}
+    {$ELSE}
+      FreeMem(OldPointer, AArr.Len shl CArchBitShift);
+    {$ENDIF}
+  end;
+
+  AArr.Len := ANewLength;
+end;
+
+
+procedure FreeDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPtrUInt(AArr);
+  {$ENDIF}
+
+  SetDynOfPtrUIntLength(AArr, 0);
+end;
+
+
+function ConcatDynArraysOfPtrUInt(var AArr1, AArr2: TDynArrayOfPtrUInt): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+var
+  NewLen: DWord;
+  NewPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF} //////////////////////////////////////////////// is it OK to be DWord in 16-bit ?????
+  OldArr1Len: DWord;
+begin
+  Result := False;
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPtrUInt(AArr1);
+    CheckInitializedDynArrayOfPtrUInt(AArr2);
+  {$ENDIF}
+
+  if AArr2.Len = 0 then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  NewLen := DWord(AArr1.Len) + DWord(AArr2.Len);
+  if NewLen > 65535 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  OldArr1Len := AArr1.Len;
+  Result := SetDynOfPtrUIntLength(AArr1, NewLen);
+  if not Result then
+    Exit;
+
+  {$IFnDEF IsDesktop}
+    NewPointer := DWord(AArr1.Content) + OldArr1Len shl CArchBitShift;
+    MemMove(NewPointer, AArr2.Content, AArr2.Len shl CArchBitShift);
+  {$ELSE}
+    NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len shl CArchBitShift));  //NewPointer := @AArr1.Content^[OldArr1Len shl CArchBitShift];
+    Move(AArr2.Content^, NewPointer^, AArr2.Len shl CArchBitShift);
+  {$ENDIF}
+
+  Result := True;
+end;
+
+
+function AddPtrUIntToDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ANewPtrUInt: PtrUInt): Boolean;
+begin
+  Result := SetDynOfPtrUIntLength(AArr, AArr.Len + 1);
+  if not Result then
+    Exit;
+
+  AArr.Content^[AArr.Len - 1] := ANewPtrUInt;
+end;
 
 end.
