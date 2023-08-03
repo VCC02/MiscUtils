@@ -62,6 +62,7 @@ unit DynArrays;
 }
 
 {$IFnDEF IsMCU}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
   interface
 {$ENDIF}
 
@@ -144,7 +145,7 @@ type
       {$DEFINE AppArch32}  //then it must be 32-bit !
     {$ENDIF}
 
-    type
+    //type
       //PByte = ^Byte;
       {$IFDEF AppArch16}
         PByte = ^far const code Byte;
@@ -184,6 +185,16 @@ type
 
   {$IFDEF AppArch16}
     PtrUInt = Word;
+  {$ENDIF}
+{$ELSE}
+  {$IFDEF IsMCU}
+    {$IFDEF AppArch32}
+      PtrUInt = DWord;
+    {$ENDIF}
+
+    {$IFDEF AppArch16}
+      PtrUInt = Word;
+    {$ENDIF}
   {$ENDIF}
 {$ENDIF}
 
@@ -253,6 +264,22 @@ type
   PDynArrayOfPtrUInt = ^TDynArrayOfPtrUInt;
 
 
+  //array of PDynArrayOfTDynArrayOfByte   -  array of pointers to array of array of byte
+  TDynArrayOfPDynArrayOfTDynArrayOfByteContent = array[0..CMaxDynArrayOfDWordLength - 1] of PDynArrayOfTDynArrayOfByte;
+  PDynArrayOfPDynArrayOfTDynArrayOfByteContent = ^TDynArrayOfPDynArrayOfTDynArrayOfByteContent;
+
+  TDynArrayOfPDynArrayOfTDynArrayOfByteLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+
+  TDynArrayOfPDynArrayOfTDynArrayOfByte = record
+    Len: TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
+    Content: PDynArrayOfPDynArrayOfTDynArrayOfByteContent;
+    {$IFDEF IsDesktop}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfPDynArrayOfTDynArrayOfByte = ^TDynArrayOfPDynArrayOfTDynArrayOfByte;
+
 const
   {$IFDEF AppArch64}
     CArchBitShift = 4;   //shl 4 means  multiply by SizeOf(Pointer)
@@ -274,13 +301,14 @@ function SetDynLength(var AArr: TDynArrayOfByte; ANewLength: TDynArrayLength): B
 procedure FreeDynArray(var AArr: TDynArrayOfByte);
 function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddByteToDynArray(AByte: Byte; var AArr: TDynArrayOfByte): Boolean;
+function RemoveStartBytesFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfByte): Boolean;
 
 
 procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 function DynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte): TDynArrayLength;
 function SetDynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 procedure FreeDynOfDynOfByteArray(var AArr: TDynArrayOfTDynArrayOfByte);
-function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; var ANewArr: TDynArrayOfByte): Boolean;
+function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; var ANewArr: TDynArrayOfByte): Boolean;  //adds the new array to the outer array
 function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
 
 
@@ -300,12 +328,22 @@ function ConcatDynArraysOfPtrUInt(var AArr1, AArr2: TDynArrayOfPtrUInt): Boolean
 function AddPtrUIntToDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ANewPtrUInt: PtrUInt): Boolean;
 
 
+procedure InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
+function DynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte): TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
+function SetDynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayOfPDynArrayOfTDynArrayOfByteLength): Boolean; //returns True if successful, or False if it can't allocate memory
+procedure FreeDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
+function ConcatDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr1, AArr2: TDynArrayOfPDynArrayOfTDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+function AddPDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewPDynArrayOfTDynArrayOfByte: PDynArrayOfTDynArrayOfByte): Boolean;
+
+
+
 {$IFDEF IsDesktop}
   //This check is not available in mP, but is is useful as a debugging means on Desktop.
   procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
   procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
   procedure CheckInitializedDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
+  procedure CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
 {$ENDIF}
 
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
@@ -335,19 +373,25 @@ implementation
   procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
   begin
     if AArr.Initialized = '' then
-      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynOfDynOfByteToEmpty before working with DynArray functions.');
   end;
 
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
   begin
     if AArr.Initialized = '' then
-      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayOfDWordToEmpty before working with DynArray functions.');
   end;
 
   procedure CheckInitializedDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
   begin
     if AArr.Initialized = '' then
-      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.');
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayOfPtrUIntToEmpty before working with DynArray functions.');
+  end;
+
+  procedure CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
+  begin
+    if AArr.Initialized = '' then
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty before working with DynArray functions.');
   end;
 {$ENDIF}
 
@@ -578,6 +622,33 @@ begin
 end;
 
 
+function RemoveStartBytesFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfByte): Boolean;
+var
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  Result := True;
+
+  if ACount > AArr.Len then
+  begin
+    FreeDynArray(AArr);
+    Exit;
+  end;
+
+  if ACount = 0 then
+    Exit;
+
+  {$IFnDEF IsDesktop}
+    OldPointer := DWord(AArr.Content) + ACount;
+    MemMove(AArr.Content, OldPointer, ACount);
+  {$ELSE}
+    OldPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt(ACount));
+    Move(OldPointer^, AArr.Content^, ACount);
+  {$ENDIF}
+
+  SetDynLength(AArr, AArr.Len - ACount);
+end;
+
+
 // array of array of byte
 
 procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -744,8 +815,6 @@ var
   OldPointer: PDynArrayOfTDynArrayOfByteContent;
   NewLen: DWord;
 begin
-  Result := False;
-
   if (ADelIndex < 0) or (ADelIndex > LongInt(AArr.Len) - 1) then
   begin
     {$IFDEF IsDesktop}
@@ -963,7 +1032,6 @@ var
   NewPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
   OldArr1Len: DWord;
 begin
-  Result := False;
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfDWord(AArr1);
     CheckInitializedDynArrayOfDWord(AArr2);
@@ -1125,7 +1193,6 @@ var
   NewPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF} //////////////////////////////////////////////// is it OK to be DWord in 16-bit ?????
   OldArr1Len: DWord;
 begin
-  Result := False;
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfPtrUInt(AArr1);
     CheckInitializedDynArrayOfPtrUInt(AArr2);
@@ -1169,5 +1236,152 @@ begin
 
   AArr.Content^[AArr.Len - 1] := ANewPtrUInt;
 end;
+
+
+//////////
+
+procedure InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
+begin
+  AArr.Len := 0;       //this is required when allocating a new array
+  AArr.Content := nil;
+
+  {$IFDEF IsDesktop}
+    AArr.Initialized := 'init';  //some string, different than ''
+  {$ENDIF}
+
+  //InitDynArrayOfPtrUIntToEmpty is not called here
+end;
+
+
+function DynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte): TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(AArr);
+  {$ENDIF}
+
+  Result := AArr.Len;
+end;
+
+
+function SetDynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayOfPDynArrayOfTDynArrayOfByteLength): Boolean; //returns True if successful, or False if it can't allocate memory
+var
+  OldLen: TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
+  i, StartIdx: LongInt;
+  {$IFDEF IsMCU}
+    TempDynArrayOfPtrUInt: TDynArrayOfPtrUInt;
+  {$ENDIF}
+begin
+  Result := False;
+  OldLen := AArr.Len;
+
+  if ANewLength = OldLen then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  if ANewLength < OldLen then
+  begin
+    StartIdx := OldLen - ANewLength + 1;
+    for i := StartIdx to OldLen - 1 do
+    begin
+      FreeDynOfDynOfByteArray(AArr.Content^[i]^);
+
+      {$IFnDEF MCU}
+        Dispose(AArr.Content^[i]);
+      {$ELSE}
+        FreeMem(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
+      {$ENDIF}
+    end;
+  end;
+
+  {$IFnDEF IsMCU}
+    Result := SetDynOfPtrUIntLength(TDynArrayOfPtrUInt(AArr), ANewLength);
+  {$ELSE}
+    TempDynArrayOfPtrUInt.Len := AArr.Len;
+    TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));
+    Result := SetDynOfPtrUIntLength(TempDynArrayOfPtrUInt, ANewLength);
+    AArr.Len := TempDynArrayOfPtrUInt.Len;
+    AArr.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
+  {$ENDIF}
+
+  if not Result then
+    Exit;
+
+  for i := OldLen to ANewLength - 1 do
+  begin
+    {$IFnDEF MCU}
+      New(AArr.Content^[i]);
+    {$ELSE}
+      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
+    {$ENDIF}
+
+    InitDynOfDynOfByteToEmpty(AArr.Content^[i]^);
+  end;
+
+  Result := True;
+end;
+
+
+procedure FreeDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
+var
+  i: Integer;
+begin
+  for i := 0 to AArr.Len - 1 do
+  begin
+    FreeDynOfDynOfByteArray(AArr.Content^[i]^);
+
+    {$IFnDEF MCU}
+      New(AArr.Content^[i]);
+    {$ELSE}
+      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
+    {$ENDIF}
+  end;
+end;
+
+
+function ConcatDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr1, AArr2: TDynArrayOfPDynArrayOfTDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+{$IFDEF IsMCU}
+  var
+    TempDynArrayOfPtrUInt1: TDynArrayOfPtrUInt;
+    TempDynArrayOfPtrUInt2: TDynArrayOfPtrUInt;
+{$ENDIF}
+begin
+  {$IFnDEF IsMCU}
+    Result := ConcatDynArraysOfPtrUInt(TDynArrayOfPtrUInt(AArr1), TDynArrayOfPtrUInt(AArr2));
+  {$ELSE}
+    TempDynArrayOfPtrUInt1.Len := AArr1.Len;
+    TempDynArrayOfPtrUInt2.Len := AArr2.Len;
+    TempDynArrayOfPtrUInt1.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr1.Content));
+    TempDynArrayOfPtrUInt2.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr2.Content));
+
+    Result := ConcatDynArraysOfPtrUInt(TempDynArrayOfPtrUInt1, TempDynArrayOfPtrUInt2);
+
+    AArr1.Len := TempDynArrayOfPtrUInt1.Len;
+    AArr2.Len := TempDynArrayOfPtrUInt2.Len;
+    AArr1.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt1.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
+    AArr2.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt2.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
+  {$ENDIF}
+end;
+
+
+function AddPDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewPDynArrayOfTDynArrayOfByte: PDynArrayOfTDynArrayOfByte): Boolean;
+{$IFDEF IsMCU}
+  var
+    TempDynArrayOfPtrUInt: TDynArrayOfPtrUInt;
+{$ENDIF}
+begin
+  {$IFnDEF IsMCU}
+    Result := AddPtrUIntToDynArraysOfPtrUInt(TDynArrayOfPtrUInt(AArr), PtrUInt(ANewPDynArrayOfTDynArrayOfByte));
+  {$ELSE}
+    TempDynArrayOfPtrUInt.Len := AArr.Len;
+    TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));
+    Result := AddPtrUIntToDynArraysOfPtrUInt(TempDynArrayOfPtrUInt, PtrUInt(ANewPDynArrayOfTDynArrayOfByte));
+    AArr.Len := TempDynArrayOfPtrUInt.Len;
+    AArr.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
+  {$ENDIF}
+end;
+
+
 
 end.
