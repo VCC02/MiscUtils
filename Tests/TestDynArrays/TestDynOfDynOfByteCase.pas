@@ -75,7 +75,8 @@ implementation
 
 
 const
-  CUninitializedDynArrayErrMsg = 'The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.';
+  CUninitializedDynArrayErrMsg1 = 'The DynArray is not initialized. Please call InitDynOfDynOfByteToEmpty before working with DynArray functions.';
+  CUninitializedDynArrayErrMsg2 = 'The DynArray is not initialized. Please call InitDynArrayToEmpty before working with DynArray functions.';
 
 
 procedure TTestDynOfDynOfByteCase.SetUp;
@@ -244,7 +245,7 @@ begin
     AddDynArrayOfByteToDynOfDynOfByte(Arr, NewArr);
   except
     on E: Exception do
-      Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg);
+      Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg1);
   end;
 
   FreeDynArray(NewArr);
@@ -263,7 +264,7 @@ begin
     AddDynArrayOfByteToDynOfDynOfByte(Arr, NewArr);
   except
     on E: Exception do
-      Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg);
+      Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg2);
   end;
 
   FreeDynOfDynOfByteArray(Arr);

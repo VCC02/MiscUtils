@@ -308,6 +308,7 @@ procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do 
 function DynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte): TDynArrayLength;
 function SetDynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 procedure FreeDynOfDynOfByteArray(var AArr: TDynArrayOfTDynArrayOfByte);
+function ConcatDynOfDynOfByteArrays(var AArr1, AArr2: TDynArrayOfTDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; var ANewArr: TDynArrayOfByte): Boolean;  //adds the new array to the outer array
 function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
 
@@ -326,6 +327,8 @@ function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArr
 procedure FreeDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
 function ConcatDynArraysOfPtrUInt(var AArr1, AArr2: TDynArrayOfPtrUInt): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddPtrUIntToDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ANewPtrUInt: PtrUInt): Boolean;
+//function DeleteItemFromPDynArraysOfPtrUInt(AArr: PDynArrayOfPtrUInt; ADelIndex: LongInt): Boolean;
+function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: LongInt): Boolean;
 
 
 procedure InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -333,8 +336,8 @@ function DynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfT
 function SetDynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayOfPDynArrayOfTDynArrayOfByteLength): Boolean; //returns True if successful, or False if it can't allocate memory
 procedure FreeDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
 function ConcatDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr1, AArr2: TDynArrayOfPDynArrayOfTDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
-function AddPDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewPDynArrayOfTDynArrayOfByte: PDynArrayOfTDynArrayOfByte): Boolean;
-
+function AddDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; var ANewDynArrayOfTDynArrayOfByte: TDynArrayOfTDynArrayOfByte): Boolean;
+function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
 
 
 {$IFDEF IsDesktop}
@@ -916,6 +919,24 @@ begin
 end;
 
 
+function ConcatDynOfDynOfByteArrays(var AArr1, AArr2: TDynArrayOfTDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+var
+  i: LongInt;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynOfDynArray(AArr1);
+    CheckInitializedDynOfDynArray(AArr2);
+  {$ENDIF}
+
+  Result := True;
+  for i := 0 to LongInt(AArr2.Len) - 1 do
+  begin
+    Result := Result and AddDynArrayOfByteToDynOfDynOfByte(AArr1, AArr2.Content^[i]^);
+    if not Result then
+      Exit;
+  end;
+end;
+
 //array of DWord
 
 procedure InitDynArrayOfDWordToEmpty(var AArr: TDynArrayOfDWord); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -1238,7 +1259,41 @@ begin
 end;
 
 
-//////////
+function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: LongInt): Boolean;
+var
+  DelPointer, NextPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  if (ADelIndex < 0) or (ADelIndex > LongInt(AArr.Len) - 1) then
+  begin
+    {$IFDEF IsDesktop}
+      raise Exception.Create('Index out of range when deleting item from DynArrayOfPtrUInt.');
+    {$ELSE}
+      Exit;
+    {$ENDIF}
+  end;
+
+  if AArr.Len = 1 then
+  begin
+    FreeDynArrayOfPtrUInt(AArr);
+    Result := True;
+    Exit;
+  end;
+
+  {$IFnDEF IsDesktop}
+    DelPointer := DWord(AArr.Content) + ADelIndex shl CArchBitShift;
+    NextPointer := DWord(AArr.Content) + (ADelIndex + 1) shl CArchBitShift;
+    MemMove(DelPointer, NextPointer, (AArr.Len - ADelIndex - 1) shl CArchBitShift);
+  {$ELSE}
+    DelPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt(ADelIndex shl CArchBitShift));  //NewPointer := @AArr.Content^[ADelIndex shl CArchBitShift];
+    NextPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt((ADelIndex + 1) shl CArchBitShift));   //NextPointer := DelPointer + SizeOf(Pointer);
+    Move(NextPointer^, DelPointer^, (AArr.Len - ADelIndex - 1) shl CArchBitShift);
+  {$ENDIF}
+
+  Result := SetDynOfPtrUIntLength(AArr, AArr.Len - 1);
+end;
+
+
+////////// array of TDynArrayOfTDynArrayOfByte
 
 procedure InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 begin
@@ -1266,11 +1321,15 @@ end;
 function SetDynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayOfPDynArrayOfTDynArrayOfByteLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
   OldLen: TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
-  i, StartIdx: LongInt;
+  i: LongInt;
   {$IFDEF IsMCU}
     TempDynArrayOfPtrUInt: TDynArrayOfPtrUInt;
   {$ENDIF}
 begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(AArr);
+  {$ENDIF}
+
   Result := False;
   OldLen := AArr.Len;
 
@@ -1282,8 +1341,7 @@ begin
 
   if ANewLength < OldLen then
   begin
-    StartIdx := OldLen - ANewLength + 1;
-    for i := StartIdx to OldLen - 1 do
+    for i := ANewLength to OldLen - 1 do
     begin
       FreeDynOfDynOfByteArray(AArr.Content^[i]^);
 
@@ -1311,7 +1369,7 @@ begin
   for i := OldLen to ANewLength - 1 do
   begin
     {$IFnDEF MCU}
-      New(AArr.Content^[i]);
+      New(AArr.Content^[i]);  //AArr.Content^[i] is a pointer to a PDynArrayOfTDynArrayOfByte
     {$ELSE}
       GetMem(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
     {$ENDIF}
@@ -1324,19 +1382,12 @@ end;
 
 
 procedure FreeDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
-var
-  i: Integer;
 begin
-  for i := 0 to AArr.Len - 1 do
-  begin
-    FreeDynOfDynOfByteArray(AArr.Content^[i]^);
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(AArr);
+  {$ENDIF}
 
-    {$IFnDEF MCU}
-      New(AArr.Content^[i]);
-    {$ELSE}
-      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
-    {$ENDIF}
-  end;
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(AArr, 0);
 end;
 
 
@@ -1365,23 +1416,77 @@ begin
 end;
 
 
-function AddPDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewPDynArrayOfTDynArrayOfByte: PDynArrayOfTDynArrayOfByte): Boolean;
+function AddDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; var ANewDynArrayOfTDynArrayOfByte: TDynArrayOfTDynArrayOfByte): Boolean;
+var
 {$IFDEF IsMCU}
-  var
-    TempDynArrayOfPtrUInt: TDynArrayOfPtrUInt;
+  TempDynArrayOfPtrUInt: TDynArrayOfPtrUInt;
 {$ENDIF}
+  TempNewPDynArrayOfTDynArrayOfByte: PDynArrayOfTDynArrayOfByte;
 begin
+  Result := True;
+
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(AArr);
+    CheckInitializedDynOfDynArray(ANewDynArrayOfTDynArrayOfByte);
+  {$ENDIF}
+
   {$IFnDEF IsMCU}
-    Result := AddPtrUIntToDynArraysOfPtrUInt(TDynArrayOfPtrUInt(AArr), PtrUInt(ANewPDynArrayOfTDynArrayOfByte));
+    New(TempNewPDynArrayOfTDynArrayOfByte);
+  {$ELSE}
+    GetMem(TempNewPDynArrayOfTDynArrayOfByte, SizeOf(TempNewPDynArrayOfTDynArrayOfByte^));
+  {$ENDIF}
+
+  InitDynOfDynOfByteToEmpty(TempNewPDynArrayOfTDynArrayOfByte^);
+
+  Result := ConcatDynOfDynOfByteArrays(TempNewPDynArrayOfTDynArrayOfByte^, ANewDynArrayOfTDynArrayOfByte);
+  if not Result then
+    Exit;
+
+  {$IFnDEF IsMCU}
+    Result := AddPtrUIntToDynArraysOfPtrUInt(TDynArrayOfPtrUInt(AArr), PtrUInt(TempNewPDynArrayOfTDynArrayOfByte));
   {$ELSE}
     TempDynArrayOfPtrUInt.Len := AArr.Len;
     TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));
-    Result := AddPtrUIntToDynArraysOfPtrUInt(TempDynArrayOfPtrUInt, PtrUInt(ANewPDynArrayOfTDynArrayOfByte));
+    Result := AddPtrUIntToDynArraysOfPtrUInt(TempDynArrayOfPtrUInt, PtrUInt(TempNewPDynArrayOfTDynArrayOfByte));
     AArr.Len := TempDynArrayOfPtrUInt.Len;
     AArr.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
   {$ENDIF}
 end;
 
 
+function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
+{$IFDEF IsMCU}
+  var
+    TempDynArrayOfPtrUInt: TDynArrayOfPtrUInt;
+{$ENDIF}
+begin
+  if (ADelIndex < 0) or (ADelIndex > LongInt(AArr.Len) - 1) then
+  begin
+    {$IFDEF IsDesktop}
+      raise Exception.Create('Index out of range when deleting item from DynArrayOfPDynArrayOfTDynArrayOfByte.');
+    {$ELSE}
+      Exit;
+    {$ENDIF}
+  end;
+
+  if AArr.Len = 1 then
+  begin
+    FreeDynArrayOfPDynArrayOfTDynArrayOfByte(AArr);
+    Result := True;
+    Exit;
+  end;
+
+  FreeDynOfDynOfByteArray(AArr.Content^[ADelIndex]^);
+
+  {$IFnDEF IsMCU}
+    Result := DeleteItemFromDynArraysOfPtrUInt(TDynArrayOfPtrUInt(AArr), ADelIndex);
+  {$ELSE}
+    TempDynArrayOfPtrUInt.Len := AArr.Len;
+    TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));
+    Result := DeleteItemFromDynArraysOfPtrUInt(TempDynArrayOfPtrUInt, ADelIndex);
+    AArr.Len := TempDynArrayOfPtrUInt.Len;
+    AArr.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
+  {$ENDIF}
+end;
 
 end.
