@@ -1,7 +1,7 @@
 {
     Copyright (C) 2023 VCC
     creation date: May 2023
-    initial release date: 04 Aug 2023
+    initial release date: 05 Aug 2023
 
     author: VCC
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -54,6 +54,11 @@ type
     procedure TestDeleteItem_FromOneItemArray_WithContent;
 
     procedure TestDeleteFirstItem_FromTwoItemArray;
+    procedure TestDeleteSecondItem_FromTwoItemArray;
+
+    procedure TestDeleteFirstItem_FromThreeItemArray;
+    procedure TestDeleteSecondItem_FromThreeItemArray;
+    procedure TestDeleteThirdItem_FromThreeItemArray;
   end;
 
 implementation
@@ -407,25 +412,118 @@ begin
 end;
 
 
+procedure AddToItemsToBigArray(var Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
+var
+  i: Integer;
+begin
+  for i := 0 to Arr.Len - 1 do
+  begin
+    InitDynOfDynOfByteToEmpty(Arr.Content^[i]^);
+    Expect(AddStringToDynOfDynArrayOfByte('First' + IntToStr(i), Arr.Content^[i]^)).ToBe(True);
+    Expect(AddStringToDynOfDynArrayOfByte('Second' + IntToStr(i), Arr.Content^[i]^)).ToBe(True);
+  end;
+end;
+
+
 procedure TTestDynOfDynOfDynOfByteCase.TestDeleteFirstItem_FromTwoItemArray;
 var
   Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  i: Integer;
 begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
 
-  InitDynOfDynOfByteToEmpty(Arr.Content^[0]^);
-  Expect(AddStringToDynOfDynArrayOfByte('First0', Arr.Content^[0]^)).ToBe(True);
-  Expect(AddStringToDynOfDynArrayOfByte('Second0', Arr.Content^[0]^)).ToBe(True);
-
-  InitDynOfDynOfByteToEmpty(Arr.Content^[1]^);
-  Expect(AddStringToDynOfDynArrayOfByte('First1', Arr.Content^[1]^)).ToBe(True);
-  Expect(AddStringToDynOfDynArrayOfByte('Second1', Arr.Content^[1]^)).ToBe(True);
+  AddToItemsToBigArray(Arr);
 
   Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True);
   Expect(Arr.Len).ToBe(1, 'successful deletion');
   Expect(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@['First1']);
   Expect(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@['Second1']);
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase.TestDeleteSecondItem_FromTwoItemArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
+
+  AddToItemsToBigArray(Arr);
+
+  Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 1)).ToBe(True);
+  Expect(Arr.Len).ToBe(1, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@['First0']);
+  Expect(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@['Second0']);
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase.TestDeleteFirstItem_FromThreeItemArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
+
+  AddToItemsToBigArray(Arr);
+
+  Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True);
+  Expect(Arr.Len).ToBe(2, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@['First1']);
+  Expect(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@['Second1']);
+
+  Expect(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@['First2']);
+  Expect(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@['Second2']);
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase.TestDeleteSecondItem_FromThreeItemArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
+
+  AddToItemsToBigArray(Arr);
+
+  Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 1)).ToBe(True);
+  Expect(Arr.Len).ToBe(2, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@['First0']);
+  Expect(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@['Second0']);
+
+  Expect(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@['First2']);
+  Expect(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@['Second2']);
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase.TestDeleteThirdItem_FromThreeItemArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
+
+  AddToItemsToBigArray(Arr);
+
+  Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 2)).ToBe(True);
+  Expect(Arr.Len).ToBe(2, 'successful deletion');
+  Expect(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@['First0']);
+  Expect(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@['Second0']);
+
+  Expect(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@['First1']);
+  Expect(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@['Second1']);
 
   FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
 end;

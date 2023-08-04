@@ -1479,8 +1479,11 @@ begin
   FreeDynOfDynOfByteArray(AArr.Content^[ADelIndex]^);
 
   {$IFnDEF IsMCU}
+    Dispose(AArr.Content^[ADelIndex]);
     Result := DeleteItemFromDynArraysOfPtrUInt(TDynArrayOfPtrUInt(AArr), ADelIndex);
   {$ELSE}
+    FreeMem(AArr.Content^[ADelIndex], SizeOf(TDynArrayOfTDynArrayOfByte));
+
     TempDynArrayOfPtrUInt.Len := AArr.Len;
     TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));
     Result := DeleteItemFromDynArraysOfPtrUInt(TempDynArrayOfPtrUInt, ADelIndex);
