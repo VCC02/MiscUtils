@@ -327,7 +327,6 @@ function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArr
 procedure FreeDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
 function ConcatDynArraysOfPtrUInt(var AArr1, AArr2: TDynArrayOfPtrUInt): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddPtrUIntToDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ANewPtrUInt: PtrUInt): Boolean;
-//function DeleteItemFromPDynArraysOfPtrUInt(AArr: PDynArrayOfPtrUInt; ADelIndex: LongInt): Boolean;
 function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: LongInt): Boolean;
 
 

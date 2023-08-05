@@ -54,6 +54,11 @@ type
     procedure Test_CallConcatDynArrays_WithoutFirstInitDynArray;
     procedure Test_CallConcatDynArrays_WithoutSecondInitDynArray;
 
+    procedure TestDeleteFirstBytes_ZeroLength;
+    procedure TestDeleteFirstBytes_LessThanLength;
+    procedure TestDeleteFirstBytes_SameAsLength;
+    procedure TestDeleteFirstBytes_GreaterThanLength;
+
     procedure TestDoubleFree;
   end;
 
@@ -341,6 +346,78 @@ begin
   end;
 
   FreeDynArray(Arr1);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFirstBytes_ZeroLength;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+  Arr.Content^[0] := 30;
+  Arr.Content^[1] := 40;
+  Arr.Content^[2] := 50;
+
+  RemoveStartBytesFromDynArray(0, Arr);
+
+  Expect(Arr.Len).ToBe(3);
+  Expect(Arr.Content^[0]).ToBe(30);
+  Expect(Arr.Content^[1]).ToBe(40);
+  Expect(Arr.Content^[2]).ToBe(50);
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFirstBytes_LessThanLength;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+  Arr.Content^[0] := 30;
+  Arr.Content^[1] := 40;
+  Arr.Content^[2] := 50;
+
+  RemoveStartBytesFromDynArray(2, Arr);
+
+  Expect(Arr.Len).ToBe(1);
+  Expect(Arr.Content^[0]).ToBe(50);
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFirstBytes_SameAsLength;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+  Arr.Content^[0] := 30;
+  Arr.Content^[1] := 40;
+  Arr.Content^[2] := 50;
+
+  RemoveStartBytesFromDynArray(3, Arr);
+
+  Expect(Arr.Len).ToBe(0);
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFirstBytes_GreaterThanLength;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+  RemoveStartBytesFromDynArray(7, Arr);
+
+  Expect(Arr.Len).ToBe(0);
+
+  FreeDynArray(Arr);
 end;
 
 
