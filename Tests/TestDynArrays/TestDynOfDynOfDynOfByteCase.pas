@@ -428,7 +428,6 @@ end;
 procedure TTestDynOfDynOfDynOfByteCase.TestDeleteFirstItem_FromTwoItemArray;
 var
   Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
-  i: Integer;
 begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
@@ -447,7 +446,6 @@ end;
 procedure TTestDynOfDynOfDynOfByteCase.TestDeleteSecondItem_FromTwoItemArray;
 var
   Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
-  i: Integer;
 begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
@@ -466,7 +464,6 @@ end;
 procedure TTestDynOfDynOfDynOfByteCase.TestDeleteFirstItem_FromThreeItemArray;
 var
   Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
-  i: Integer;
 begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
@@ -488,7 +485,6 @@ end;
 procedure TTestDynOfDynOfDynOfByteCase.TestDeleteSecondItem_FromThreeItemArray;
 var
   Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
-  i: Integer;
 begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
@@ -510,7 +506,6 @@ end;
 procedure TTestDynOfDynOfDynOfByteCase.TestDeleteThirdItem_FromThreeItemArray;
 var
   Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
-  i: Integer;
 begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);

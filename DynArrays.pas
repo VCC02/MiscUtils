@@ -62,7 +62,9 @@ unit DynArrays;
 }
 
 {$IFnDEF IsMCU}
-  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$IFDEF FPC}
+    {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$ENDIF}
   interface
 {$ENDIF}
 
@@ -282,7 +284,7 @@ type
 
 const
   {$IFDEF AppArch64}
-    CArchBitShift = 4;   //shl 4 means  multiply by SizeOf(Pointer)
+    CArchBitShift = 3;   //shl 3 means  multiply by SizeOf(Pointer)
   {$ENDIF}
 
   {$IFDEF AppArch32}
@@ -1281,11 +1283,11 @@ begin
   {$IFnDEF IsDesktop}
     DelPointer := DWord(AArr.Content) + ADelIndex shl CArchBitShift;
     NextPointer := DWord(AArr.Content) + (ADelIndex + 1) shl CArchBitShift;
-    MemMove(DelPointer, NextPointer, (AArr.Len - ADelIndex - 1) shl CArchBitShift);
+    MemMove(DelPointer, NextPointer, (LongInt(AArr.Len) - ADelIndex - 1) shl CArchBitShift);
   {$ELSE}
     DelPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt(ADelIndex shl CArchBitShift));  //NewPointer := @AArr.Content^[ADelIndex shl CArchBitShift];
     NextPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt((ADelIndex + 1) shl CArchBitShift));   //NextPointer := DelPointer + SizeOf(Pointer);
-    Move(NextPointer^, DelPointer^, (AArr.Len - ADelIndex - 1) shl CArchBitShift);
+    Move(NextPointer^, DelPointer^, (LongInt(AArr.Len) - ADelIndex - 1) shl CArchBitShift);
   {$ENDIF}
 
   Result := SetDynOfPtrUIntLength(AArr, AArr.Len - 1);
@@ -1329,7 +1331,6 @@ begin
     CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(AArr);
   {$ENDIF}
 
-  Result := False;
   OldLen := AArr.Len;
 
   if ANewLength = OldLen then
@@ -1422,8 +1423,6 @@ var
 {$ENDIF}
   TempNewPDynArrayOfTDynArrayOfByte: PDynArrayOfTDynArrayOfByte;
 begin
-  Result := True;
-
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(AArr);
     CheckInitializedDynOfDynArray(ANewDynArrayOfTDynArrayOfByte);
