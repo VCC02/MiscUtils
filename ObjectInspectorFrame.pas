@@ -57,7 +57,8 @@ type
     etColorCombo,         //A standard colorbox (combobox with colors) and an overlayed editbox. This allows custom user colors.
     etEnumCombo,          //A combobox with user-defined list of items.
     etEnumComboWithBtn,   //A combobox with user-defined list of items. Next to the combobox, a "..." browse button is displayed.
-    etUserEditor          //A "..." browse button which opens user-defined editor.
+    etUserEditor,         //A "..." browse button which opens user-defined editor.
+    etIntBooleanCombo     //Same as BooleanCombo, but it displays "0" and "1", instead of "False" and "True".
   );
 
   TOIColorFormat = (cfHexa, cfDecimal, cfMixed, cfText);
@@ -480,7 +481,8 @@ const
     'etColorCombo',
     'etEnumCombo',
     'etEnumComboWithBtn',
-    'etUserEditor'
+    'etUserEditor',
+    'etIntBooleanCombo'
   );
 
 
@@ -2291,7 +2293,7 @@ begin
       Exit;
     end;
 
-    etEnumCombo:
+    etEnumCombo, etIntBooleanCombo:
     begin
       CreateEnumComboBox(Node, VertScrollBarWidth);
       Allowed := False;
@@ -2563,7 +2565,7 @@ begin
       Exit;
 
     case NodeLevel of
-      CPropertyLevel:
+      CCategoryLevel, CPropertyLevel:
       begin
         PropertyNodeData := vstOI.GetNodeData(FEditingNode);
         case PropertyNodeData^.EditorType of
@@ -2642,7 +2644,7 @@ begin
             ;
         end;
       end;
-    end;
+    end; //case NodeLevel
 
     NewItems := FEditingText;
     if DoOnOIEditItems(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, NewItems) then
