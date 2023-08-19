@@ -486,6 +486,9 @@ const
   );
 
 
+function StrToTOIEditorType(AStr: string): TOIEditorType;
+
+
 implementation
 
 {$R *.frm}
@@ -605,6 +608,20 @@ begin
   finally
     SelDirDialog.Free;
   end;
+end;
+
+
+function StrToTOIEditorType(AStr: string): TOIEditorType;
+var
+  i: TOIEditorType;
+begin
+  Result := Low(TOIEditorType);
+  for i := Low(TOIEditorType) to High(TOIEditorType) do
+    if AStr = COIEditorTypeStr[i] then
+    begin
+      Result := i;
+      Exit;
+    end;
 end;
 
 
