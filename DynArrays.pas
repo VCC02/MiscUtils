@@ -39,7 +39,7 @@ unit DynArrays;
 //MemManager requirements:  open __Lib_MemManager.mpas (or MemManager.pas) and uncomment the header of MM_error function from the interface.
 //Whe using __Lib_MemManager.mpas (not MemManager.pas), the NR_FREE_BLOCKS may have to be moved to interface or set to a different value
 //Define MMFreeBlocks, for Memory Manager (requires MMFreeBlocks.inc). All the main tests should pass with a minimum value of 6 blocks (the library comes with a default value of 20).
-//reate MaxMM.inc, to define the heap size.
+//Create/Update MaxMM.inc file, to define the heap size.
 
 {  How to use:
   - Before calling any of the DynLength, SetDynLength or ConcatDynArrays function, users have to call InitDynArrayToEmpty.
@@ -204,7 +204,14 @@ type
   TDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of Byte;
   PDynArrayOfByteContent = ^TDynArrayOfByteContent;
 
-  TDynArrayLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+
+  {$IFDEF AppArch64}
+    TDynArrayLength = QWord;
+    TDynArrayLengthSig = Int64;
+  {$ELSE}
+    TDynArrayLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
+    TDynArrayLengthSig = LongInt;
+  {$ENDIF}
 
   TDynArrayOfByte = record
     Len: TDynArrayLength;
@@ -236,10 +243,9 @@ type
   TDynArrayOfDWordContent = array[0..CMaxDynArrayOfDWordLength - 1] of DWord;
   PDynArrayOfDWordContent = ^TDynArrayOfDWordContent;
 
-  TDynArrayOfDWordLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
 
   TDynArrayOfDWord = record
-    Len: TDynArrayOfDWordLength;
+    Len: TDynArrayLength;
     Content: PDynArrayOfDWordContent;
     {$IFDEF IsDesktop}
       Initialized: string; //strings are automatically initialized to empty in FP
@@ -253,10 +259,9 @@ type
   TDynArrayOfPtrUIntContent = array[0..CMaxDynArrayOfDWordLength - 1] of PtrUInt;
   PDynArrayOfPtrUIntContent = ^TDynArrayOfPtrUIntContent;
 
-  TDynArrayOfPtrUIntLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
 
   TDynArrayOfPtrUInt = record
-    Len: TDynArrayOfPtrUIntLength;
+    Len: TDynArrayLength;
     Content: PDynArrayOfPtrUIntContent;
     {$IFDEF IsDesktop}
       Initialized: string; //strings are automatically initialized to empty in FP
@@ -270,10 +275,9 @@ type
   TDynArrayOfPDynArrayOfTDynArrayOfByteContent = array[0..CMaxDynArrayOfDWordLength - 1] of PDynArrayOfTDynArrayOfByte;
   PDynArrayOfPDynArrayOfTDynArrayOfByteContent = ^TDynArrayOfPDynArrayOfTDynArrayOfByteContent;
 
-  TDynArrayOfPDynArrayOfTDynArrayOfByteLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
 
   TDynArrayOfPDynArrayOfTDynArrayOfByte = record
-    Len: TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
+    Len: TDynArrayLength;
     Content: PDynArrayOfPDynArrayOfTDynArrayOfByteContent;
     {$IFDEF IsDesktop}
       Initialized: string; //strings are automatically initialized to empty in FP
@@ -312,33 +316,33 @@ function SetDynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte; ANewLengt
 procedure FreeDynOfDynOfByteArray(var AArr: TDynArrayOfTDynArrayOfByte);
 function ConcatDynOfDynOfByteArrays(var AArr1, AArr2: TDynArrayOfTDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; var ANewArr: TDynArrayOfByte): Boolean;  //adds the new array to the outer array
-function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
+function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: TDynArrayLengthSig): Boolean;
 
 
 procedure InitDynArrayOfDWordToEmpty(var AArr: TDynArrayOfDWord); //do not call this on an array, which is already allocated, because it results in memory leaks
-function DynOfDWordLength(var AArr: TDynArrayOfDWord): TDynArrayOfDWordLength;
-function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayOfDWordLength): Boolean; //returns True if successful, or False if it can't allocate memory
+function DynOfDWordLength(var AArr: TDynArrayOfDWord): TDynArrayLength;
+function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 procedure FreeDynArrayOfDWord(var AArr: TDynArrayOfDWord);
 function ConcatDynArraysOfDWord(var AArr1, AArr2: TDynArrayOfDWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddDWordToDynArraysOfDWord(var AArr: TDynArrayOfDWord; ANewDWord: DWord): Boolean;
 
 
 procedure InitDynArrayOfPtrUIntToEmpty(var AArr: TDynArrayOfPtrUInt); //do not call this on an array, which is already allocated, because it results in memory leaks
-function DynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt): TDynArrayOfPtrUIntLength;
-function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArrayOfPtrUIntLength): Boolean; //returns True if successful, or False if it can't allocate memory
+function DynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt): TDynArrayLength;
+function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 procedure FreeDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
 function ConcatDynArraysOfPtrUInt(var AArr1, AArr2: TDynArrayOfPtrUInt): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddPtrUIntToDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ANewPtrUInt: PtrUInt): Boolean;
-function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: LongInt): Boolean;
+function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: TDynArrayLengthSig): Boolean;
 
 
 procedure InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
-function DynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte): TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
-function SetDynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayOfPDynArrayOfTDynArrayOfByteLength): Boolean; //returns True if successful, or False if it can't allocate memory
+function DynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte): TDynArrayLength;
+function SetDynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 procedure FreeDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
 function ConcatDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr1, AArr2: TDynArrayOfPDynArrayOfTDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; var ANewDynArrayOfTDynArrayOfByte: TDynArrayOfTDynArrayOfByte): Boolean;
-function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
+function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ADelIndex: TDynArrayLengthSig): Boolean;
 
 
 {$IFDEF IsDesktop}
@@ -455,7 +459,7 @@ end;
     TempStr: string;
   begin
     Result := '';
-    for i := 0 to LongInt(AArr.Len) - 1 do
+    for i := 0 to TDynArrayLengthSig(AArr.Len) - 1 do
     begin
       TempStr := 'some init value';
       DynArrayOfByteToString(AArr.Content^[i]^, TempStr);
@@ -679,7 +683,7 @@ end;
 function SetDynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
   OldPointer: PDynArrayOfTDynArrayOfByteContent;
-  i, MaxCopyIdx: LongInt;
+  i, MaxCopyIdx: TDynArrayLengthSig;
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynOfDynArray(AArr);
@@ -691,7 +695,7 @@ begin
   begin
     if AArr.Len > 0 then
     begin
-      for i := 0 to LongInt(AArr.Len) - 1 do
+      for i := 0 to TDynArrayLengthSig(AArr.Len) - 1 do
       begin
         FreeDynArray(AArr.Content^[i]^);
 
@@ -760,7 +764,7 @@ begin
     end;
   {$ENDIF}
 
-  MaxCopyIdx := LongInt(Min(AArr.Len, ANewLength)) - 1;
+  MaxCopyIdx := TDynArrayLengthSig(Min(AArr.Len, ANewLength)) - 1;
   for i := 0 to MaxCopyIdx do
   begin
     InitDynArrayToEmpty(AArr.Content^[i]^);
@@ -773,7 +777,7 @@ begin
 
   if AArr.Len > 0 then
   begin
-    for i := 0 to LongInt(AArr.Len) - 1 do
+    for i := 0 to TDynArrayLengthSig(AArr.Len) - 1 do
     begin
       FreeDynArray(OldPointer^[i]^);    /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
 
@@ -813,13 +817,13 @@ begin
 end;
 
 
-function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
+function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: TDynArrayLengthSig): Boolean;
 var
   i: Integer;
   OldPointer: PDynArrayOfTDynArrayOfByteContent;
   NewLen: DWord;
 begin
-  if (ADelIndex < 0) or (ADelIndex > LongInt(AArr.Len) - 1) then
+  if (ADelIndex < 0) or (ADelIndex > TDynArrayLengthSig(AArr.Len) - 1) then
   begin
     {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynOfDynArrayOfByte.');
@@ -922,7 +926,7 @@ end;
 
 function ConcatDynOfDynOfByteArrays(var AArr1, AArr2: TDynArrayOfTDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 var
-  i: LongInt;
+  i: TDynArrayLengthSig;
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynOfDynArray(AArr1);
@@ -930,7 +934,7 @@ begin
   {$ENDIF}
 
   Result := True;
-  for i := 0 to LongInt(AArr2.Len) - 1 do
+  for i := 0 to TDynArrayLengthSig(AArr2.Len) - 1 do
   begin
     Result := Result and AddDynArrayOfByteToDynOfDynOfByte(AArr1, AArr2.Content^[i]^);
     if not Result then
@@ -951,7 +955,7 @@ begin
 end;
 
 
-function DynOfDWordLength(var AArr: TDynArrayOfDWord): TDynArrayOfDWordLength;
+function DynOfDWordLength(var AArr: TDynArrayOfDWord): TDynArrayLength;
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfDWord(AArr);
@@ -961,7 +965,7 @@ begin
 end;
 
 
-function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayOfDWordLength): Boolean; //returns True if successful, or False if it can't allocate memory
+function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
   OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
@@ -1112,7 +1116,7 @@ begin
 end;
 
 
-function DynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt): TDynArrayOfPtrUIntLength;
+function DynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt): TDynArrayLength;
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfPtrUInt(AArr);
@@ -1122,7 +1126,7 @@ begin
 end;
 
 
-function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArrayOfPtrUIntLength): Boolean; //returns True if successful, or False if it can't allocate memory
+function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
   OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
@@ -1260,11 +1264,11 @@ begin
 end;
 
 
-function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: LongInt): Boolean;
+function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: TDynArrayLengthSig): Boolean;
 var
   DelPointer, NextPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
-  if (ADelIndex < 0) or (ADelIndex > LongInt(AArr.Len) - 1) then
+  if (ADelIndex < 0) or (ADelIndex > TDynArrayLengthSig(AArr.Len) - 1) then
   begin
     {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynArrayOfPtrUInt.');
@@ -1283,11 +1287,11 @@ begin
   {$IFnDEF IsDesktop}
     DelPointer := DWord(AArr.Content) + ADelIndex shl CArchBitShift;
     NextPointer := DWord(AArr.Content) + (ADelIndex + 1) shl CArchBitShift;
-    MemMove(DelPointer, NextPointer, (LongInt(AArr.Len) - ADelIndex - 1) shl CArchBitShift);
+    MemMove(DelPointer, NextPointer, (TDynArrayLengthSig(AArr.Len) - ADelIndex - 1) shl CArchBitShift);
   {$ELSE}
     DelPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt(ADelIndex shl CArchBitShift));  //NewPointer := @AArr.Content^[ADelIndex shl CArchBitShift];
     NextPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt((ADelIndex + 1) shl CArchBitShift));   //NextPointer := DelPointer + SizeOf(Pointer);
-    Move(NextPointer^, DelPointer^, (LongInt(AArr.Len) - ADelIndex - 1) shl CArchBitShift);
+    Move(NextPointer^, DelPointer^, (TDynArrayLengthSig(AArr.Len) - ADelIndex - 1) shl CArchBitShift);
   {$ENDIF}
 
   Result := SetDynOfPtrUIntLength(AArr, AArr.Len - 1);
@@ -1309,7 +1313,7 @@ begin
 end;
 
 
-function DynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte): TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
+function DynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte): TDynArrayLength;
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(AArr);
@@ -1319,10 +1323,10 @@ begin
 end;
 
 
-function SetDynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayOfPDynArrayOfTDynArrayOfByteLength): Boolean; //returns True if successful, or False if it can't allocate memory
+function SetDynOfPDynArrayOfTDynArrayOfByteLength(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldLen: TDynArrayOfPDynArrayOfTDynArrayOfByteLength;
-  i: LongInt;
+  OldLen: TDynArrayLength;
+  i: TDynArrayLengthSig;
   {$IFDEF IsMCU}
     TempDynArrayOfPtrUInt: TDynArrayOfPtrUInt;
   {$ENDIF}
@@ -1452,13 +1456,13 @@ begin
 end;
 
 
-function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ADelIndex: LongInt): Boolean;
+function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte; ADelIndex: TDynArrayLengthSig): Boolean;
 {$IFDEF IsMCU}
   var
     TempDynArrayOfPtrUInt: TDynArrayOfPtrUInt;
 {$ENDIF}
 begin
-  if (ADelIndex < 0) or (ADelIndex > LongInt(AArr.Len) - 1) then
+  if (ADelIndex < 0) or (ADelIndex > TDynArrayLengthSig(AArr.Len) - 1) then
   begin
     {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynArrayOfPDynArrayOfTDynArrayOfByte.');
