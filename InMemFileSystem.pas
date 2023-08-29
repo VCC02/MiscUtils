@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2022 VCC
+    Copyright (C) 2023 VCC
     creation date: Jul 2022
     initial release date: 26 Jul 2022
 
@@ -80,6 +80,7 @@ type
     function GetFileSize(AName: string): Int64;
     procedure ListMemFiles(var AList: TMemFileArr); overload;
     procedure ListMemFiles(AStringList: TStringList); overload;
+    function ListMemFilesAsString: string;
     procedure UpdateListOfMemFiles(FileNames: TStringList); //creates in-mem files if the provided names are not found
     function FileExistsInMem(AFileName: string): Boolean;
     function FileExistsInMemWithHash(AFileName, AHash: string): Boolean; overload;
@@ -102,6 +103,9 @@ function FileExistsInDiskOrMemWithPriority(AFileName: string; AInMemFileSystem: 
 procedure TMemFileArrToStringList(var AListOfMemFiles: TMemFileArr; AListOfFileNames: TStringList);
 procedure ExtractNonExistentFiles(AInitialListOfFiles, ANonExistentFiles: TStringList; AFileLocation: TFileLocation = flDisk; AInMemFileSystem: TInMemFileSystem = nil);
 
+
+const
+  CFileLocationStr: array[TFileLocation] of string = ('flDisk', 'flMem', 'flDiskThenMem', 'flMemThenDisk');
 
 implementation
 
@@ -336,6 +340,21 @@ begin
     AStringList.Clear;
     for i := 0 to Length(FListOfFiles) - 1 do
       AStringList.Add(FListOfFiles[i].Name);
+  finally
+    LeaveCriticalSection(FSystemCriticalSection);
+  end;
+end;
+
+
+function TInMemFileSystem.ListMemFilesAsString: string;
+var
+  i: Integer;
+begin
+  Result := '';
+  EnterCriticalSection(FSystemCriticalSection);
+  try
+    for i := 0 to Length(FListOfFiles) - 1 do
+      Result := Result + FListOfFiles[i].Name + #13#10;
   finally
     LeaveCriticalSection(FSystemCriticalSection);
   end;

@@ -24,7 +24,7 @@
 unit Expectations;
 
 //{$mode ObjFPC}{$H+}
-
+{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
 interface
 
 uses
