@@ -49,6 +49,12 @@ type
     function GetLength: Integer;
   end;
 
+  
+{$IFnDEF FPC}
+  function GetTickCount64: DWORD; stdcall; external kernel32 name 'GetTickCount64';  //available on Vista and newer, according to SysUtils from FP
+{$ENDIF}
+
+
 implementation
 
 
@@ -68,10 +74,6 @@ begin
   {$ENDIF}
 end;
 
-
-{$IFnDEF FPC}
-  function GetTickCount64: DWORD; stdcall; external kernel32 name 'GetTickCount64';  //available on Vista and newer, according to SysUtils from FP
-{$ENDIF}
 
 destructor TPollingFIFO.Destroy;
 var
