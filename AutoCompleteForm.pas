@@ -24,27 +24,28 @@
 
 unit AutoCompleteForm;
 
-{$mode ObjFPC}{$H+}
+{$mode Delphi}{$H+}
 
 interface
 
 uses
-  LCLIntf, LCLType, Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ComCtrls, StdCtrls,
-  VirtualTrees;
+  LCLIntf, LCLType, Classes, SysUtils, Forms, Controls, Graphics, Dialogs,
+  ComCtrls, StdCtrls, ExtCtrls, VirtualTrees;
 
 type
 
   { TfrmAutoComplete }
 
-  TfrmAutoComplete = class(TForm)
-    StatusBar1: TStatusBar;
-    vstIdentifiers: TVirtualStringTree;
+  //TfrmAutoComplete = class(TForm)
+  TfrmAutoComplete = class(THintWindow)
+    lblSizeInfo: TLabel;
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
+    procedure FormCreate(Sender: TObject);
+    procedure FormHide(Sender: TObject);
     procedure vstIdentifiersDblClick(Sender: TObject);
     procedure vstIdentifiersDrawText(Sender: TBaseVirtualTree;
       TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       const AText: String; const CellRect: TRect; var DefaultDraw: Boolean);
-    procedure vstIdentifiersExit(Sender: TObject);
     procedure vstIdentifiersGetText(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
       var CellText: String);
@@ -63,7 +64,30 @@ type
     FListOfVars: TStringList;
     FListOfFuncs: TStringList;
 
+    vstIdentifiers: TVirtualStringTree;
+    pnlDragCorner: TPanel;
+    tmrDeactivate: TTimer;
+    tmrStartup: TTimer;
+
+    FHold: Boolean;
+    FInitialWidth: Integer;
+    FInitialHeight: Integer;
+    FInitialX: Integer;
+    FInitialY: Integer;
+
+    procedure pnlDragCornerMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure pnlDragCornerMouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
+    procedure pnlDragCornerMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+
+    procedure FormDeactivate(Sender: TObject);
+    procedure tmrDeactivateTimer(Sender: TObject);
+    procedure tmrStartupTimer(Sender: TObject);
+
     procedure SearchText;
+    procedure CreateRemainingUIComponents;
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -113,7 +137,19 @@ begin
   CreatedHere := False;
   if frmAutoComplete = nil then
   begin
-    Application.CreateForm(TfrmAutoComplete, frmAutoComplete);
+    //Application.CreateForm(TfrmAutoComplete, frmAutoComplete);
+    frmAutoComplete := TfrmAutoComplete.Create(Application.MainForm);
+    frmAutoComplete.Width := 416;
+    frmAutoComplete.Height := 313;
+    frmAutoComplete.FormStyle := fsSystemStayOnTop;
+    frmAutoComplete.BorderStyle := bsNone;
+    frmAutoComplete.Constraints.MinWidth := frmAutoComplete.Width;
+    frmAutoComplete.Constraints.MinHeight := frmAutoComplete.Height;
+
+    frmAutoComplete.OnCreate := frmAutoComplete.FormCreate;
+    frmAutoComplete.OnClose := frmAutoComplete.FormClose;
+    frmAutoComplete.OnDeactivate := frmAutoComplete.FormDeactivate;
+
     CreatedHere := True;
   end;
 
@@ -131,18 +167,21 @@ begin
   frmAutoComplete.FSearchWord := ExtractSearchWord(AEdit.Text, AEdit.CaretPos.X);
   frmAutoComplete.FEdit := AEdit;
 
-  if CreatedHere then
-  begin
-    frmAutoComplete.FListOfVars.AddStrings(AListOfVars);
-    frmAutoComplete.FListOfFuncs.AddStrings(AListOfFuncs);
-    frmAutoComplete.vstIdentifiers.RootNodeCount := AListOfVars.Count + AListOfFuncs.Count;
-  end;
-
   if not frmAutoComplete.Visible then
   begin
     frmAutoComplete.Show;
     frmAutoComplete.vstIdentifiers.SetFocus;
     frmAutoComplete.FSelected := '';
+  end;
+
+  if CreatedHere then
+  begin
+    frmAutoComplete.FListOfVars.AddStrings(AListOfVars);
+    frmAutoComplete.FListOfFuncs.AddStrings(AListOfFuncs);
+    try
+      frmAutoComplete.vstIdentifiers.RootNodeCount := AListOfVars.Count + AListOfFuncs.Count;
+    except
+    end;
   end;
 
   frmAutoComplete.SearchText;
@@ -173,6 +212,10 @@ begin
   FListOfVars := TStringList.Create;
   FListOfFuncs := TStringList.Create;
   FSelected := '';
+  FHold := False;
+
+  CreateRemainingUIComponents;
+  tmrStartup.Enabled := True;
 end;
 
 
@@ -181,6 +224,28 @@ begin
   FListOfVars.Free;
   FListOfFuncs.Free;
   inherited Destroy;
+end;
+
+
+procedure TfrmAutoComplete.FormDeactivate(Sender: TObject);
+begin
+  tmrDeactivate.Enabled := True;
+end;
+
+
+procedure TfrmAutoComplete.tmrDeactivateTimer(Sender: TObject);
+begin
+  tmrDeactivate.Enabled := False;
+  if not FEdit.Focused then
+    Close;
+end;
+
+
+procedure TfrmAutoComplete.tmrStartupTimer(Sender: TObject);
+begin
+  tmrStartup.Enabled := False;
+  pnlDragCorner.Left := ClientWidth - pnlDragCorner.Width;
+  pnlDragCorner.Top := ClientHeight - pnlDragCorner.Height;
 end;
 
 
@@ -237,12 +302,6 @@ begin
 end;
 
 
-procedure TfrmAutoComplete.vstIdentifiersExit(Sender: TObject);
-begin
-  Close;
-end;
-
-
 procedure TfrmAutoComplete.vstIdentifiersDblClick(Sender: TObject);
 var
   Node: PVirtualNode;
@@ -271,6 +330,89 @@ begin
   except
     //the editbox might not be available
   end;
+end;
+
+
+procedure TfrmAutoComplete.CreateRemainingUIComponents;
+var
+  NewColum: TVirtualTreeColumn;
+begin
+  vstIdentifiers := TVirtualStringTree.Create(Self);
+  vstIdentifiers.Parent := Self;
+
+  vstIdentifiers.Left := 0;
+  vstIdentifiers.Top := 0;
+  vstIdentifiers.Height := Height {- 20};
+  vstIdentifiers.Width := Width;
+  vstIdentifiers.Anchors := [akTop, akLeft, akRight, akBottom];
+  vstIdentifiers.Colors.UnfocusedColor := clMedGray;
+  vstIdentifiers.DefaultNodeHeight := 16;
+  vstIdentifiers.DefaultText := 'Node';
+  vstIdentifiers.Font.Height := -13;
+  vstIdentifiers.Font.Name := 'Courier New';
+  vstIdentifiers.Header.AutoSizeIndex := 0;
+  vstIdentifiers.Header.DefaultHeight := 17;
+  vstIdentifiers.Indent := 4;
+  vstIdentifiers.ParentFont := False;
+  vstIdentifiers.TabOrder := 0;
+  vstIdentifiers.TreeOptions.PaintOptions := [toShowButtons, toShowDropmark, toShowRoot, toThemeAware, toUseBlendedImages];
+  vstIdentifiers.TreeOptions.SelectionOptions := [toFullRowSelect];
+  vstIdentifiers.ScrollBarOptions.AlwaysVisible := True;
+  vstIdentifiers.OnDblClick := vstIdentifiersDblClick;
+  vstIdentifiers.OnDrawText := vstIdentifiersDrawText;
+  vstIdentifiers.OnGetText := vstIdentifiersGetText;
+  vstIdentifiers.OnPaintText := vstIdentifiersPaintText;
+  vstIdentifiers.OnKeyDown := vstIdentifiersKeyDown;
+  vstIdentifiers.OnKeyUp := vstIdentifiersKeyUp;;
+
+  NewColum := vstIdentifiers.Header.Columns.Add;
+  NewColum.MinWidth := 50;
+  NewColum.Position := 0;
+  NewColum.Width := 50;
+  NewColum.Text := 'Type';
+
+  NewColum := vstIdentifiers.Header.Columns.Add;
+  NewColum.MinWidth := 500;
+  NewColum.Position := 1;
+  NewColum.Width := 500;
+  NewColum.Text := 'Definition';
+
+  pnlDragCorner := TPanel.Create(Self);
+  pnlDragCorner.Parent := Self;
+  pnlDragCorner.Width := 19;
+  pnlDragCorner.Height := 19;
+  pnlDragCorner.Left := ClientWidth - pnlDragCorner.Width;
+  pnlDragCorner.Top := ClientHeight - pnlDragCorner.Height;
+  pnlDragCorner.Cursor := crSizeNWSE;
+  pnlDragCorner.Font.Style := [fsBold, fsItalic];
+  pnlDragCorner.Font.Color := clGray;
+  pnlDragCorner.Caption := '/.';
+  pnlDragCorner.Anchors := [akLeft, akTop];  //yes, left and top
+  pnlDragCorner.OnMouseDown := pnlDragCornerMouseDown;
+  pnlDragCorner.OnMouseMove := pnlDragCornerMouseMove;
+  pnlDragCorner.OnMouseUp := pnlDragCornerMouseUp;
+  pnlDragCorner.BringToFront;
+
+  tmrDeactivate := TTimer.Create(Self);
+  tmrDeactivate.Interval := 100;
+  tmrDeactivate.OnTimer := tmrDeactivateTimer;
+  tmrDeactivate.Enabled := False;
+
+  tmrStartup := TTimer.Create(Self);
+  tmrStartup.Interval := 100;
+  tmrStartup.OnTimer := tmrStartupTimer;
+  tmrStartup.Enabled := False;             //Enabled later
+end;
+
+
+procedure TfrmAutoComplete.FormCreate(Sender: TObject);
+begin
+  //does not execute on THintWindow, unless manually assigned
+end;
+
+procedure TfrmAutoComplete.FormHide(Sender: TObject);
+begin
+  //does not execute on THintWindow, unless manually assigned
 end;
 
 
@@ -346,6 +488,42 @@ begin
         TargetCanvas.Font.Color := clGreen;
     end;
   end;
+end;
+
+
+procedure TfrmAutoComplete.pnlDragCornerMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  if ssLeft in Shift then
+  begin
+    FHold := True;
+    FInitialWidth := Width;
+    FInitialHeight := Height;
+    FInitialX := X;
+    FInitialY := Y;
+    pnlDragCorner.Hide;
+  end;
+end;
+
+
+procedure TfrmAutoComplete.pnlDragCornerMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+begin
+  if FHold then
+  begin
+    Width := FInitialWidth + X - FInitialX;
+    Height := FInitialHeight + Y - FInitialY;
+  end;
+end;
+
+
+procedure TfrmAutoComplete.pnlDragCornerMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  FHold := False;
+  pnlDragCorner.Left := ClientWidth - pnlDragCorner.Width;
+  pnlDragCorner.Top := ClientHeight - pnlDragCorner.Height;
+  pnlDragCorner.Show;
 end;
 
 

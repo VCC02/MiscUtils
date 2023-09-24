@@ -670,7 +670,7 @@ begin
   vstOI.TreeOptions.SelectionOptions := [toExtendedFocus, toFullRowSelect, toRightClickSelect];
   vstOI.OnCompareNodes := vstOICompareNodes;
   vstOI.OnCreateEditor := vstOICreateEditor;
-  vstOI.OnDblClick := vstOIDblClick;
+  //vstOI.OnDblClick := vstOIDblClick;
   vstOI.OnEditCancelled := vstOIEditCancelled;
   vstOI.OnEdited := vstOIEdited;
   vstOI.OnEditing := vstOIEditing;
@@ -948,12 +948,25 @@ end;
 procedure TfrObjectInspector.SetTextEditorEditPosAndSize;
 begin
   try
-    FTextEditorEditBox.Left := GetLocalComboEditorLeft;
-  except
-  end;
+    try
+      FTextEditorEditBox.Left := GetLocalComboEditorLeft;
+    except
+      Sleep(100);                  //move the race condition under the carpet  (At least, partially)
+      Application.ProcessMessages;
+      Sleep(300);
+      Application.ProcessMessages;
+      FTextEditorEditBox.Left := GetLocalComboEditorLeft;
+    end;
 
-  try
-    FTextEditorEditBox.Width := GetTextEditorWidth;
+    try
+      FTextEditorEditBox.Width := GetTextEditorWidth;
+    except
+      Sleep(100);                 //move the race condition under the carpet  (At least, partially)
+      Application.ProcessMessages;
+      Sleep(300);
+      Application.ProcessMessages;
+      FTextEditorEditBox.Width := GetTextEditorWidth;
+    end;
   except
   end;
 end;
