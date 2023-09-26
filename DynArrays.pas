@@ -308,6 +308,7 @@ procedure FreeDynArray(var AArr: TDynArrayOfByte);
 function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddByteToDynArray(AByte: Byte; var AArr: TDynArrayOfByte): Boolean;
 function RemoveStartBytesFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfByte): Boolean;
+function CopyFromDynArray(var ADestArr, ASrcArr: TDynArrayOfByte; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 
 
 procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -597,11 +598,11 @@ begin
   end;
 
   NewLen := DWord(AArr1.Len) + DWord(AArr2.Len);
-  if NewLen > 65535 then
-  begin
-    Result := False;
-    Exit;
-  end;
+  //if NewLen > 65535 then
+  //begin
+  //  Result := False;
+  //  Exit;
+  //end;
 
   OldArr1Len := AArr1.Len;
   Result := SetDynLength(AArr1, NewLen);
@@ -656,6 +657,36 @@ begin
   SetDynLength(AArr, AArr.Len - ACount);
 end;
 
+
+function CopyFromDynArray(var ADestArr, ASrcArr: TDynArrayOfByte; AIndex, ACount: TDynArrayLength): Boolean;
+var
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  Result := True;
+  InitDynArrayToEmpty(ADestArr);
+
+  if ACount = 0 then
+    Exit;
+
+  if AIndex > ASrcArr.Len then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  if ACount > ASrcArr.Len - AIndex then
+    ACount := ASrcArr.Len - AIndex;
+
+  SetDynLength(ADestArr, ACount);
+
+  {$IFnDEF IsDesktop}
+    OldPointer := DWord(ASrcArr.Content) + AIndex;
+    MemMove(ADestArr.Content, OldPointer, ACount);
+  {$ELSE}
+    OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex));
+    Move(OldPointer^, ADestArr.Content^, ACount); //src, dest, cnt
+  {$ENDIF}
+end;
 
 // array of array of byte
 
@@ -1070,11 +1101,11 @@ begin
   end;
 
   NewLen := DWord(AArr1.Len) + DWord(AArr2.Len);
-  if NewLen > 65535 then
-  begin
-    Result := False;
-    Exit;
-  end;
+  //if NewLen > 65535 then
+  //begin
+  //  Result := False;
+  //  Exit;
+  //end;
 
   OldArr1Len := AArr1.Len;
   Result := SetDynOfDWordLength(AArr1, NewLen);
@@ -1231,11 +1262,11 @@ begin
   end;
 
   NewLen := DWord(AArr1.Len) + DWord(AArr2.Len);
-  if NewLen > 65535 then
-  begin
-    Result := False;
-    Exit;
-  end;
+  //if NewLen > 65535 then
+  //begin
+  //  Result := False;
+  //  Exit;
+  //end;
 
   OldArr1Len := AArr1.Len;
   Result := SetDynOfPtrUIntLength(AArr1, NewLen);
