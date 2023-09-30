@@ -59,6 +59,12 @@ type
     procedure TestDeleteFirstBytes_SameAsLength;
     procedure TestDeleteFirstBytes_GreaterThanLength;
 
+    procedure TestCopyFromDynArray_HappyFlow;
+    procedure TestCopyFromDynArray_0Length;
+    procedure TestCopyFromDynArray_PartialOutOfContent;
+    procedure TestCopyFromDynArray_CompletelyOutOfContent;
+    procedure TestCopyFromDynArray_EmptySource;
+
     procedure TestDoubleFree;
   end;
 
@@ -418,6 +424,65 @@ begin
   Expect(Arr.Len).ToBe(0);
 
   FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestCopyFromDynArray_HappyFlow;
+var
+  Src, Dest: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Src);
+  Expect(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True);
+  CopyFromDynArray(Dest, Src, 3, 7);
+
+  Expect(DynArrayOfByteToString(Dest)).ToBe('3456789');
+end;
+
+
+procedure TTestDynArrays.TestCopyFromDynArray_0Length;
+var
+  Src, Dest: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Src);
+  Expect(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True);
+  CopyFromDynArray(Dest, Src, 3, 0);
+
+  Expect(DynArrayOfByteToString(Dest)).ToBe('');
+end;
+
+
+procedure TTestDynArrays.TestCopyFromDynArray_PartialOutOfContent;
+var
+  Src, Dest: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Src);
+  Expect(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True);
+  CopyFromDynArray(Dest, Src, 10, 20);
+
+  Expect(DynArrayOfByteToString(Dest)).ToBe('ABCDEF');
+end;
+
+
+procedure TTestDynArrays.TestCopyFromDynArray_CompletelyOutOfContent;
+var
+  Src, Dest: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Src);
+  Expect(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True);
+  CopyFromDynArray(Dest, Src, 50, 20);
+
+  Expect(DynArrayOfByteToString(Dest)).ToBe('');
+end;
+
+
+procedure TTestDynArrays.TestCopyFromDynArray_EmptySource;
+var
+  Src, Dest: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Src);
+  CopyFromDynArray(Dest, Src, 0, 20);
+
+  Expect(DynArrayOfByteToString(Dest)).ToBe('');
 end;
 
 
