@@ -984,44 +984,49 @@ begin
 
   SetTextEditorEditPosAndSize;
 
-  case NodeData^.EditorType of
-    etSpinText:
-    begin
-      FupdownTextEditor := TUpDown.Create(Self);
-      FupdownTextEditor.Parent := FTextEditorEditBox.Parent;//Self;
-      FupdownTextEditor.Width := 17;
-      FupdownTextEditor.Height := FTextEditorEditBox.Height - 4;
-      FupdownTextEditor.Left := GetLocalEditorLeft(FupdownTextEditor.Width, GetVertScrollBarWidth) - CTextEditorSpacing; //vstOI.Left + vstOI.Header.Columns.Items[2].Left - FupdownTextEditor.Width - CTextEditorSpacing; ///////////////////// - icon width - icon spacing
-      FupdownTextEditor.Top := FTextEditorEditBox.Top + 2;
-      FupdownTextEditor.Flat := True;
-      FupdownTextEditor.ParentColor := False;
-      FupdownTextEditor.OnChangingEx := updownTextEditorChangingEx;
+  try
+    case NodeData^.EditorType of
+      etSpinText:
+      begin
+        FupdownTextEditor := TUpDown.Create(Self);
+        FupdownTextEditor.Parent := FTextEditorEditBox.Parent;//Self;
+        FupdownTextEditor.Width := 17;
+        FupdownTextEditor.Height := FTextEditorEditBox.Height - 4;
+        FupdownTextEditor.Left := GetLocalEditorLeft(FupdownTextEditor.Width, GetVertScrollBarWidth) - CTextEditorSpacing; //vstOI.Left + vstOI.Header.Columns.Items[2].Left - FupdownTextEditor.Width - CTextEditorSpacing; ///////////////////// - icon width - icon spacing
+        FupdownTextEditor.Top := FTextEditorEditBox.Top + 2;
+        FupdownTextEditor.Flat := True;
+        FupdownTextEditor.ParentColor := False;
+        FupdownTextEditor.OnChangingEx := updownTextEditorChangingEx;
 
-      FupdownTextEditor.Visible := True;
-      FupdownTextEditor.BringToFront;
-    end;
+        FupdownTextEditor.Visible := True;
+        FupdownTextEditor.BringToFront;
+      end;
 
-    etTextWithArrow:
-    begin
-      //CreateArrowButton(FEditingNode, GetVertScrollBarWidth, etTextWithArrow);
-      FSpdBtnArrowProperty := TSpeedButton.Create(Self);
-      FSpdBtnArrowProperty.Parent := FTextEditorEditBox; //using the edtibox as parent, to automatically move the arrow button on scrolling
-      FSpdBtnArrowProperty.Width := 17;
-      FSpdBtnArrowProperty.Height := FTextEditorEditBox.Height - 4;
-      FSpdBtnArrowProperty.Left := FTextEditorEditBox.Width - FSpdBtnArrowProperty.Width - 4; ///////////////////// - icon width - icon spacing
-      FSpdBtnArrowProperty.Top := 0;
-      FSpdBtnArrowProperty.Flat := True;
-      FSpdBtnArrowProperty.Glyph.Assign(imgDownArrow.Picture.Bitmap);
-      FSpdBtnArrowProperty.OnClick := spdbtnArrowPropertyClick;
-      FSpdBtnArrowProperty.Anchors := [akRight, akTop];
+      etTextWithArrow:
+      begin
+        //CreateArrowButton(FEditingNode, GetVertScrollBarWidth, etTextWithArrow);
+        FSpdBtnArrowProperty := TSpeedButton.Create(Self);
+        FSpdBtnArrowProperty.Parent := FTextEditorEditBox; //using the edtibox as parent, to automatically move the arrow button on scrolling
+        FSpdBtnArrowProperty.Width := 17;
+        FSpdBtnArrowProperty.Height := FTextEditorEditBox.Height - 4;
+        FSpdBtnArrowProperty.Left := FTextEditorEditBox.Width - FSpdBtnArrowProperty.Width - 4; ///////////////////// - icon width - icon spacing
+        FSpdBtnArrowProperty.Top := 0;
+        FSpdBtnArrowProperty.Flat := True;
+        FSpdBtnArrowProperty.Glyph.Assign(imgDownArrow.Picture.Bitmap);
+        FSpdBtnArrowProperty.OnClick := spdbtnArrowPropertyClick;
+        FSpdBtnArrowProperty.Anchors := [akRight, akTop];
 
-      FSpdBtnArrowProperty.Visible := True;
-      FSpdBtnArrowProperty.BringToFront;
-    end
+        FSpdBtnArrowProperty.Visible := True;
+        FSpdBtnArrowProperty.BringToFront;
+      end
 
-    else
-      ;
-  end; //case
+      else
+        ;
+    end; //case
+  except
+    //on E: Exception do
+    //  raise Exception.Create('Using unready editbox: ' + E.Message);
+  end;
 end;
 
 
@@ -1767,9 +1772,10 @@ begin
   FEditingNode := Node;
   FEditingColumn := Column;
 
-  FTextEditorEditBox.Left := GetLocalComboEditorLeft;
-  tmrSetEditBox.Enabled := True;
+  FTextEditorEditBox.Show;
+  //FTextEditorEditBox.Left := GetLocalComboEditorLeft;  //this is also called from timer
   AssignPopupMenuAndTooltipToEditor(FTextEditorEditBox);
+  tmrSetEditBox.Enabled := True;
 end;
 
 
