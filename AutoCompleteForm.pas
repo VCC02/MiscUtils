@@ -63,6 +63,8 @@ type
 
     FListOfVars: TStringList;
     FListOfFuncs: TStringList;
+    FListOfVarsDesc: TStringList;
+    FListOfFuncsDesc: TStringList;
 
     vstIdentifiers: TVirtualStringTree;
     pnlDragCorner: TPanel;
@@ -88,6 +90,9 @@ type
 
     procedure SearchText;
     procedure CreateRemainingUIComponents;
+
+    procedure LoadSettings;
+    procedure SaveSettings;
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -96,7 +101,7 @@ type
 var
   frmAutoComplete: TfrmAutoComplete;
 
-procedure ShowAutoComplete(AEdit: TCustomEdit; AListOfVars, AListOfFuncs: TStrings);  //should be called once / CloseAutoComplete call
+procedure ShowAutoComplete(AEdit: TCustomEdit; AListOfVars, AListOfFuncs, AListOfVarsDesc, AListOfFuncsDesc: TStrings);  //should be called once / CloseAutoComplete call
 function CloseAutoComplete: string;
 function AutoCompleteVisible: Boolean;
 
@@ -104,13 +109,17 @@ function AutoCompleteVisible: Boolean;
 { ToDo:
  - add only the missing string part, at Caret position
  - Highlight ASearchWord in list of identifiers
- - Find a way to detect defocusing
 }
 
 
 implementation
 
-{$R *.frm}
+
+//{$R *.frm}
+
+
+uses
+  IniFiles;
 
 
 function ExtractSearchWord(AStr: string; ACurrentCaretPos: Integer): string;
@@ -129,7 +138,7 @@ begin
 end;
 
 
-procedure ShowAutoComplete(AEdit: TCustomEdit; AListOfVars, AListOfFuncs: TStrings);
+procedure ShowAutoComplete(AEdit: TCustomEdit; AListOfVars, AListOfFuncs, AListOfVarsDesc, AListOfFuncsDesc: TStrings);
 var
   CreatedHere: Boolean;
   EditRect: TRect;
@@ -176,8 +185,18 @@ begin
 
   if CreatedHere then
   begin
-    frmAutoComplete.FListOfVars.AddStrings(AListOfVars);
-    frmAutoComplete.FListOfFuncs.AddStrings(AListOfFuncs);
+    if AListOfVars <> nil then
+      frmAutoComplete.FListOfVars.AddStrings(AListOfVars);
+
+    if AListOfFuncs <> nil then
+      frmAutoComplete.FListOfFuncs.AddStrings(AListOfFuncs);
+
+    if AListOfVarsDesc <> nil then
+      frmAutoComplete.FListOfVarsDesc.AddStrings(AListOfVarsDesc);
+
+    if AListOfFuncsDesc <> nil then
+      frmAutoComplete.FListOfFuncsDesc.AddStrings(AListOfFuncsDesc);
+
     try
       frmAutoComplete.vstIdentifiers.RootNodeCount := AListOfVars.Count + AListOfFuncs.Count;
     except
@@ -186,6 +205,16 @@ begin
 
   frmAutoComplete.SearchText;
   frmAutoComplete.BringToFront;
+
+  if frmAutoComplete.Left + frmAutoComplete.Width > Screen.Width then
+    frmAutoComplete.Left := EditRect.Left - frmAutoComplete.Width - 10;
+
+  if frmAutoComplete.Top + frmAutoComplete.Width > Screen.Height then
+    frmAutoComplete.Top := EditRect.Top - frmAutoComplete.Height - 15;
+
+  if frmAutoComplete.Top < 0 then
+    frmAutoComplete.Top := 0;
+
   AEdit.SetFocus;
 end;
 
@@ -211,6 +240,9 @@ begin
   inherited Create(TheOwner);
   FListOfVars := TStringList.Create;
   FListOfFuncs := TStringList.Create;
+  FListOfVarsDesc := TStringList.Create;
+  FListOfFuncsDesc := TStringList.Create;
+
   FSelected := '';
   FHold := False;
 
@@ -223,7 +255,53 @@ destructor TfrmAutoComplete.Destroy;
 begin
   FListOfVars.Free;
   FListOfFuncs.Free;
+
+  try
+    SaveSettings;
+  except
+  end;
+
   inherited Destroy;
+end;
+
+
+procedure TfrmAutoComplete.LoadSettings;
+var
+  Ini: TMemIniFile;
+begin
+  Ini := TMemIniFile.Create(ExtractFilePath(ParamStr(0)) + 'AutoComplete.ini'); //every application, which uses autocomplete will have this file
+  try
+    Width := Ini.ReadInteger('AutoComplete', 'Width', Width);
+    Height := Ini.ReadInteger('AutoComplete', 'Height', Height);
+
+    vstIdentifiers.ShowHint := True;
+    vstIdentifiers.Hint := 'Width: ' + IntToStr(Width) + '  Height: ' + IntToStr(Height);
+  finally
+    Ini.Free;
+  end;
+end;
+
+
+procedure TfrmAutoComplete.SaveSettings;
+var
+  Ini: TMemIniFile;
+  TempWidth, TempHeight: Integer;
+begin
+  Ini := TMemIniFile.Create(ExtractFilePath(ParamStr(0)) + 'AutoComplete.ini'); //every application, which uses autocomplete will have this file
+  try
+    TempWidth := Ini.ReadInteger('AutoComplete', 'Width', 50);
+    TempHeight := Ini.ReadInteger('AutoComplete', 'Height', 50);
+
+    if (TempWidth <> Width) or
+       (TempHeight <> Height) then
+    begin
+      Ini.WriteInteger('AutoComplete', 'Width', Width);
+      Ini.WriteInteger('AutoComplete', 'Height', Height);
+      Ini.UpdateFile;  //save only if modified
+    end;
+  finally
+    Ini.Free;
+  end;
 end;
 
 
@@ -244,6 +322,8 @@ end;
 procedure TfrmAutoComplete.tmrStartupTimer(Sender: TObject);
 begin
   tmrStartup.Enabled := False;
+
+  LoadSettings;
   pnlDragCorner.Left := ClientWidth - pnlDragCorner.Width;
   pnlDragCorner.Top := ClientHeight - pnlDragCorner.Height;
 end;
@@ -253,6 +333,7 @@ procedure TfrmAutoComplete.SearchText;
 var
   Node, FirstVisible: PVirtualNode;
   TempIsVisible: Boolean;
+  UpperCaseSearchWord: string;
 begin
   Node := vstIdentifiers.GetFirst;
   if Node = nil then
@@ -260,10 +341,11 @@ begin
 
   FirstVisible := nil;
   FSearchWord := Trim(FSearchWord);
+  UpperCaseSearchWord := UpperCase(FSearchWord);
   repeat
     TempIsVisible := (FSearchWord = '') or
-    ((Integer(Node^.Index) < FListOfVars.Count) and (Pos(FSearchWord, FListOfVars.Strings[Node^.Index]) > 0)) or
-    ((Integer(Node^.Index) >= FListOfVars.Count) and (Pos(FSearchWord, FListOfFuncs.Strings[Node^.Index - FListOfVars.Count]) > 0));
+    ((Integer(Node^.Index) < FListOfVars.Count) and (Pos(UpperCaseSearchWord, UpperCase(FListOfVars.Strings[Node^.Index])) > 0)) or
+    ((Integer(Node^.Index) >= FListOfVars.Count) and (Pos(UpperCaseSearchWord, UpperCase(FListOfFuncs.Strings[Node^.Index - FListOfVars.Count])) > 0));
 
     vstIdentifiers.IsVisible[Node] := TempIsVisible;
     if TempIsVisible and (FirstVisible = nil) then
@@ -297,6 +379,18 @@ begin
         CellText := FListOfVars.Strings[Node^.Index]
       else
         CellText := FListOfFuncs.Strings[Node^.Index - FListOfVars.Count];
+    end;
+
+    2:
+    begin
+      try
+        if Integer(Node^.Index) < FListOfVars.Count then
+          CellText := FListOfVarsDesc.Strings[Node^.Index]
+        else
+          CellText := FListOfFuncsDesc.Strings[Node^.Index - FListOfVars.Count];
+      except
+        CellText := '*** indexing bug ***';
+      end;
     end;
   end;
 end;
@@ -363,7 +457,7 @@ begin
   vstIdentifiers.OnGetText := vstIdentifiersGetText;
   vstIdentifiers.OnPaintText := vstIdentifiersPaintText;
   vstIdentifiers.OnKeyDown := vstIdentifiersKeyDown;
-  vstIdentifiers.OnKeyUp := vstIdentifiersKeyUp;;
+  vstIdentifiers.OnKeyUp := vstIdentifiersKeyUp;
 
   NewColum := vstIdentifiers.Header.Columns.Add;
   NewColum.MinWidth := 50;
@@ -372,10 +466,16 @@ begin
   NewColum.Text := 'Type';
 
   NewColum := vstIdentifiers.Header.Columns.Add;
-  NewColum.MinWidth := 500;
+  NewColum.MinWidth := 390;
   NewColum.Position := 1;
-  NewColum.Width := 500;
+  NewColum.Width := 390;
   NewColum.Text := 'Definition';
+
+  NewColum := vstIdentifiers.Header.Columns.Add;
+  NewColum.MinWidth := 4500;
+  NewColum.Position := 2;
+  NewColum.Width := 4500;
+  NewColum.Text := 'Description';
 
   pnlDragCorner := TPanel.Create(Self);
   pnlDragCorner.Parent := Self;
@@ -426,6 +526,13 @@ end;
 
 procedure TfrmAutoComplete.vstIdentifiersKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
+begin
+  //
+end;
+
+
+procedure TfrmAutoComplete.vstIdentifiersKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
 var
   Node: PVirtualNode;
 begin
@@ -447,13 +554,6 @@ begin
   else
     if not (Key in [VK_UP, VK_DOWN, VK_NEXT, VK_PRIOR]) then
       FEdit.SetFocus;
-end;
-
-
-procedure TfrmAutoComplete.vstIdentifiersKeyUp(Sender: TObject; var Key: Word;
-  Shift: TShiftState);
-begin
-  //
 end;
 
 
