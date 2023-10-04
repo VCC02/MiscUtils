@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2022 VCC
+    Copyright (C) 2023 VCC
     creation date: Jul 2022
     initial release date: 26 Jul 2022
 
@@ -30,7 +30,12 @@ unit PollingFIFO;
 interface
 
 uses
-  Windows, Classes, SysUtils;
+  {$IFDEF UNIX}
+    LCLIntf, LCLType,
+  {$ELSE}
+    Windows,
+  {$ENDIF}
+  Classes, SysUtils;
 
 type
   TPollingFIFO = class
@@ -82,15 +87,18 @@ var
   tk: UInt64;
 begin
   tk := GetTickCount64;
-  repeat
-    FoundLock := False;
-    RawCount := (-1 - FCritSec.LockCount) shr 2 + FCritSec.RecursionCount;
-    if RawCount > 0 then
-      FoundLock := True;
 
-    Application.ProcessMessages;
-    Sleep(2);
-  until not FoundLock or (GetTickCount64 - tk > 5000);
+  {$IFnDEF UNIX}
+    repeat
+      FoundLock := False;
+      RawCount := (-1 - FCritSec.LockCount) shr 2 + FCritSec.RecursionCount;  ////////////////////// ToDo: look for FCritSec fields in Linux if they can be used here
+      if RawCount > 0 then
+        FoundLock := True;
+
+      Application.ProcessMessages;
+      Sleep(2);
+    until not FoundLock or (GetTickCount64 - tk > 5000);
+  {$ENDIF}
 
   {$IFDEF FPC}   
     DoneCriticalSection(FCritSec);
