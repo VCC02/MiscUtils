@@ -296,8 +296,18 @@ begin
 
     //see StackOverflow answer 19440268
     //FpIOCtl(ComConnections[Idx].ConnHandle, TIOCGSERIAL, @Ser);
-    tios.c_ispeed := BaudRateToConst(ABaudRate);
-    tios.c_ospeed := BaudRateToConst(ABaudRate);
+    //tios.c_ispeed := BaudRateToConst(ABaudRate);
+    //tios.c_ospeed := BaudRateToConst(ABaudRate);
+
+    CFSetISpeed(tios, BaudRateToConst(ABaudRate));
+    CFSetOSpeed(tios, BaudRateToConst(ABaudRate));
+
+    tios.c_cflag := tios.c_cflag or CS8; //byte is 8-bits wide
+
+    if tios.c_cflag and PARENB = PARENB then
+      tios.c_cflag := tios.c_cflag xor PARENB; //disable parity
+
+    tios.c_cflag := tios.c_cflag or CSTOPB;
     //More flags need to be set here
 
     if TCSetAttr(ComConnections[Idx].ConnHandle, TCSANOW, tios) = -1 then
