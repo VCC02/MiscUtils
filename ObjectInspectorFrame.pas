@@ -2012,8 +2012,6 @@ begin
   FBtnItemsProperty.OnClick := btnItemsPropertyClick;
   FBtnItemsProperty.OnExit := btnItemsPropertyExit;
 
-  AssignPopupMenuAndTooltipToEditor(FBtnItemsProperty);
-
   if AUsedForPath then
   begin
     FEdtPath := TEdit.Create(Self);
@@ -2030,10 +2028,12 @@ begin
 
     FEdtPath.OnExit := EdtPathExit;
 
-    //AssignPopupMenuAndTooltipToEditor(FEdtPath);
+    AssignPopupMenuAndTooltipToEditor(FEdtPath);
     FEdtPath.Visible := True;
     FEdtPath.BringToFront;
-  end;
+  end
+  else
+    AssignPopupMenuAndTooltipToEditor(FBtnItemsProperty);
 
   FBtnItemsProperty.Visible := True;
   FBtnItemsProperty.BringToFront;
