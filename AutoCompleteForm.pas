@@ -221,6 +221,8 @@ end;
 
 function CloseAutoComplete: string;
 begin
+  Result := '';
+
   if frmAutoComplete <> nil then
   begin
     Result := frmAutoComplete.FSelected;

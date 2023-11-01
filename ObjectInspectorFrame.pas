@@ -1147,6 +1147,7 @@ end;
 
 function TfrObjectInspector.DoOnOIGetCategoryValue(ACategoryIndex: Integer; var AEditorType: TOIEditorType): string;
 begin
+  Result := '';
   if not Assigned(FOnOIGetCategoryValue) then
     Exit; //not all ObjectInspectors have to implement editable categories, so exist instead of raising an exception
 
