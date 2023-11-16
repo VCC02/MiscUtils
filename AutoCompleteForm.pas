@@ -476,7 +476,7 @@ begin
   NewColum := vstIdentifiers.Header.Columns.Add;
   NewColum.MinWidth := 4500;
   NewColum.Position := 2;
-  NewColum.Width := 4500;
+  NewColum.Width := 6500;
   NewColum.Text := 'Description';
 
   pnlDragCorner := TPanel.Create(Self);
