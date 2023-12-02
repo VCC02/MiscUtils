@@ -81,6 +81,7 @@ type
     procedure ListMemFiles(var AList: TMemFileArr); overload;
     procedure ListMemFiles(AStringList: TStringList); overload;
     function ListMemFilesAsString: string;
+    function ListMemFilesWithHashAsString: string;
     procedure UpdateListOfMemFiles(FileNames: TStringList); //creates in-mem files if the provided names are not found
     function FileExistsInMem(AFileName: string): Boolean;
     function FileExistsInMemWithHash(AFileName, AHash: string): Boolean; overload;
@@ -355,6 +356,21 @@ begin
   try
     for i := 0 to Length(FListOfFiles) - 1 do
       Result := Result + FListOfFiles[i].Name + #13#10;
+  finally
+    LeaveCriticalSection(FSystemCriticalSection);
+  end;
+end;
+
+
+function TInMemFileSystem.ListMemFilesWithHashAsString: string;
+var
+  i: Integer;
+begin
+  Result := '';
+  EnterCriticalSection(FSystemCriticalSection);
+  try
+    for i := 0 to Length(FListOfFiles) - 1 do
+      Result := Result + FListOfFiles[i].Name + FFileNameHashSeparator + FListOfFiles[i].Hash + #13#10;
   finally
     LeaveCriticalSection(FSystemCriticalSection);
   end;
