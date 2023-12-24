@@ -664,7 +664,7 @@ begin
   vstOI.StateImages := imglstOIColorIcons;
   vstOI.TabOrder := 0;
   vstOI.TextMargin := 2;
-  vstOI.TreeOptions.AutoOptions := [toAutoScrollOnExpand, toAutoTristateTracking, toAutoDeleteMovedNodes, toDisableAutoscrollOnFocus, toDisableAutoscrollOnEdit];
+  vstOI.TreeOptions.AutoOptions := [toAutoScrollOnExpand, toAutoTristateTracking, toDisableAutoscrollOnFocus, toDisableAutoscrollOnEdit];
   vstOI.TreeOptions.MiscOptions := [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning];
   vstOI.TreeOptions.PaintOptions := [toShowButtons, toShowDropmark, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines];
   vstOI.TreeOptions.SelectionOptions := [toExtendedFocus, toFullRowSelect, toRightClickSelect];

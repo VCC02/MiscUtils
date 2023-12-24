@@ -21,6 +21,7 @@ object frObjectInspector: TfrObjectInspector
     BevelOuter = bvNone
     Caption = 'pnlvstOI'
     Color = 181757
+    ParentBackground = False
     ParentColor = False
     TabOrder = 0
     Visible = False
@@ -58,12 +59,12 @@ object frObjectInspector: TfrObjectInspector
     Top = 216
     Width = 320
     Anchors = [akLeft, akRight, akBottom]
-    OnChange = edtSearchChange
     ParentShowHint = False
     ShowHint = True
     TabOrder = 1
     TextHint = 'Search'
     Visible = False
+    OnChange = edtSearchChange
   end
   object imglstOIColorIcons: TImageList
     Left = 268
