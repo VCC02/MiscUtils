@@ -1,0 +1,31 @@
+object frmMouseHint: TfrmMouseHint
+  Left = 100
+  Height = 76
+  Top = 99
+  Width = 164
+  AlphaBlendValue = 200
+  BorderIcons = []
+  BorderStyle = bsNone
+  Caption = 'frmMouseHint'
+  ClientHeight = 76
+  ClientWidth = 164
+  Color = clCream
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  FormStyle = fsStayOnTop
+  LCLVersion = '8.2'
+  object pnlMoment: TPanel
+    Left = 0
+    Height = 17
+    Top = 0
+    Width = 164
+    Alignment = taLeftJustify
+    BevelOuter = bvNone
+    Caption = 'Moment:'
+    Color = clCream
+    ParentBackground = False
+    ParentColor = False
+    TabOrder = 0
+  end
+end

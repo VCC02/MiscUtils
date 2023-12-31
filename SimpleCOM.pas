@@ -399,6 +399,10 @@ procedure ListExistentCOMPorts(AList: TStrings; AIncludeNonExistent: Boolean = F
     i: Integer;
     AReg: TRegistry;
     ValueNames: TStringList;
+
+    {$IFDEF OpenComFilter}
+      Res: Cardinal;
+    {$ENDIF}
 {$ENDIF}
 begin
   AList.Clear;
@@ -433,6 +437,18 @@ begin
       finally
         AReg.Free;
       end;
+
+      {$IFDEF OpenComFilter}
+        for i := AList.Count - 1 downto 0 do
+        begin
+          Res := FileOpen(CComPortPrefix + AList.Strings[i], fmOpenRead or fmShareDenyNone);
+
+          if Res <> $FFFFFFFF then
+            FileClose(Res)
+          else
+            AList.Delete(i);
+        end;  
+      {$ENDIF}
     {$ELSE}
       {$IFDEF UNIX}
         ListPortsByFilter(AList, CComPortPrefix, 'ttyUSB');
