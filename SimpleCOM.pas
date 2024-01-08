@@ -58,6 +58,14 @@ uses
 {$ENDIF}
   ;
 
+{$IFnDEF Windows}
+  type
+    TOnOverrideCOMSettings = procedure(AComName: string; var tios: Termios);
+
+  var
+    OnOverrideCOMSettings: TOnOverrideCOMSettings;   //should be assigned to a user-code handler if the settings have to be changed
+{$ENDIF}
+
 
 function ConnectToCOM(AComName: string; ABaudRate: Cardinal; ARxBufSize, ATxBufSize: Integer): Cardinal;  //Returns a handle, greater than 0 for success. Returns 0, in case of error.
 procedure DisconnectFromCOM(AComName: string);
@@ -176,9 +184,18 @@ begin
 end;
 
 
+procedure DoOnOverrideCOMSettings(AComName: string; var tios: Termios);
+begin
+  if not Assigned(OnOverrideCOMSettings) then
+    Exit;
+
+  OnOverrideCOMSettings(AComName, tios);
+end;
+
+
 function ConnectToCOM(AComName: string; ABaudRate: Cardinal; ARxBufSize, ATxBufSize: Integer): Cardinal;  //Returns a handle, greater than 0 for success. Returns 0, in case of error.
 var
-  Idx: Integer;
+  Idx, i: Integer;
   {$IFDEF Windows}
     DCB: TDCB;
     CommTimeouts: TCommTimeouts;
@@ -308,7 +325,8 @@ begin
       tios.c_cflag := tios.c_cflag xor PARENB; //disable parity
 
     tios.c_cflag := tios.c_cflag or CSTOPB;
-    //More flags need to be set here
+
+    DoOnOverrideCOMSettings(AComName, tios);
 
     if TCSetAttr(ComConnections[Idx].ConnHandle, TCSANOW, tios) = -1 then
     begin
@@ -586,6 +604,7 @@ end;
 
 initialization
   SetLength(ComConnections, 0);
+  OnOverrideCOMSettings := nil;
 
 finalization
   SetLength(ComConnections, 0);
