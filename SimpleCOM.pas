@@ -184,23 +184,26 @@ begin
 end;
 
 
-procedure DoOnOverrideCOMSettings(AComName: string; var tios: Termios);
-begin
-  if not Assigned(OnOverrideCOMSettings) then
-    Exit;
+{$IFnDEF Windows}
+  procedure DoOnOverrideCOMSettings(AComName: string; var tios: Termios);
+  begin
+    if not Assigned(OnOverrideCOMSettings) then
+      Exit;
 
-  OnOverrideCOMSettings(AComName, tios);
-end;
+    OnOverrideCOMSettings(AComName, tios);
+  end;
+{$ENDIF}
 
 
 function ConnectToCOM(AComName: string; ABaudRate: Cardinal; ARxBufSize, ATxBufSize: Integer): Cardinal;  //Returns a handle, greater than 0 for success. Returns 0, in case of error.
 var
-  Idx, i: Integer;
+  Idx: Integer;
   {$IFDEF Windows}
     DCB: TDCB;
     CommTimeouts: TCommTimeouts;
   {$ELSE}
     tios: Termios;
+    i: Integer;
   {$ENDIF}  
 begin
   Idx := GetCOMIndexByName(AComName);
@@ -604,7 +607,10 @@ end;
 
 initialization
   SetLength(ComConnections, 0);
-  OnOverrideCOMSettings := nil;
+
+  {$IFnDEF Windows}
+    OnOverrideCOMSettings := nil;
+  {$ENDIF}
 
 finalization
   SetLength(ComConnections, 0);
