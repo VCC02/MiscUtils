@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2024 VCC
     creation date: 23 Apr 2023
     initial release date: 23 Apr 2023
 
@@ -39,7 +39,7 @@ unit DynArrays;
 //Create/Update MaxMM.inc file, to define the heap size.
 
 {  How to use:
-  - Before calling any of the DynLength, SetDynLength or ConcatDynArrays function, users have to call InitDynArrayToEmpty.
+  - Before calling any of the DynLength, SetDynLength or ConcatDynArrays functions, users have to call InitDynArrayToEmpty.
     This ensures that the array is properly initialized. The reason is that there is no reference counting or automatic initialization.
     The FP implementation has an "Initialized" field, on every array, which allows raising an exception if calling one of the array functions
     on unitialized arrays. Thus, it is recommended to validate the code, as much as possible, using FP, before moving to mP.
@@ -56,6 +56,8 @@ unit DynArrays;
   - test with MM(.mpas) and on various cases of fragmentation error and memory full error.
     In case of fragmentation errors, the memory manager becomes unusable, so the allocated data will be lost
   - test on mP that for loops on empty arrays, behave as expected, when TDynArrayLength is DWord instead of LongInt. If not, this has to be changed.
+  - The implementations of TDynArrayOfByte, TDynArrayOfWord and TDynArrayOfDWord might share a common implementation, where a data size is passed to each function, for allocation / deallocation.
+    This should decrease the code size at the expense of a stack level. The complez arrays (array of array of..) might also require small changes.
 }
 
 {$IFnDEF IsMCU}
@@ -197,10 +199,6 @@ type
   {$ENDIF}
 {$ENDIF}
 
-  //array of byte
-  TDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of Byte;
-  PDynArrayOfByteContent = ^TDynArrayOfByteContent;
-
 
   {$IFDEF AppArch64}
     TDynArrayLength = QWord;
@@ -209,6 +207,11 @@ type
     TDynArrayLength = DWord; // {$IFDEF IsDesktop} SmallInt {$ELSE} Integer {$ENDIF}; //16-bit on mP
     TDynArrayLengthSig = LongInt;
   {$ENDIF}
+
+  //-------------------------------------
+  //array of Byte
+  TDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of Byte;
+  PDynArrayOfByteContent = ^TDynArrayOfByteContent;
 
   TDynArrayOfByte = record
     Len: TDynArrayLength;
@@ -221,7 +224,8 @@ type
   PDynArrayOfByte = ^TDynArrayOfByte;
 
 
-  //array of array of byte
+  //-------------------------------------
+  //array of array of Byte
   TDynArrayOfTDynArrayOfByteContent = array[0..CMaxDynArrayLength - 1] of PDynArrayOfByte;
   PDynArrayOfTDynArrayOfByteContent = ^TDynArrayOfTDynArrayOfByteContent;
 
@@ -236,6 +240,39 @@ type
   PDynArrayOfTDynArrayOfByte = ^TDynArrayOfTDynArrayOfByte;
 
 
+  //-------------------------------------
+  //array of Word
+  TDynArrayOfWordContent = array[0..CMaxDynArrayLength - 1] of Word;
+  PDynArrayOfWordContent = ^TDynArrayOfWordContent;
+
+  TDynArrayOfWord = record
+    Len: TDynArrayLength;
+    Content: PDynArrayOfWordContent;
+    {$IFDEF IsDesktop}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfWord = ^TDynArrayOfWord;
+
+
+  //-------------------------------------
+  //array of array of Word
+  TDynArrayOfTDynArrayOfWordContent = array[0..CMaxDynArrayLength - 1] of PDynArrayOfWord;
+  PDynArrayOfTDynArrayOfWordContent = ^TDynArrayOfTDynArrayOfWordContent;
+
+  TDynArrayOfTDynArrayOfWord = record
+    Len: TDynArrayLength;
+    Content: PDynArrayOfTDynArrayOfWordContent;
+    {$IFDEF IsDesktop}
+      Initialized: string; //strings are automatically initialized to empty in FP
+    {$ENDIF}
+  end;
+
+  PDynArrayOfTDynArrayOfWord = ^TDynArrayOfTDynArrayOfWord;
+
+
+  //-------------------------------------
   //array of DWord
   TDynArrayOfDWordContent = array[0..CMaxDynArrayOfDWordLength - 1] of DWord;
   PDynArrayOfDWordContent = ^TDynArrayOfDWordContent;
@@ -252,6 +289,7 @@ type
   PDynArrayOfDWord = ^TDynArrayOfDWord;
 
 
+  //-------------------------------------
   //array of Pointer (PtrUInt)
   TDynArrayOfPtrUIntContent = array[0..CMaxDynArrayOfDWordLength - 1] of PtrUInt;
   PDynArrayOfPtrUIntContent = ^TDynArrayOfPtrUIntContent;
@@ -268,6 +306,7 @@ type
   PDynArrayOfPtrUInt = ^TDynArrayOfPtrUInt;
 
 
+  //-------------------------------------
   //array of PDynArrayOfTDynArrayOfByte   -  array of pointers to array of array of byte
   TDynArrayOfPDynArrayOfTDynArrayOfByteContent = array[0..CMaxDynArrayOfDWordLength - 1] of PDynArrayOfTDynArrayOfByte;
   PDynArrayOfPDynArrayOfTDynArrayOfByteContent = ^TDynArrayOfPDynArrayOfTDynArrayOfByteContent;
@@ -317,6 +356,25 @@ function AddDynArrayOfByteToDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte;
 function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: TDynArrayLengthSig): Boolean;
 
 
+procedure InitDynArrayOfWordToEmpty(var AArr: TDynArrayOfWord); //do not call this on an array, which is already allocated, because it results in memory leaks
+function DynOfWordLength(var AArr: TDynArrayOfWord): TDynArrayLength;
+function SetDynOfWordLength(var AArr: TDynArrayOfWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
+procedure FreeDynArrayOfWord(var AArr: TDynArrayOfWord);
+function ConcatDynArraysOfWord(var AArr1, AArr2: TDynArrayOfWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+function AddWordToDynArraysOfWord(var AArr: TDynArrayOfWord; ANewWord: Word): Boolean;
+function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfWord): Boolean;
+function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+
+
+procedure InitDynOfDynOfWordToEmpty(var AArr: TDynArrayOfTDynArrayOfWord); //do not call this on an array, which is already allocated, because it results in memory leaks
+function DynOfDynOfWordLength(var AArr: TDynArrayOfTDynArrayOfWord): TDynArrayLength;
+function SetDynOfDynOfWordLength(var AArr: TDynArrayOfTDynArrayOfWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
+procedure FreeDynOfDynOfWordArray(var AArr: TDynArrayOfTDynArrayOfWord);
+function ConcatDynOfDynOfWordArrays(var AArr1, AArr2: TDynArrayOfTDynArrayOfWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+function AddDynArrayOfWordToDynOfDynOfWord(var AArr: TDynArrayOfTDynArrayOfWord; var ANewArr: TDynArrayOfWord): Boolean;  //adds the new array to the outer array
+function DeleteItemFromDynOfDynOfWord(var AArr: TDynArrayOfTDynArrayOfWord; ADelIndex: TDynArrayLengthSig): Boolean;
+
+
 procedure InitDynArrayOfDWordToEmpty(var AArr: TDynArrayOfDWord); //do not call this on an array, which is already allocated, because it results in memory leaks
 function DynOfDWordLength(var AArr: TDynArrayOfDWord): TDynArrayLength;
 function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
@@ -348,16 +406,19 @@ function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayO
   procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
   procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
+  procedure CheckInitializedDynOfDynArrayOfWord(var AArr: TDynArrayOfTDynArrayOfWord);
   procedure CheckInitializedDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
   procedure CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
 {$ENDIF}
 
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
+function StringToDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfWord): Boolean;   //assumes ADest is initialized
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
 function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
 
 {$IFDEF IsDesktop}
   function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF IsDesktop} overload; {$ENDIF}
+  function DynArrayOfWordToString(var AArr: TDynArrayOfWord): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynOfDynArrayOfByteToString(var AArr: TDynArrayOfTDynArrayOfByte; ASeparator: string = #13#10): string;
 
   //for compatibility with mP
@@ -383,6 +444,18 @@ implementation
   begin
     if AArr.Initialized = '' then
       raise Exception.Create('The DynArray is not initialized. Please call InitDynOfDynOfByteToEmpty before working with DynArray functions.');
+  end;
+
+  procedure CheckInitializedDynArrayOfWord(var AArr: TDynArrayOfWord);
+  begin
+    if AArr.Initialized = '' then
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynArrayOfWordToEmpty before working with DynArray functions.');
+  end;
+
+  procedure CheckInitializedDynOfDynArrayOfWord(var AArr: TDynArrayOfTDynArrayOfWord);
+  begin
+    if AArr.Initialized = '' then
+      raise Exception.Create('The DynArray is not initialized. Please call InitDynOfDynOfWordToEmpty before working with DynArray functions.');
   end;
 
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
@@ -423,6 +496,26 @@ begin
 end;
 
 
+function StringToDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfWord): Boolean;   //assumes ADest is initialized
+var
+  TempLen: TDynArrayLength;
+begin
+  TempLen := TDynArrayLength(Length(AString));
+  TempLen := TempLen shr 1 + Ord(TempLen and 1 = 1);  //add one more item if odd
+
+  Result := SetDynOfWordLength(ADest, TempLen);
+
+  if not Result then
+    Exit;
+
+  {$IFDEF IsDesktop}
+    MemMove(ADest.Content, @AString[1], TempLen shl 1);
+  {$ELSE}
+    MemMove(PByte(ADest.Content), PByte(@AString[0]), TempLen shl 1);
+  {$ENDIF}
+end;
+
+
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string);  {$IFDEF IsDesktop} overload; {$ENDIF}
 begin
   {$IFDEF IsDesktop}
@@ -432,6 +525,19 @@ begin
     MemMove(@ADestStr[1], AArr.Content, AArr.Len);
   {$ELSE}
     MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len);
+  {$ENDIF}
+end;
+
+
+procedure DynArrayOfWordToString(var AArr: TDynArrayOfWord; var ADestStr: string);  {$IFDEF IsDesktop} overload; {$ENDIF}
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfWord(AArr);
+    SetLength(ADestStr, AArr.Len shl 1);
+
+    MemMove(@ADestStr[1], AArr.Content, AArr.Len shl 1);
+  {$ELSE}
+    MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len shl 1);
   {$ENDIF}
 end;
 
@@ -452,6 +558,13 @@ end;
   begin
     Result := 'no string content';
     DynArrayOfByteToString(AArr, Result);
+  end;
+
+
+  function DynArrayOfWordToString(var AArr: TDynArrayOfWord): string; {$IFDEF IsDesktop} overload; {$ENDIF}
+  begin
+    Result := 'no string content';
+    DynArrayOfWordToString(AArr, Result);
   end;
 
 
@@ -688,7 +801,8 @@ begin
   MemMove(ADestArr.Content, OldPointer, ACount);
 end;
 
-// array of array of byte
+
+// array of array of Byte
 
 procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
 begin
@@ -969,6 +1083,503 @@ begin
   end;
 end;
 
+
+//---------------------------------------
+//array of Word
+
+procedure InitDynArrayOfWordToEmpty(var AArr: TDynArrayOfWord); //do not call this on an array, which is already allocated, because it results in memory leaks
+begin
+  AArr.Len := 0;       //this is required when allocating a new array
+  AArr.Content := nil; //probably, not needed, since Len is set to 0
+
+  {$IFDEF IsDesktop}
+    AArr.Initialized := 'init';  //some string, different than ''
+  {$ENDIF}
+end;
+
+
+function DynOfWordLength(var AArr: TDynArrayOfWord): TDynArrayLength;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfWord(AArr);
+  {$ENDIF}
+
+  Result := AArr.Len;
+end;
+
+
+function SetDynOfWordLength(var AArr: TDynArrayOfWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
+var
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfWord(AArr);
+  {$ENDIF}
+
+  Result := True;
+
+  if ANewLength = 0 then
+  begin
+    if AArr.Len > 0 then
+    begin
+      {$IFDEF UsingDynTFT}
+        {$IFDEF IsMCU}
+          FreeMem(AArr.Content, AArr.Len shl 1);
+        {$ELSE}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len shl 1);
+        {$ENDIF}
+      {$ELSE}
+        FreeMem(AArr.Content, AArr.Len shl 1);
+      {$ENDIF}
+    end;
+
+    AArr.Len := 0;
+    Exit;
+  end;
+
+  OldPointer := PIntPtr(AArr.Content);
+
+  {$IFnDEF IsDesktop}
+    GetMem(AArr.Content, ANewLength shl 1);
+    if MM_error or (AArr.Content = nil) then
+    begin
+      Result := False;
+      Exit;
+    end;
+
+    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl 1);  //OldPointer = src, AArr.Content = dest
+  {$ELSE}
+    try
+      {$IFDEF UsingDynTFT}
+        GetMem(TPtrRec(AArr.Content), ANewLength shl 1);
+        if MM_error or (AArr.Content = nil) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      {$ELSE}
+        GetMem(AArr.Content, ANewLength shl 1);
+      {$ENDIF}
+
+      //AArr.Len is still the old array length. Only the Content field points somewhere else.
+      MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl 1);    // the rest of the content is not initialized
+    except
+      Result := False;
+    end;
+  {$ENDIF}
+
+  if AArr.Len > 0 then
+  begin
+    {$IFDEF UsingDynTFT}
+      {$IFDEF IsMCU}
+        FreeMem(TPtrRec(OldPointer), AArr.Len shl 1);
+      {$ELSE}
+        FreeMem(TPtrRec(OldPointer), AArr.Len shl 1);
+      {$ENDIF}
+    {$ELSE}
+      FreeMem(OldPointer, AArr.Len shl 1);
+    {$ENDIF}
+  end;
+
+  AArr.Len := ANewLength;
+end;
+
+
+procedure FreeDynArrayOfWord(var AArr: TDynArrayOfWord);
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfWord(AArr);
+  {$ENDIF}
+
+  SetDynOfWordLength(AArr, 0);
+end;
+
+
+function ConcatDynArraysOfWord(var AArr1, AArr2: TDynArrayOfWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+var
+  NewLen: DWord;
+  NewPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  OldArr1Len: DWord;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfWord(AArr1);
+    CheckInitializedDynArrayOfWord(AArr2);
+  {$ENDIF}
+
+  if AArr2.Len = 0 then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  NewLen := DWord(AArr1.Len) + DWord(AArr2.Len);
+
+  OldArr1Len := AArr1.Len;
+  Result := SetDynOfWordLength(AArr1, NewLen);
+  if not Result then
+    Exit;
+
+  {$IFnDEF IsDesktop}
+    NewPointer := DWord(AArr1.Content) + OldArr1Len shl 1;
+  {$ELSE}
+    NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len shl 1));  //NewPointer := @AArr1.Content^[OldArr1Len shl 1];
+  {$ENDIF}
+  MemMove(NewPointer, AArr2.Content, AArr2.Len shl 1);
+
+  Result := True;
+end;
+
+
+function AddWordToDynArraysOfWord(var AArr: TDynArrayOfWord; ANewWord: Word): Boolean;
+begin
+  Result := SetDynOfWordLength(AArr, AArr.Len + 1);
+  if not Result then
+    Exit;
+
+  AArr.Content^[AArr.Len - 1] := ANewWord;
+end;
+
+
+function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfWord): Boolean;
+var
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  Result := True;
+
+  if ACount > AArr.Len then
+  begin
+    FreeDynArrayOfWord(AArr);
+    Exit;
+  end;
+
+  if ACount = 0 then
+    Exit;
+
+  {$IFnDEF IsDesktop}
+    OldPointer := DWord(AArr.Content) + ACount shl 1;
+  {$ELSE}
+    OldPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt(ACount shl 1));
+  {$ENDIF}
+  MemMove(AArr.Content, OldPointer, ACount shl 1);
+
+  SetDynOfWordLength(AArr, AArr.Len - ACount);  //no "shl 1" here
+end;
+
+
+function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+var
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  Result := True;
+  InitDynArrayOfWordToEmpty(ADestArr);
+
+  if ACount = 0 then
+    Exit;
+
+  if AIndex > ASrcArr.Len then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  if ACount > ASrcArr.Len - AIndex then
+    ACount := ASrcArr.Len - AIndex;
+
+  SetDynOfWordLength(ADestArr, ACount);
+
+  {$IFnDEF IsDesktop}
+    OldPointer := DWord(ASrcArr.Content) + AIndex shl 1;
+  {$ELSE}
+    OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex shl 1));
+  {$ENDIF}
+  MemMove(ADestArr.Content, OldPointer, ACount shl 1);
+end;
+
+
+//-------------------------
+// array of array of Word
+
+procedure InitDynOfDynOfWordToEmpty(var AArr: TDynArrayOfTDynArrayOfWord); //do not call this on an array, which is already allocated, because it results in memory leaks
+begin
+  AArr.Len := 0;       //this is required when allocating a new array
+  AArr.Content := nil; //probably, not needed, since Len is set to 0
+
+  {$IFDEF IsDesktop}
+    AArr.Initialized := 'init';  //some string, different than ''
+  {$ENDIF}
+end;
+
+
+function DynOfDynOfWordLength(var AArr: TDynArrayOfTDynArrayOfWord): TDynArrayLength;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynOfDynArrayOfWord(AArr);
+  {$ENDIF}
+
+  Result := AArr.Len;
+end;
+
+
+function SetDynOfDynOfWordLength(var AArr: TDynArrayOfTDynArrayOfWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
+var
+  OldPointer: PDynArrayOfTDynArrayOfWordContent;
+  i, MaxCopyIdx: TDynArrayLengthSig;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynOfDynArrayOfWord(AArr);
+  {$ENDIF}
+
+  Result := True;
+
+  if ANewLength = 0 then
+  begin
+    if AArr.Len > 0 then
+    begin
+      for i := 0 to TDynArrayLengthSig(AArr.Len) - 1 do
+      begin
+        FreeDynArrayOfWord(AArr.Content^[i]^);
+
+        {$IFnDEF IsDesktop}
+          Freemem(AArr.Content^[i], SizeOf(TDynArrayOfWord));
+        {$ELSE}
+          Dispose(AArr.Content^[i]);
+        {$ENDIF}
+      end;
+
+      {$IFDEF UsingDynTFT}
+        {$IFDEF IsMCU}
+          FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfWord));
+        {$ELSE}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len * SizeOf(PDynArrayOfWord));
+        {$ENDIF}
+      {$ELSE}
+        FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfWord));
+      {$ENDIF}
+    end;
+
+    AArr.Len := 0;
+    Exit;
+  end;
+
+  {$IFnDEF IsDesktop}
+    OldPointer := DWord(AArr.Content);
+  {$ELSE}
+    OldPointer := PDynArrayOfTDynArrayOfWordContent(AArr.Content);
+  {$ENDIF}
+
+  {$IFnDEF IsDesktop}
+    GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfWord));    //SizeOf pointer
+    if MM_error or (AArr.Content = nil) then
+    begin
+      Result := False;
+      Exit;
+    end;
+
+    for i := 0 to ANewLength - 1 do
+    begin
+      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfWord));           //SizeOf struct
+      if MM_error or (AArr.Content = nil) then
+      begin
+        Result := False;
+        Exit;
+      end;
+    end;
+  {$ELSE}
+    try
+      {$IFDEF UsingDynTFT}
+        GetMem(TPtrRec(AArr.Content), ANewLength * SizeOf(PDynArrayOfWord)); //SizeOf pointer
+        if MM_error or (AArr.Content = nil) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      {$ELSE}
+        GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfWord)); //SizeOf pointer
+      {$ENDIF}
+                                              /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
+      for i := 0 to ANewLength - 1 do
+        New(AArr.Content^[i]);           //SizeOf struct    //Using New instead of GetMem, to properly initialize the "Initialized" field (string). GetMem doesn't do any form of initialization to the allocated structure.
+    except
+      Result := False;
+    end;
+  {$ENDIF}
+
+  MaxCopyIdx := TDynArrayLengthSig(Min(AArr.Len, ANewLength)) - 1;
+  for i := 0 to MaxCopyIdx do
+  begin
+    InitDynArrayOfWordToEmpty(AArr.Content^[i]^);
+    if not ConcatDynArraysOfWord(AArr.Content^[i]^, OldPointer^[i]^) then   /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
+
+  if AArr.Len > 0 then
+  begin
+    for i := 0 to TDynArrayLengthSig(AArr.Len) - 1 do
+    begin
+      FreeDynArrayOfWord(OldPointer^[i]^);    /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
+
+      {$IFnDEF IsDesktop}
+        Freemem(OldPointer^[i], SizeOf(TDynArrayOfWord));
+      {$ELSE}
+        Dispose(OldPointer^[i]);
+      {$ENDIF}
+    end;
+
+    {$IFDEF UsingDynTFT}
+      {$IFDEF IsMCU}
+        FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
+      {$ELSE}
+        FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfWord));
+      {$ENDIF}
+    {$ELSE}
+      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
+    {$ENDIF}
+  end;
+
+  if ANewLength > AArr.Len then
+    for i := AArr.Len to ANewLength - 1 do
+      InitDynArrayOfWordToEmpty(AArr.Content^[i]^);
+
+  AArr.Len := ANewLength;
+end;
+
+
+function AddDynArrayOfWordToDynOfDynOfWord(var AArr: TDynArrayOfTDynArrayOfWord; var ANewArr: TDynArrayOfWord): Boolean;
+begin
+  Result := SetDynOfDynOfWordLength(AArr, AArr.Len + 1);
+  if not Result then
+    Exit;
+
+  Result := ConcatDynArraysOfWord(AArr.Content^[AArr.Len - 1]^, ANewArr);
+end;
+
+
+function DeleteItemFromDynOfDynOfWord(var AArr: TDynArrayOfTDynArrayOfWord; ADelIndex: TDynArrayLengthSig): Boolean;
+var
+  i: Integer;
+  OldPointer: PDynArrayOfTDynArrayOfWordContent;
+  NewLen: DWord;
+begin
+  if (ADelIndex < 0) or (ADelIndex > TDynArrayLengthSig(AArr.Len) - 1) then
+  begin
+    {$IFDEF IsDesktop}
+      raise Exception.Create('Index out of range when deleting item from DynOfDynArrayOfWord.');
+    {$ELSE}
+      Exit;
+    {$ENDIF}
+  end;
+
+  for i := ADelIndex to AArr.Len - 2 do
+  begin
+    FreeDynArrayOfWord(AArr.Content^[i]^);
+
+    {$IFnDEF IsDesktop}
+      Freemem(AArr.Content^[i], SizeOf(TDynArrayOfWord));
+    {$ELSE}
+      Dispose(AArr.Content^[i]);
+    {$ENDIF}
+
+    {$IFnDEF IsDesktop}
+      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfWord));           //SizeOf struct
+      if MM_error or (AArr.Content = nil) then
+      begin
+        Result := False;
+        Exit;
+      end;
+    {$ELSE}
+      New(AArr.Content^[i]);
+    {$ENDIF}
+
+    InitDynArrayOfWordToEmpty(AArr.Content^[i]^);
+    Result := ConcatDynArraysOfWord(AArr.Content^[i]^, AArr.Content^[i + 1]^);
+    if not Result then
+      Exit;
+  end;
+
+  FreeDynArrayOfWord(AArr.Content^[AArr.Len - 1]^);
+
+  {$IFnDEF IsDesktop}
+    Freemem(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfWord));
+  {$ELSE}
+    Dispose(AArr.Content^[AArr.Len - 1]);
+  {$ENDIF}
+
+  NewLen := AArr.Len - 1;
+  OldPointer := AArr.Content;
+
+  if NewLen > 0 then
+  begin
+    {$IFnDEF IsDesktop}
+      GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfWord));    //SizeOf pointer
+      if MM_error or (AArr.Content = nil) then
+      begin
+        Result := False;
+        Exit;
+      end;
+    {$ELSE}
+      {$IFDEF UsingDynTFT}
+        GetMem(TPtrRec(AArr.Content), NewLen * SizeOf(PDynArrayOfWord)); //SizeOf pointer
+        if MM_error or (AArr.Content = nil) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      {$ELSE}
+        GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfWord)); //SizeOf pointer
+      {$ENDIF}
+    {$ENDIF}
+  end;
+
+  MemMove(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfWord));
+
+  {$IFDEF UsingDynTFT}
+    {$IFDEF IsMCU}
+      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
+    {$ELSE}
+      FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfWord));
+    {$ENDIF}
+  {$ELSE}
+    FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
+  {$ENDIF}
+
+  AArr.Len := AArr.Len - 1;
+  Result := True;
+end;
+
+
+procedure FreeDynOfDynOfWordArray(var AArr: TDynArrayOfTDynArrayOfWord);
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynOfDynArrayOfWord(AArr);
+  {$ENDIF}
+
+  SetDynOfDynOfWordLength(AArr, 0);
+end;
+
+
+function ConcatDynOfDynOfWordArrays(var AArr1, AArr2: TDynArrayOfTDynArrayOfWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
+var
+  i: TDynArrayLengthSig;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynOfDynArrayOfWord(AArr1);
+    CheckInitializedDynOfDynArrayOfWord(AArr2);
+  {$ENDIF}
+
+  Result := True;
+  for i := 0 to TDynArrayLengthSig(AArr2.Len) - 1 do
+  begin
+    Result := Result and AddDynArrayOfWordToDynOfDynOfWord(AArr1, AArr2.Content^[i]^);
+    if not Result then
+      Exit;
+  end;
+end;
+
+
+//----------------------------
 //array of DWord
 
 procedure InitDynArrayOfDWordToEmpty(var AArr: TDynArrayOfDWord); //do not call this on an array, which is already allocated, because it results in memory leaks
