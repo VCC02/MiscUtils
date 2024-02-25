@@ -406,6 +406,7 @@ function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayO
   procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
   procedure CheckInitializedDynOfDynArray(var AArr: TDynArrayOfTDynArrayOfByte);
   procedure CheckInitializedDynArrayOfDWord(var AArr: TDynArrayOfDWord);
+  procedure CheckInitializedDynArrayOfWord(var AArr: TDynArrayOfWord);
   procedure CheckInitializedDynOfDynArrayOfWord(var AArr: TDynArrayOfTDynArrayOfWord);
   procedure CheckInitializedDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
   procedure CheckInitializedDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
@@ -415,6 +416,7 @@ function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string
 function StringToDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfWord): Boolean;   //assumes ADest is initialized
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
 function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
+function AddStringToDynOfDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfWord): Boolean;
 
 {$IFDEF IsDesktop}
   function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF IsDesktop} overload; {$ENDIF}
@@ -550,6 +552,17 @@ begin
   Result := StringToDynArrayOfByte(AStr, TempArr);
   Result := Result and AddDynArrayOfByteToDynOfDynOfByte(ADest, TempArr);
   FreeDynArray(TempArr);
+end;
+
+
+function AddStringToDynOfDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfWord): Boolean;
+var
+  TempArr: TDynArrayOfWord;
+begin
+  InitDynArrayOfWordToEmpty(TempArr);
+  Result := StringToDynArrayOfWord(AStr, TempArr);
+  Result := Result and AddDynArrayOfWordToDynOfDynOfWord(ADest, TempArr);
+  FreeDynArrayOfWord(TempArr);
 end;
 
 

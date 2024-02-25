@@ -9,7 +9,7 @@ uses
 
   Interfaces, Forms, GuiTestRunner, TestDynArraysMainCase, DynArrays,
   Expectations, DynTFTTypes, TestDynOfDynOfByteCase, 
-  TestDynOfDynOfDynOfByteCase, TestDynArraysOfWord;
+  TestDynOfDynOfDynOfByteCase, TestDynArraysOfWord, TestDynOfDynOfWordCase;
 
 {$R *.res}
 
