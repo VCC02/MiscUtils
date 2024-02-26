@@ -65,6 +65,11 @@ type
     procedure TestCopyFromDynArray_CompletelyOutOfContent;
     procedure TestCopyFromDynArray_EmptySource;
 
+    procedure TestDeleteFromDynArray_EmptyArray;
+    procedure TestDeleteFromDynArray_IndexOutOfBounds;
+    procedure TestDeleteFromDynArray_HappyFlow1;
+    procedure TestDeleteFromDynArray_HappyFlow2;
+
     procedure TestDoubleFree;
   end;
 
@@ -484,6 +489,87 @@ begin
   CopyFromDynArrayOfWord(Dest, Src, 0, 20);
 
   Expect(DynArrayOfWordToString(Dest)).ToBe('');
+end;
+
+
+procedure TTestDynArraysOfWord.TestDeleteFromDynArray_EmptyArray;
+var
+  Arr: TDynArrayOfWord;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+  DeleteItemFromDynArrayOfWord(Arr, 0);
+  Expect(Arr.Len).ToBe(0);
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestDeleteFromDynArray_IndexOutOfBounds;
+var
+  Arr: TDynArrayOfWord;
+  FoundException: Boolean;
+begin
+  FoundException := False;
+  InitDynArrayOfWordToEmpty(Arr);
+  try
+    SetDynOfWordLength(Arr, 3);
+    DeleteItemFromDynArrayOfWord(Arr, 3);
+  except
+    on E: Exception do
+    begin
+      FoundException := True;
+      Expect(E.Message).ToBe('Delete index out of bounds in DeleteItemFromDynArrayOfWord.');
+    end;
+  end;
+
+  Expect(FoundException).ToBe(True);
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestDeleteFromDynArray_HappyFlow1;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  SetDynOfWordLength(Arr, 7);
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := i + 20;
+
+  DeleteItemFromDynArrayOfWord(Arr, 3);
+
+  Expect(Arr.Len).ToBe(6);
+
+  for i := 0 to 2 do
+    Expect(Arr.Content^[i]).ToBe(i + 20);
+
+  for i := 3 to Arr.Len - 1 do
+    Expect(Arr.Content^[i]).ToBe(i + 20 + 1);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestDeleteFromDynArray_HappyFlow2;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  SetDynOfWordLength(Arr, 7);
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := i + 20;
+
+  DeleteItemFromDynArrayOfWord(Arr, 0);
+
+  Expect(Arr.Len).ToBe(6);
+
+  for i := 0 to Arr.Len - 1 do
+    Expect(Arr.Content^[i]).ToBe(i + 20 + 1);
+
+  FreeDynArrayOfWord(Arr);
 end;
 
 

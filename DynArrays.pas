@@ -345,6 +345,7 @@ function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats 
 function AddByteToDynArray(AByte: Byte; var AArr: TDynArrayOfByte): Boolean;
 function RemoveStartBytesFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfByte): Boolean;
 function CopyFromDynArray(var ADestArr, ASrcArr: TDynArrayOfByte; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+function DeleteItemFromDynArray(var AArr: TDynArrayOfByte; ADelIndex: TDynArrayLength): Boolean;
 
 
 procedure InitDynOfDynOfByteToEmpty(var AArr: TDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -364,6 +365,8 @@ function ConcatDynArraysOfWord(var AArr1, AArr2: TDynArrayOfWord): Boolean; //Co
 function AddWordToDynArraysOfWord(var AArr: TDynArrayOfWord; ANewWord: Word): Boolean;
 function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfWord): Boolean;
 function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): Integer; //returns -1 if not found
+function DeleteItemFromDynArrayOfWord(var AArr: TDynArrayOfWord; ADelIndex: TDynArrayLength): Boolean;
 
 
 procedure InitDynOfDynOfWordToEmpty(var AArr: TDynArrayOfTDynArrayOfWord); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -795,7 +798,13 @@ begin
   if ACount = 0 then
     Exit;
 
-  if AIndex > ASrcArr.Len then
+  if ASrcArr.Len = 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  if AIndex > ASrcArr.Len - 1 then
   begin
     Result := False;
     Exit;
@@ -812,6 +821,36 @@ begin
     OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex));
   {$ENDIF}
   MemMove(ADestArr.Content, OldPointer, ACount);
+end;
+
+
+function DeleteItemFromDynArray(var AArr: TDynArrayOfByte; ADelIndex: TDynArrayLength): Boolean;
+var
+  i, Dest: TDynArrayLengthSig;
+begin
+  Result := True;
+
+  if AArr.Len = 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  if ADelIndex > AArr.Len - 1 then
+  begin
+    {$IFDEF IsDesktop}
+      raise Exception.Create('Delete index out of bounds in DeleteItemFromDynArray.');
+    {$ENDIF}
+
+    Result := False;
+    Exit;
+  end;
+
+  Dest := AArr.Len - 2;
+  for i := ADelIndex to Dest do
+    AArr.Content^[i] := AArr.Content^[i + 1];
+
+  Result := SetDynLength(AArr, AArr.Len - 1);
 end;
 
 
@@ -1306,6 +1345,54 @@ begin
     OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex shl 1));
   {$ENDIF}
   MemMove(ADestArr.Content, OldPointer, ACount shl 1);
+end;
+
+
+function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): Integer; //returns -1 if not found
+var
+  i: Integer;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfWord(AArr);
+  {$ENDIF}
+
+  Result := -1;
+  for i := 0 to AArr.Len - 1 do
+    if AArr.Content^[i] = AWordToFind then
+    begin
+      Result := i;
+      Break;
+    end;
+end;
+
+
+function DeleteItemFromDynArrayOfWord(var AArr: TDynArrayOfWord; ADelIndex: TDynArrayLength): Boolean;
+var
+  i, Dest: TDynArrayLengthSig;
+begin
+  Result := True;
+
+  if AArr.Len = 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  if ADelIndex > AArr.Len - 1 then
+  begin
+    {$IFDEF IsDesktop}
+      raise Exception.Create('Delete index out of bounds in DeleteItemFromDynArrayOfWord.');
+    {$ENDIF}
+
+    Result := False;
+    Exit;
+  end;
+
+  Dest := AArr.Len - 2;
+  for i := ADelIndex to Dest do
+    AArr.Content^[i] := AArr.Content^[i + 1];
+
+  Result := SetDynOfWordLength(AArr, AArr.Len - 1);
 end;
 
 

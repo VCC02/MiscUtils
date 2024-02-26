@@ -65,6 +65,11 @@ type
     procedure TestCopyFromDynArray_CompletelyOutOfContent;
     procedure TestCopyFromDynArray_EmptySource;
 
+    procedure TestDeleteFromDynArray_EmptyArray;
+    procedure TestDeleteFromDynArray_IndexOutOfBounds;
+    procedure TestDeleteFromDynArray_HappyFlow1;
+    procedure TestDeleteFromDynArray_HappyFlow2;
+
     procedure TestDoubleFree;
   end;
 
@@ -483,6 +488,87 @@ begin
   CopyFromDynArray(Dest, Src, 0, 20);
 
   Expect(DynArrayOfByteToString(Dest)).ToBe('');
+end;
+
+
+procedure TTestDynArrays.TestDeleteFromDynArray_EmptyArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  DeleteItemFromDynArray(Arr, 0);
+  Expect(Arr.Len).ToBe(0);
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFromDynArray_IndexOutOfBounds;
+var
+  Arr: TDynArrayOfByte;
+  FoundException: Boolean;
+begin
+  FoundException := False;
+  InitDynArrayToEmpty(Arr);
+  try
+    SetDynLength(Arr, 3);
+    DeleteItemFromDynArray(Arr, 3);
+  except
+    on E: Exception do
+    begin
+      FoundException := True;
+      Expect(E.Message).ToBe('Delete index out of bounds in DeleteItemFromDynArray.');
+    end;
+  end;
+
+  Expect(FoundException).ToBe(True);
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFromDynArray_HappyFlow1;
+var
+  Arr: TDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr);
+
+  SetDynLength(Arr, 7);
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := i + 20;
+
+  DeleteItemFromDynArray(Arr, 3);
+
+  Expect(Arr.Len).ToBe(6);
+
+  for i := 0 to 2 do
+    Expect(Arr.Content^[i]).ToBe(i + 20);
+
+  for i := 3 to Arr.Len - 1 do
+    Expect(Arr.Content^[i]).ToBe(i + 20 + 1);
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFromDynArray_HappyFlow2;
+var
+  Arr: TDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr);
+
+  SetDynLength(Arr, 7);
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := i + 20;
+
+  DeleteItemFromDynArray(Arr, 0);
+
+  Expect(Arr.Len).ToBe(6);
+
+  for i := 0 to Arr.Len - 1 do
+    Expect(Arr.Content^[i]).ToBe(i + 20 + 1);
+
+  FreeDynArray(Arr);
 end;
 
 
