@@ -70,6 +70,17 @@ type
     procedure TestDeleteFromDynArray_HappyFlow1;
     procedure TestDeleteFromDynArray_HappyFlow2;
 
+    procedure TestCreateUniqueWord_HappyFlow1;
+    procedure TestCreateUniqueWord_HappyFlow2;
+    procedure TestCreateUniqueWord_HappyFlow3;
+    procedure TestCreateUniqueWord_HappyFlow4;
+    procedure TestCreateUniqueWord_HappyFlow5;
+    procedure TestCreateUniqueWord_HappyFlow6;
+    procedure TestCreateUniqueWord_FullArray1;
+    procedure TestCreateUniqueWord_FullArray2;
+    procedure TestCreateUniqueWord_FullArray3;
+    procedure TestCreateUniqueWord_FullArray4;
+
     procedure TestDoubleFree;
   end;
 
@@ -568,6 +579,217 @@ begin
 
   for i := 0 to Arr.Len - 1 do
     Expect(Arr.Content^[i]).ToBe(i + 20 + 1);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow1;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  //SetDynOfWordLength(Arr, 0);
+  Expect(CreateUniqueWord(Arr)).ToBe(0);
+  Expect(Arr.Len).ToBe(1);
+  Expect(Arr.Content^[0]).ToBe(0);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow2;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  SetDynOfWordLength(Arr, 1);
+  Arr.Content^[0] := 0;
+  Expect(CreateUniqueWord(Arr)).ToBe(1);
+  Expect(Arr.Len).ToBe(2);
+  Expect(Arr.Content^[0]).ToBe(0);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow3;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  SetDynOfWordLength(Arr, 2);
+  Arr.Content^[0] := 0;
+  Arr.Content^[1] := 2;
+  Expect(CreateUniqueWord(Arr)).ToBe(3);
+  Expect(Arr.Len).ToBe(3);
+
+  Expect(Arr.Content^[0]).ToBe(0);
+  Expect(Arr.Content^[1]).ToBe(2);
+  Expect(Arr.Content^[2]).ToBe(3);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow4;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  SetDynOfWordLength(Arr, 3);
+  Arr.Content^[0] := 0;
+  Arr.Content^[1] := 2;
+  Arr.Content^[2] := 3;
+  Expect(CreateUniqueWord(Arr)).ToBe(4);
+  Expect(Arr.Len).ToBe(4);
+
+  Expect(Arr.Content^[0]).ToBe(0);
+  Expect(Arr.Content^[1]).ToBe(2);
+  Expect(Arr.Content^[2]).ToBe(3);
+  Expect(Arr.Content^[3]).ToBe(4);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow5;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  Expect(SetDynOfWordLength(Arr, 65534)).ToBe(True, 'Increase MaxMM value in case of an error.');
+  for i := 0 to 65534 - 1 do
+    Arr.Content^[i] := i;
+
+  Expect(CreateUniqueWord(Arr)).ToBe(65534);
+  Expect(Arr.Len).ToBe(65535);
+
+  for i := 0 to 65534 - 1 do
+    Expect(Arr.Content^[i]).ToBe(i);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow6;  //the search wraps around to find a free number
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  Expect(SetDynOfWordLength(Arr, 65534)).ToBe(True);
+  for i := 0 to 10 - 1 do
+    Arr.Content^[i] := i;
+
+  for i := 10 to 65534 - 1 do
+    Arr.Content^[i] := i + 1;
+
+  Expect(CreateUniqueWord(Arr)).ToBe(10);
+  Expect(Arr.Len).ToBe(65535);
+
+  for i := 0 to 10 - 1 do
+    Expect(Arr.Content^[i]).ToBe(i);
+
+  for i := 10 to 65534 - 1 do
+    Expect(Arr.Content^[i]).ToBe(i + 1);
+
+  Expect(Arr.Content^[65534]).ToBe(10);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_FullArray1;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  Expect(SetDynOfWordLength(Arr, 65535)).ToBe(True);
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := i;
+
+  Expect(CreateUniqueWord(Arr)).ToBe(65535); //65535 is an error indicator, not a valid number
+  Expect(Arr.Len).ToBe(65535);
+
+  for i := 0 to Arr.Len - 1 do
+    Expect(Arr.Content^[i]).ToBe(i);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_FullArray2;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  Expect(SetDynOfWordLength(Arr, 65535)).ToBe(True);
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := 0;
+
+  Expect(CreateUniqueWord(Arr)).ToBe(65535); //65535 is an error indicator, not a valid number
+  Expect(Arr.Len).ToBe(65535);
+
+  for i := 0 to Arr.Len - 1 do
+    Expect(Arr.Content^[i]).ToBe(0);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_FullArray3;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  Expect(SetDynOfWordLength(Arr, 65540)).ToBe(True);  //The array has more numbers than the max value CreateUniqueWord can create.
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := i;
+
+  Expect(CreateUniqueWord(Arr)).ToBe(65535); //65535 is an error indicator, not a valid number
+  Expect(Arr.Len).ToBe(65540);
+
+  for i := 0 to Arr.Len - 1 do
+    Expect(Arr.Content^[i]).ToBe(i and $FFFF);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestCreateUniqueWord_FullArray4;
+var
+  Arr: TDynArrayOfWord;
+  i: Integer;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+
+  Expect(SetDynOfWordLength(Arr, 65540)).ToBe(True); //The array has more numbers than the max value CreateUniqueWord can create.
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := 3;
+
+  Expect(CreateUniqueWord(Arr)).ToBe(65535); //65535 is an error indicator, not a valid number
+  Expect(Arr.Len).ToBe(65540);
+
+  for i := 0 to Arr.Len - 1 do
+    Expect(Arr.Content^[i]).ToBe(3);
 
   FreeDynArrayOfWord(Arr);
 end;

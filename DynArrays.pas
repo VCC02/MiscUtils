@@ -367,6 +367,7 @@ function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArr
 function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): Integer; //returns -1 if not found
 function DeleteItemFromDynArrayOfWord(var AArr: TDynArrayOfWord; ADelIndex: TDynArrayLength): Boolean;
+function CreateUniqueWord(var AArr: TDynArrayOfWord): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
 
 
 procedure InitDynOfDynOfWordToEmpty(var AArr: TDynArrayOfTDynArrayOfWord); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -1395,6 +1396,48 @@ begin
   Result := SetDynOfWordLength(AArr, AArr.Len - 1);
 end;
 
+
+function CreateUniqueWord(var AArr: TDynArrayOfWord): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
+var
+  i: TDynArrayLengthSig;
+  TempNumber: TDynArrayLength;  //using a DWord, instead of a Word, because the array length might already be greater than 65535.
+  //TempNumber: Word;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfWord(AArr);
+  {$ENDIF}
+
+  TempNumber := AArr.Len;   //Start with AArr.Len
+  if (AArr.Len >= 65535) or (TempNumber = $FFFF) then
+  begin
+    Result := $FFFF;
+    Exit;
+  end;
+
+  Result := 0; //init here. When it becomes $FFFF (err) and TempNumber is also $FFFF, then exit.
+  repeat
+    if IndexOfWordInArrayOfWord(AArr, TempNumber) = -1 then //Found
+    begin
+      AddWordToDynArraysOfWord(AArr, TempNumber);
+      Result := TempNumber;
+      Exit;
+    end;
+
+    Inc(TempNumber);
+    if TempNumber = $FFFF then
+    begin
+      if Result = $FFFF then
+        Exit;
+
+      Inc(TempNumber);  //Jump past $FFFF, so it should become 0, to verify the other part of the array.
+      Result := $FFFF;  //Mark as wrapped around.
+    end
+    else
+      if Result = $FFFF then //already wrapped around
+        if TempNumber = AArr.Len then //back to first attempted value
+          Exit;
+  until False;
+end;
 
 //-------------------------
 // array of array of Word
