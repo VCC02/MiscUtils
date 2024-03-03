@@ -365,7 +365,7 @@ function ConcatDynArraysOfWord(var AArr1, AArr2: TDynArrayOfWord): Boolean; //Co
 function AddWordToDynArraysOfWord(var AArr: TDynArrayOfWord; ANewWord: Word): Boolean;
 function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfWord): Boolean;
 function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
-function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): Integer; //returns -1 if not found
+function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): TDynArrayLengthSig; //returns -1 if not found
 function DeleteItemFromDynArrayOfWord(var AArr: TDynArrayOfWord; ADelIndex: TDynArrayLength): Boolean;
 function CreateUniqueWord(var AArr: TDynArrayOfWord): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
 
@@ -1349,16 +1349,17 @@ begin
 end;
 
 
-function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): Integer; //returns -1 if not found
+function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): TDynArrayLengthSig; //returns -1 if not found
 var
-  i: Integer;
+  i, Dest: TDynArrayLengthSig;
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfWord(AArr);
   {$ENDIF}
 
   Result := -1;
-  for i := 0 to AArr.Len - 1 do
+  Dest := AArr.Len - 1;
+  for i := 0 to Dest do
     if AArr.Content^[i] = AWordToFind then
     begin
       Result := i;
@@ -1399,7 +1400,6 @@ end;
 
 function CreateUniqueWord(var AArr: TDynArrayOfWord): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
 var
-  i: TDynArrayLengthSig;
   TempNumber: TDynArrayLength;  //using a DWord, instead of a Word, because the array length might already be greater than 65535.
   //TempNumber: Word;
 begin
@@ -1418,7 +1418,12 @@ begin
   repeat
     if IndexOfWordInArrayOfWord(AArr, TempNumber) = -1 then //Found
     begin
-      AddWordToDynArraysOfWord(AArr, TempNumber);
+      if not AddWordToDynArraysOfWord(AArr, TempNumber) then
+      begin
+        Result := $FFFF; //Error: Out of memory.
+        Exit;
+      end;
+
       Result := TempNumber;
       Exit;
     end;
