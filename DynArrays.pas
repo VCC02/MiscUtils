@@ -385,6 +385,9 @@ function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayLe
 procedure FreeDynArrayOfDWord(var AArr: TDynArrayOfDWord);
 function ConcatDynArraysOfDWord(var AArr1, AArr2: TDynArrayOfDWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddDWordToDynArraysOfDWord(var AArr: TDynArrayOfDWord; ANewDWord: DWord): Boolean;
+function IndexOfDWordInArrayOfDWord(var AArr: TDynArrayOfDWord; ADWordToFind: DWord): TDynArrayLengthSig; //returns -1 if not found
+function DeleteItemFromDynArrayOfDWord(var AArr: TDynArrayOfDWord; ADelIndex: TDynArrayLength): Boolean;
+function CreateUniqueDWord(var AArr: TDynArrayOfDWord): DWord;  //Returns $FFFFFFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFFFFFF is reserved as an error message.
 
 
 procedure InitDynArrayOfPtrUIntToEmpty(var AArr: TDynArrayOfPtrUInt); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -1880,6 +1883,102 @@ begin
     Exit;
 
   AArr.Content^[AArr.Len - 1] := ANewDWord;
+end;
+
+
+function IndexOfDWordInArrayOfDWord(var AArr: TDynArrayOfDWord; ADWordToFind: DWord): TDynArrayLengthSig; //returns -1 if not found
+var
+  i, Dest: TDynArrayLengthSig;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfDWord(AArr);
+  {$ENDIF}
+
+  Result := -1;
+  Dest := AArr.Len - 1;
+  for i := 0 to Dest do
+    if AArr.Content^[i] = ADWordToFind then
+    begin
+      Result := i;
+      Break;
+    end;
+end;
+
+
+function DeleteItemFromDynArrayOfDWord(var AArr: TDynArrayOfDWord; ADelIndex: TDynArrayLength): Boolean;
+var
+  i, Dest: TDynArrayLengthSig;
+begin
+  Result := True;
+
+  if AArr.Len = 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  if ADelIndex > AArr.Len - 1 then
+  begin
+    {$IFDEF IsDesktop}
+      raise Exception.Create('Delete index out of bounds in DeleteItemFromDynArrayOfDWord.');
+    {$ENDIF}
+
+    Result := False;
+    Exit;
+  end;
+
+  Dest := AArr.Len - 2;
+  for i := ADelIndex to Dest do
+    AArr.Content^[i] := AArr.Content^[i + 1];
+
+  Result := SetDynOfDWordLength(AArr, AArr.Len - 1);
+end;
+
+
+function CreateUniqueDWord(var AArr: TDynArrayOfDWord): DWord;  //Returns $FFFFFFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFFFFFF is reserved as an error message.
+var           //TempNumber is used below as DWord (for controlled overflow), but for length comparison, it should be QWord (or Int64)
+  TempNumber: TDynArrayLength;  //using a DWord, instead of a Word, because the array length might already be greater than $FFFFFFFF.
+  //TempNumber: Word;
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfDWord(AArr);
+  {$ENDIF}
+
+  TempNumber := AArr.Len;   //Start with AArr.Len
+  if (AArr.Len >= $FFFFFFFF) or (TempNumber = $FFFFFFFF) then
+  begin
+    Result := $FFFFFFFF;
+    Exit;
+  end;
+
+  Result := 0; //init here. When it becomes $FFFFFFFF (err) and TempNumber is also $FFFFFFFF, then exit.
+  repeat
+    if IndexOfDWordInArrayOfDWord(AArr, TempNumber) = -1 then //Found
+    begin
+      if not AddDWordToDynArraysOfDWord(AArr, TempNumber) then
+      begin
+        Result := $FFFFFFFF; //Error: Out of memory.
+        Exit;
+      end;
+
+      Result := TempNumber;
+      Exit;
+    end;
+
+    Inc(TempNumber);
+    if TempNumber = $FFFFFFFF then
+    begin
+      if Result = $FFFFFFFF then
+        Exit;
+
+      Inc(TempNumber);  //Jump past $FFFFFFFF, so it should become 0, to verify the other part of the array.
+      Result := $FFFFFFFF;  //Mark as wrapped around.
+    end
+    else
+      if Result = $FFFFFFFF then //already wrapped around
+        if TempNumber = AArr.Len then //back to first attempted value
+          Exit;
+  until False;
 end;
 
 

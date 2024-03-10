@@ -29,7 +29,7 @@ unit TestDynArraysOfWord;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, Windows,
+  Classes, SysUtils, fpcunit, testregistry, //Windows,
   DynArrays, Expectations;
 
 type
@@ -587,7 +587,6 @@ end;
 procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow1;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -603,7 +602,6 @@ end;
 procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow2;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -620,7 +618,6 @@ end;
 procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow3;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -641,7 +638,6 @@ end;
 procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow4;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
