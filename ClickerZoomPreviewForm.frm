@@ -9,8 +9,8 @@ object frmClickerZoomPreview: TfrmClickerZoomPreview
   ClientWidth = 242
   Color = clLime
   FormStyle = fsStayOnTop
+  LCLVersion = '8.3'
   OnCreate = FormCreate
-  LCLVersion = '7.9'
   object imgZoom: TImage
     Left = 1
     Height = 240

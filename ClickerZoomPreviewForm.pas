@@ -80,6 +80,7 @@ implementation
 const
   clLightYellow = $00A0FFFF;
   clHashPink = $008888FF;
+  clDottedLine = $000044FF;
 
 
 //DrawWipeRect, WipeBitmap and WipeImage were copied from BitmapProcessing, to remove the dependency.
@@ -217,6 +218,23 @@ begin
 
   frmClickerZoomPreview.Left := AWinPosX;
   frmClickerZoomPreview.Top := AWinPosY;
+
+  Application.ProcessMessages;
+  frmClickerZoomPreview.FlblLeft.Canvas.Pen.Color := clDottedLine;
+  frmClickerZoomPreview.FlblLeft.Canvas.Pen.Style := psDot;
+  frmClickerZoomPreview.FlblLeft.Canvas.Line(0, 0, 0, frmClickerZoomPreview.FlblLeft.Height);
+
+  frmClickerZoomPreview.FlblRight.Canvas.Pen.Color := clDottedLine;
+  frmClickerZoomPreview.FlblRight.Canvas.Pen.Style := psDot;
+  frmClickerZoomPreview.FlblRight.Canvas.Line(0, 0, 0, frmClickerZoomPreview.FlblRight.Height);
+
+  frmClickerZoomPreview.FlblTop.Canvas.Pen.Color := clDottedLine;
+  frmClickerZoomPreview.FlblTop.Canvas.Pen.Style := psDot;
+  frmClickerZoomPreview.FlblTop.Canvas.Line(0, 0, frmClickerZoomPreview.FlblTop.Width, 0);
+
+  frmClickerZoomPreview.FlblBottom.Canvas.Pen.Color := clDottedLine;
+  frmClickerZoomPreview.FlblBottom.Canvas.Pen.Style := psDot;
+  frmClickerZoomPreview.FlblBottom.Canvas.Line(0, 0, frmClickerZoomPreview.FlblBottom.Width, 0);
 end;
 
 
