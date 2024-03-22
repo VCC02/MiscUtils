@@ -367,6 +367,7 @@ function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArr
 function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): TDynArrayLengthSig; //returns -1 if not found
 function DeleteItemFromDynArrayOfWord(var AArr: TDynArrayOfWord; ADelIndex: TDynArrayLength): Boolean;
+function CreateUniqueWordWithStart(var AArr: TDynArrayOfWord; AStartAt: Word): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
 function CreateUniqueWord(var AArr: TDynArrayOfWord): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
 
 
@@ -1401,7 +1402,7 @@ begin
 end;
 
 
-function CreateUniqueWord(var AArr: TDynArrayOfWord): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
+function CreateUniqueWordWithStart(var AArr: TDynArrayOfWord; AStartAt: Word): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
 var
   TempNumber: TDynArrayLength;  //using a DWord, instead of a Word, because the array length might already be greater than 65535.
   //TempNumber: Word;
@@ -1410,7 +1411,11 @@ begin
     CheckInitializedDynArrayOfWord(AArr);
   {$ENDIF}
 
-  TempNumber := AArr.Len;   //Start with AArr.Len
+  if AStartAt = $FFFF then
+    TempNumber := AArr.Len   //Start with AArr.Len
+  else
+    TempNumber := AStartAt;
+
   if (AArr.Len >= 65535) or (TempNumber = $FFFF) then
   begin
     Result := $FFFF;
@@ -1446,6 +1451,13 @@ begin
           Exit;
   until False;
 end;
+
+
+function CreateUniqueWord(var AArr: TDynArrayOfWord): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
+begin
+  Result := CreateUniqueWordWithStart(AArr, $FFFF);
+end;
+
 
 //-------------------------
 // array of array of Word
