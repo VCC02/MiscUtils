@@ -511,7 +511,9 @@ var
   TempLen: TDynArrayLength;
 begin
   TempLen := TDynArrayLength(Length(AString));
-  TempLen := TempLen shr 1 + Ord(TempLen and 1 = 1);  //add one more item if odd
+  TempLen := TempLen shr 1;
+  if (TempLen and 1) = 1 then
+    Inc(TempLen);  //add one more item if odd
 
   Result := SetDynOfWordLength(ADest, TempLen);
 

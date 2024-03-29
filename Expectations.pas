@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2022 VCC
+    Copyright (C) 2024 VCC
     creation date: Nov 2021
     initial release date: 25 Aug 2022
 
@@ -37,6 +37,14 @@ type
 
   TConstByteArr = array[0..0] of Byte;
   PConstByteArr = ^TConstByteArr;
+
+  TStringCallbackFunc = function: string;
+  TIntegerCallbackFunc = function: Integer;
+  TDWordCallbackFunc = function: DWord;
+  TBooleanCallbackFunc = function: Boolean;
+
+  TExpectDataType = (edtString, edtInteger, edtDWord, edtBoolean); //couldn't use TTypeKind, because Integer and DWord resolve to the same type
+
 
   TExpect = class;
 
@@ -84,6 +92,37 @@ type
   end;
 
 
+  TLoopedExpect = class
+  private
+    FTimeout: Integer;
+
+    FActualValue: PString;
+    FActualValueDWord: PDWord;
+    FActualValueInt: PInteger;
+    FActualValueBoolean: PBoolean;
+
+    FActualValueStringCallbackFunc: TStringCallbackFunc;
+    FActualValueIntegerCallbackFunc: TIntegerCallbackFunc;
+    FActualValueDWordCallbackFunc: TDWordCallbackFunc;
+    FActualValueBooleanCallbackFunc: TBooleanCallbackFunc;
+
+    procedure UntypedValidator(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
+    procedure UntypedValidatorDifferent(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
+    procedure UntypedToBe(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
+    procedure UntypedNotToBe(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
+  public
+    constructor Create;
+
+    procedure ToBe(ExpectedValue: string; ExtraMessage: string = ''); overload;
+    procedure ToBe(ExpectedValue: Integer; ExtraMessage: string = ''); overload;
+    procedure ToBe(ExpectedValue: DWord; ExtraMessage: string = ''); overload;
+    procedure ToBe(ExpectedValue: Boolean; ExtraMessage: string = ''); overload;
+
+    procedure NotToBe(ExpectedValue: string; ExtraMessage: string = ''); overload;
+    procedure NotToBe(ExpectedValue: Integer; ExtraMessage: string = ''); overload;
+    procedure NotToBe(ExpectedValue: DWord; ExtraMessage: string = ''); overload;
+    procedure NotToBe(ExpectedValue: Boolean; ExtraMessage: string = ''); overload;
+  end;
 
 
 function GetTextFileContent(APath: string): string;
@@ -97,7 +136,19 @@ function Expect(ActualValue: Pointer): TExpect; overload;
 function Expect(ActualValue: PConstByteArr; ALen: Integer): TExpect; overload;
 
 
+function LoopedExpect(ActualValue: PString; Timeout: Integer = 1000): TLoopedExpect; overload;
+function LoopedExpect(ActualValue: PInteger; Timeout: Integer = 1000): TLoopedExpect; overload;
+function LoopedExpect(ActualValue: PDWord; Timeout: Integer = 1000): TLoopedExpect; overload;
+function LoopedExpect(ActualValue: PBoolean; Timeout: Integer = 1000): TLoopedExpect; overload;
+function LoopedExpect(ActualValue: TStringCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
+function LoopedExpect(ActualValue: TIntegerCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
+function LoopedExpect(ActualValue: TBooleanCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
+
 implementation
+
+
+uses
+  Forms;
 
 
 function GetTextFileContent(APath: string): string;
@@ -212,6 +263,13 @@ procedure ExpectStrDifferent(ActualValue, ExpectedValue: string; ExtraMsg: strin
 begin
   if ExpectedValue = ActualValue then
     raise Exception.Create('Expected "' + ExpectedValue + '" to be different than "' + ActualValue + '", but they are the same.  ' + ExtraMsg);
+end;
+
+
+procedure ExpectBooleanDifferent(ActualValue, ExpectedValue: Boolean; ExtraMsg: string = '');
+begin
+  if ExpectedValue = ActualValue then
+    raise Exception.Create('Expected "' + BoolToStr(ExpectedValue, 'True', 'False') + '" to be different than "' + BoolToStr(ActualValue, 'True', 'False') + '", but they are the same.  ' + ExtraMsg);
 end;
 
 
@@ -445,6 +503,225 @@ begin
 end;
 
 
+
+{TLoopedExpect}
+constructor TLoopedExpect.Create;
+begin
+  inherited Create;
+  FTimeout := 1000;
+
+  FActualValue := nil;
+  FActualValueInt := nil;
+  FActualValueDWord := nil;
+  FActualValueBoolean := nil;
+  FActualValueStringCallbackFunc := nil;
+  FActualValueIntegerCallbackFunc := nil;
+  FActualValueDWordCallbackFunc := nil;
+  FActualValueBooleanCallbackFunc := nil;
+end;
+
+
+procedure TLoopedExpect.UntypedValidator(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
+const
+  CValidPointerExpectedMessage = 'Expecting a valid pointer when calling LoopedExpect with ';
+begin
+  case AExpectDataType of
+    edtString:
+    begin
+      if FActualValue <> nil then
+        ExpectStr(FActualValue^, PString(ExpectedValue)^, ExtraMessage)
+      else
+        if FActualValueStringCallbackFunc <> nil then
+          ExpectStr(FActualValueStringCallbackFunc(), PString(ExpectedValue)^, ExtraMessage)
+        else
+          raise Exception.Create(CValidPointerExpectedMessage + 'string.  ' + ExtraMessage);
+    end;
+
+    edtInteger:
+    begin
+      if FActualValueInt <> nil then
+        ExpectInt(FActualValueInt^, PInteger(ExpectedValue)^, ExtraMessage)
+      else
+        if FActualValueIntegerCallbackFunc <> nil then
+          ExpectInt(FActualValueIntegerCallbackFunc(), PInteger(ExpectedValue)^, ExtraMessage)
+        else
+          raise Exception.Create(CValidPointerExpectedMessage + 'Integer.  ' + ExtraMessage);
+    end;
+
+    edtDWord:
+    begin
+      if FActualValueDWord <> nil then
+        ExpectDWord(FActualValueDWord^, PDWord(ExpectedValue)^, ExtraMessage)
+      else
+        if FActualValueDWordCallbackFunc <> nil then
+          ExpectDWord(FActualValueDWordCallbackFunc(), PDWord(ExpectedValue)^, ExtraMessage)
+        else
+          raise Exception.Create(CValidPointerExpectedMessage + 'DWord.  ' + ExtraMessage);
+          //When calling LoopedExpect with Integer, and the DWord (overloaded) version of ToBe is used (by compiler), then please typecast the argument passed to ToBe, to DWord, in order to avoid the exception.
+    end;
+
+    edtBoolean:
+    begin
+      if FActualValueBoolean <> nil then
+        ExpectBoolean(FActualValueBoolean^, PBoolean(ExpectedValue)^, ExtraMessage)
+      else
+        if FActualValueBooleanCallbackFunc <> nil then
+          ExpectBoolean(FActualValueBooleanCallbackFunc(), PBoolean(ExpectedValue)^, ExtraMessage)
+        else
+          raise Exception.Create(CValidPointerExpectedMessage + 'Boolean.  ' + ExtraMessage);
+    end;
+    else
+      raise Exception.Create('Unhandled datatype in UntypedValidator');
+  end;
+end;
+
+
+procedure TLoopedExpect.UntypedValidatorDifferent(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
+const
+  CValidPointerExpectedMessage = 'Expecting a valid pointer when calling LoopedExpect with ';
+begin
+  case AExpectDataType of
+    edtString:
+    begin
+      if FActualValue <> nil then
+        ExpectStrDifferent(FActualValue^, PString(ExpectedValue)^, ExtraMessage)
+      else
+        if FActualValueStringCallbackFunc <> nil then
+          ExpectStrDifferent(FActualValueStringCallbackFunc(), PString(ExpectedValue)^, ExtraMessage)
+        else
+          raise Exception.Create(CValidPointerExpectedMessage + 'string.  ' + ExtraMessage);
+    end;
+
+    edtInteger:
+    begin
+      if FActualValueInt <> nil then
+        ExpectIntDifferent(FActualValueInt^, PInteger(ExpectedValue)^, ExtraMessage)
+      else
+        if FActualValueIntegerCallbackFunc <> nil then
+          ExpectIntDifferent(FActualValueIntegerCallbackFunc(), PInteger(ExpectedValue)^, ExtraMessage)
+        else
+          raise Exception.Create(CValidPointerExpectedMessage + 'Integer.  ' + ExtraMessage);
+    end;
+
+    edtDWord:
+    begin
+      if FActualValueDWord <> nil then
+        ExpectDWordDifferent(FActualValueDWord^, PDWord(ExpectedValue)^, ExtraMessage)
+      else
+        if FActualValueDWordCallbackFunc <> nil then
+          ExpectDWordDifferent(FActualValueDWordCallbackFunc(), PDWord(ExpectedValue)^, ExtraMessage)
+        else
+          raise Exception.Create(CValidPointerExpectedMessage + 'DWord.  ' + ExtraMessage);
+          //When calling LoopedExpect with Integer, and the DWord (overloaded) version of ToBe is used (by compiler), then please typecast the argument passed to ToBe, to DWord, in order to avoid the exception.
+    end;
+
+    edtBoolean:
+    begin
+      if FActualValueBoolean <> nil then
+        ExpectBooleanDifferent(FActualValueBoolean^, PBoolean(ExpectedValue)^, ExtraMessage)
+      else
+        if FActualValueBooleanCallbackFunc <> nil then
+          ExpectBooleanDifferent(FActualValueBooleanCallbackFunc(), PBoolean(ExpectedValue)^, ExtraMessage)
+        else
+          raise Exception.Create(CValidPointerExpectedMessage + 'Boolean.  ' + ExtraMessage);
+    end;
+    else
+      raise Exception.Create('Unhandled datatype in UntypedValidatorDifferent');
+  end;
+end;
+
+
+procedure TLoopedExpect.UntypedToBe(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
+var
+  tk: DWord;
+begin
+  try
+    tk := GetTickCount64;
+    repeat
+      try
+        UntypedValidator(ExpectedValue, AExpectDataType, ExtraMessage);
+        Break;
+      except
+        if GetTickCount64 - tk > FTimeout then
+          raise;
+      end;
+
+      Application.ProcessMessages;
+      Sleep(1);
+    until False;
+  finally
+    Free;
+  end;
+end;
+
+
+procedure TLoopedExpect.UntypedNotToBe(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
+var
+  tk: DWord;
+begin
+  try
+    tk := GetTickCount64;
+    repeat
+      Application.ProcessMessages;
+      Sleep(1);
+    until GetTickCount64 - tk > FTimeout;
+
+    UntypedValidatorDifferent(ExpectedValue, AExpectDataType, ExtraMessage);
+  finally
+    Free;
+  end;
+end;
+
+
+procedure TLoopedExpect.ToBe(ExpectedValue: string; ExtraMessage: string = '');
+begin
+  UntypedToBe(@ExpectedValue, edtString, ExtraMessage);
+end;
+
+
+procedure TLoopedExpect.ToBe(ExpectedValue: Integer; ExtraMessage: string = '');
+begin
+  UntypedToBe(@ExpectedValue, edtInteger, ExtraMessage);
+end;
+
+
+procedure TLoopedExpect.ToBe(ExpectedValue: DWord; ExtraMessage: string = ''); overload;
+begin
+  UntypedToBe(@ExpectedValue, edtDWord, ExtraMessage);
+end;
+
+
+procedure TLoopedExpect.ToBe(ExpectedValue: Boolean; ExtraMessage: string = '');
+begin
+  UntypedToBe(@ExpectedValue, edtBoolean, ExtraMessage);
+end;
+
+
+procedure TLoopedExpect.NotToBe(ExpectedValue: string; ExtraMessage: string = '');
+begin
+  UntypedNotToBe(@ExpectedValue, edtString, ExtraMessage);
+end;
+
+
+procedure TLoopedExpect.NotToBe(ExpectedValue: Integer; ExtraMessage: string = '');
+begin
+  UntypedNotToBe(@ExpectedValue, edtInteger, ExtraMessage);
+end;
+
+
+procedure TLoopedExpect.NotToBe(ExpectedValue: DWord; ExtraMessage: string = ''); overload;
+begin
+  UntypedNotToBe(@ExpectedValue, edtDWord, ExtraMessage);
+end;
+
+
+procedure TLoopedExpect.NotToBe(ExpectedValue: Boolean; ExtraMessage: string = '');
+begin
+  UntypedNotToBe(@ExpectedValue, edtBoolean, ExtraMessage);
+end;
+
+
+
 function Expect(ActualValue: string): TExpect; overload;
 begin
   Result := TExpect.Create;
@@ -465,7 +742,7 @@ begin
 end;
 
 
-function Expect(ActualValue: DWord): TExpect;
+function Expect(ActualValue: DWord): TExpect; overload;
 begin
   Result := TExpect.Create;
   Result.FActualValueInt := ActualValue;
@@ -510,6 +787,78 @@ begin
 
   SetLength(Result.FActualValueConstByteArr, ALen);
   Move(ActualValue^[0], Result.FActualValueConstByteArr[0], Length(Result.FActualValueConstByteArr));
+end;
+
+
+function LoopedExpect(ActualValue: PString; Timeout: Integer = 1000): TLoopedExpect; overload;
+begin
+  Result := TLoopedExpect.Create;
+  Result.FTimeout := Timeout;
+
+  Result.FActualValue := ActualValue;
+end;
+
+
+function LoopedExpect(ActualValue: PInteger; Timeout: Integer = 1000): TLoopedExpect; overload;
+begin
+  Result := TLoopedExpect.Create;
+  Result.FTimeout := Timeout;
+
+  Result.FActualValueInt := ActualValue;
+end;
+
+
+function LoopedExpect(ActualValue: PDWord; Timeout: Integer = 1000): TLoopedExpect; overload;
+begin
+  Result := TLoopedExpect.Create;
+  Result.FTimeout := Timeout;
+
+  Result.FActualValueDWord := ActualValue;
+end;
+
+
+function LoopedExpect(ActualValue: PBoolean; Timeout: Integer = 1000): TLoopedExpect; overload;
+begin
+  Result := TLoopedExpect.Create;
+  Result.FTimeout := Timeout;
+
+  Result.FActualValueBoolean := ActualValue;
+end;
+
+
+function LoopedExpect(ActualValue: TStringCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
+begin
+  Result := TLoopedExpect.Create;
+  Result.FTimeout := Timeout;
+
+  Result.FActualValueStringCallbackFunc := ActualValue;
+end;
+
+
+function LoopedExpect(ActualValue: TIntegerCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
+begin
+  Result := TLoopedExpect.Create;
+  Result.FTimeout := Timeout;
+
+  Result.FActualValueIntegerCallbackFunc := ActualValue;
+end;
+
+
+function LoopedExpect(ActualValue: TDWordCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
+begin
+  Result := TLoopedExpect.Create;
+  Result.FTimeout := Timeout;
+
+  Result.FActualValueDWordCallbackFunc := ActualValue;
+end;
+
+
+function LoopedExpect(ActualValue: TBooleanCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
+begin
+  Result := TLoopedExpect.Create;
+  Result.FTimeout := Timeout;
+
+  Result.FActualValueBooleanCallbackFunc := ActualValue;
 end;
 
 end.
