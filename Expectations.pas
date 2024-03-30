@@ -45,6 +45,8 @@ type
 
   TExpectDataType = (edtString, edtInteger, edtDWord, edtBoolean); //couldn't use TTypeKind, because Integer and DWord resolve to the same type
 
+  EExp = class(Exception)
+  end;
 
   TExpect = class;
 
@@ -180,21 +182,21 @@ end;
 procedure ExpectInt(ActualValue, ExpectedValue: Integer; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise Exception.Create('Expected ' + IntToStr(ExpectedValue) + ', but is was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected ' + IntToStr(ExpectedValue) + ', but is was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectDWord(ActualValue, ExpectedValue: DWord; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise Exception.Create('Expected ' + IntToStr(ExpectedValue) + ', but is was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected ' + IntToStr(ExpectedValue) + ', but is was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectStr(ActualValue, ExpectedValue: string; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise Exception.Create('Expected "' + ExpectedValue + '", but is was "' + ActualValue + '".  ' + ExtraMsg);
+    raise EExp.Create('Expected "' + ExpectedValue + '", but is was "' + ActualValue + '".  ' + ExtraMsg);
 end;
 
 
@@ -206,21 +208,21 @@ var
 begin
   DigitCount := CDigitCount[SizeOf(Pointer) = 8];
   if not Assigned(ActualValue) then
-    raise Exception.Create('Expected pointer/object at ' + IntToHex(Int64(ActualValue), DigitCount) + ', to be assigned.  ' + ExtraMsg);
+    raise EExp.Create('Expected pointer/object at ' + IntToHex(Int64(ActualValue), DigitCount) + ', to be assigned.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectBoolean(ActualValue, ExpectedValue: Boolean; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise Exception.Create('Expected ' + BoolToStr(ExpectedValue, 'True', 'False') + ', but is was ' + BoolToStr(ActualValue, 'True', 'False') + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected ' + BoolToStr(ExpectedValue, 'True', 'False') + ', but is was ' + BoolToStr(ActualValue, 'True', 'False') + '.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectPointer(ActualValue, ExpectedValue: Pointer; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise Exception.Create('Expected $' + IntToHex(QWord(ExpectedValue), 8) + ', but is was $' + IntToHex(QWord(ActualValue), 8) + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected $' + IntToHex(QWord(ExpectedValue), 8) + ', but is was $' + IntToHex(QWord(ActualValue), 8) + '.  ' + ExtraMsg);
 end;
 
 
@@ -241,35 +243,35 @@ begin
     end;
 
   if s <> '' then
-    raise Exception.Create(s);
+    raise EExp.Create(s);
 end;
 
 
 procedure ExpectIntDifferent(ActualValue, ExpectedValue: Integer; ExtraMsg: string = '');
 begin
   if ExpectedValue = ActualValue then
-    raise Exception.Create('Expected ' + IntToStr(ExpectedValue) + ' to be different than ' + IntToStr(ActualValue) + ', but they are the same.  ' + ExtraMsg);
+    raise EExp.Create('Expected ' + IntToStr(ExpectedValue) + ' to be different than ' + IntToStr(ActualValue) + ', but they are the same.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectDWordDifferent(ActualValue, ExpectedValue: DWord; ExtraMsg: string = '');
 begin
   if ExpectedValue = ActualValue then
-    raise Exception.Create('Expected ' + IntToStr(ExpectedValue) + ' to be different than ' + IntToStr(ActualValue) + ', but they are the same.  ' + ExtraMsg);
+    raise EExp.Create('Expected ' + IntToStr(ExpectedValue) + ' to be different than ' + IntToStr(ActualValue) + ', but they are the same.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectStrDifferent(ActualValue, ExpectedValue: string; ExtraMsg: string = '');
 begin
   if ExpectedValue = ActualValue then
-    raise Exception.Create('Expected "' + ExpectedValue + '" to be different than "' + ActualValue + '", but they are the same.  ' + ExtraMsg);
+    raise EExp.Create('Expected "' + ExpectedValue + '" to be different than "' + ActualValue + '", but they are the same.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectBooleanDifferent(ActualValue, ExpectedValue: Boolean; ExtraMsg: string = '');
 begin
   if ExpectedValue = ActualValue then
-    raise Exception.Create('Expected "' + BoolToStr(ExpectedValue, 'True', 'False') + '" to be different than "' + BoolToStr(ActualValue, 'True', 'False') + '", but they are the same.  ' + ExtraMsg);
+    raise EExp.Create('Expected "' + BoolToStr(ExpectedValue, 'True', 'False') + '" to be different than "' + BoolToStr(ActualValue, 'True', 'False') + '", but they are the same.  ' + ExtraMsg);
 end;
 
 
@@ -409,7 +411,7 @@ begin
 
   for i := 0 to ExpectedLength - 1 do
     if FActualValueStringList.Strings[i] <> ExpectedValue^[i] then
-      raise Exception.Create('Expected "' + ExpectedValue^[i] + '", but is was "' + FActualValueStringList.Strings[i] + '"  at index ' + IntToStr(i) + '  ' + ExtraMessage);
+      raise EExp.Create('Expected "' + ExpectedValue^[i] + '", but is was "' + FActualValueStringList.Strings[i] + '"  at index ' + IntToStr(i) + '  ' + ExtraMessage);
 end;
 
 
@@ -534,7 +536,7 @@ begin
         if FActualValueStringCallbackFunc <> nil then
           ExpectStr(FActualValueStringCallbackFunc(), PString(ExpectedValue)^, ExtraMessage)
         else
-          raise Exception.Create(CValidPointerExpectedMessage + 'string.  ' + ExtraMessage);
+          raise EExp.Create(CValidPointerExpectedMessage + 'string.  ' + ExtraMessage);
     end;
 
     edtInteger:
@@ -545,7 +547,7 @@ begin
         if FActualValueIntegerCallbackFunc <> nil then
           ExpectInt(FActualValueIntegerCallbackFunc(), PInteger(ExpectedValue)^, ExtraMessage)
         else
-          raise Exception.Create(CValidPointerExpectedMessage + 'Integer.  ' + ExtraMessage);
+          raise EExp.Create(CValidPointerExpectedMessage + 'Integer.  ' + ExtraMessage);
     end;
 
     edtDWord:
@@ -556,8 +558,8 @@ begin
         if FActualValueDWordCallbackFunc <> nil then
           ExpectDWord(FActualValueDWordCallbackFunc(), PDWord(ExpectedValue)^, ExtraMessage)
         else
-          raise Exception.Create(CValidPointerExpectedMessage + 'DWord.  ' + ExtraMessage);
-          //When calling LoopedExpect with Integer, and the DWord (overloaded) version of ToBe is used (by compiler), then please typecast the argument passed to ToBe, to DWord, in order to avoid the exception.
+          raise EExp.Create(CValidPointerExpectedMessage + 'DWord.  ' + ExtraMessage);
+          //When calling LoopedExpect with Integer, and the DWord (overloaded) version of ToBe is used (by compiler), then please typecast the argument passed to ToBe, to DWord, in order to avoid the EExp.
     end;
 
     edtBoolean:
@@ -568,10 +570,10 @@ begin
         if FActualValueBooleanCallbackFunc <> nil then
           ExpectBoolean(FActualValueBooleanCallbackFunc(), PBoolean(ExpectedValue)^, ExtraMessage)
         else
-          raise Exception.Create(CValidPointerExpectedMessage + 'Boolean.  ' + ExtraMessage);
+          raise EExp.Create(CValidPointerExpectedMessage + 'Boolean.  ' + ExtraMessage);
     end;
     else
-      raise Exception.Create('Unhandled datatype in UntypedValidator');
+      raise EExp.Create('Unhandled datatype in UntypedValidator');
   end;
 end;
 
@@ -589,7 +591,7 @@ begin
         if FActualValueStringCallbackFunc <> nil then
           ExpectStrDifferent(FActualValueStringCallbackFunc(), PString(ExpectedValue)^, ExtraMessage)
         else
-          raise Exception.Create(CValidPointerExpectedMessage + 'string.  ' + ExtraMessage);
+          raise EExp.Create(CValidPointerExpectedMessage + 'string.  ' + ExtraMessage);
     end;
 
     edtInteger:
@@ -600,7 +602,7 @@ begin
         if FActualValueIntegerCallbackFunc <> nil then
           ExpectIntDifferent(FActualValueIntegerCallbackFunc(), PInteger(ExpectedValue)^, ExtraMessage)
         else
-          raise Exception.Create(CValidPointerExpectedMessage + 'Integer.  ' + ExtraMessage);
+          raise EExp.Create(CValidPointerExpectedMessage + 'Integer.  ' + ExtraMessage);
     end;
 
     edtDWord:
@@ -611,8 +613,8 @@ begin
         if FActualValueDWordCallbackFunc <> nil then
           ExpectDWordDifferent(FActualValueDWordCallbackFunc(), PDWord(ExpectedValue)^, ExtraMessage)
         else
-          raise Exception.Create(CValidPointerExpectedMessage + 'DWord.  ' + ExtraMessage);
-          //When calling LoopedExpect with Integer, and the DWord (overloaded) version of ToBe is used (by compiler), then please typecast the argument passed to ToBe, to DWord, in order to avoid the exception.
+          raise EExp.Create(CValidPointerExpectedMessage + 'DWord.  ' + ExtraMessage);
+          //When calling LoopedExpect with Integer, and the DWord (overloaded) version of ToBe is used (by compiler), then please typecast the argument passed to ToBe, to DWord, in order to avoid the EExp.
     end;
 
     edtBoolean:
@@ -623,10 +625,10 @@ begin
         if FActualValueBooleanCallbackFunc <> nil then
           ExpectBooleanDifferent(FActualValueBooleanCallbackFunc(), PBoolean(ExpectedValue)^, ExtraMessage)
         else
-          raise Exception.Create(CValidPointerExpectedMessage + 'Boolean.  ' + ExtraMessage);
+          raise EExp.Create(CValidPointerExpectedMessage + 'Boolean.  ' + ExtraMessage);
     end;
     else
-      raise Exception.Create('Unhandled datatype in UntypedValidatorDifferent');
+      raise EExp.Create('Unhandled datatype in UntypedValidatorDifferent');
   end;
 end;
 
@@ -783,7 +785,7 @@ begin
   Result := TExpect.Create;
 
   if ActualValue = nil then
-    raise Exception.Create('Actual pointer to array is nil.');
+    raise EExp.Create('Actual pointer to array is nil.');
 
   SetLength(Result.FActualValueConstByteArr, ALen);
   Move(ActualValue^[0], Result.FActualValueConstByteArr[0], Length(Result.FActualValueConstByteArr));
