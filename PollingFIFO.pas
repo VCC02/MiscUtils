@@ -106,6 +106,8 @@ begin
     DeleteCriticalSection(FCritSec);
   {$ENDIF}
 
+  FreeAndNil(FFIFO);
+
   inherited Destroy;
 end;
 
