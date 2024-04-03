@@ -25,6 +25,14 @@ unit Expectations;
 
 //{$mode ObjFPC}{$H+}
 {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+
+// When using "ConvExMsg", compiler directive (at project-level),
+// the messages from raised exceptions will have ASCII 0 characters (#0), replaced with ASCII 1 characters (#1),
+// so they can be visible on various window components (e.g. TMemo, TListBox etc.)
+
+// When displayed string values are too long, to prevent UI glitching, the "TruncateDiffMsg" compiler directive can be defined.
+// This will truncate the values to 255 characters.
+
 interface
 
 uses
@@ -150,7 +158,18 @@ implementation
 
 
 uses
-  Forms;
+  Forms, Math;
+
+
+function FastReplace0To1(s: string): string;
+var
+  i: Integer;
+begin
+  Result := s;
+  for i := 1 to Length(Result) do
+    if Result[i] = #0 then
+      Result[i] := #1;
+end;
 
 
 function GetTextFileContent(APath: string): string;
@@ -194,9 +213,33 @@ end;
 
 
 procedure ExpectStr(ActualValue, ExpectedValue: string; ExtraMsg: string = '');
+var
+  i, DiffAt: Integer;
 begin
   if ExpectedValue <> ActualValue then
-    raise EExp.Create('Expected "' + ExpectedValue + '", but is was "' + ActualValue + '".  ' + ExtraMsg);
+  begin
+    {$IFDEF ConvExMsg}
+      ActualValue := FastReplace0To1(ActualValue);
+      ExpectedValue := FastReplace0To1(ExpectedValue);
+    {$ENDIF}
+
+    if (ActualValue = '') or (ExpectedValue = '') then
+      DiffAt := 0
+    else
+      for i := 1 to Min(Length(ActualValue), Length(ExpectedValue)) do
+        if ExpectedValue[i] <> ActualValue[i] then
+        begin
+          DiffAt := i;
+          Break
+        end;
+
+    {$IFDEF TruncateDiffMsg}
+      ActualValue := Copy(ActualValue, 1, 255);
+      ExpectedValue := Copy(ExpectedValue, 1, 255);
+    {$ENDIF}
+
+    raise EExp.Create('Expected "' + ExpectedValue + '", but is was "' + ActualValue + '".  Diff at index ' + IntToStr(DiffAt) + '.  ' + ExtraMsg);
+  end;
 end;
 
 
@@ -264,7 +307,19 @@ end;
 procedure ExpectStrDifferent(ActualValue, ExpectedValue: string; ExtraMsg: string = '');
 begin
   if ExpectedValue = ActualValue then
+  begin
+    {$IFDEF ConvExMsg}
+      ActualValue := FastReplace0To1(ActualValue);
+      ExpectedValue := FastReplace0To1(ExpectedValue);
+    {$ENDIF}
+
+    {$IFDEF TruncateDiffMsg}
+      ActualValue := Copy(ActualValue, 1, 255);
+      ExpectedValue := Copy(ExpectedValue, 1, 255);
+    {$ENDIF}
+
     raise EExp.Create('Expected "' + ExpectedValue + '" to be different than "' + ActualValue + '", but they are the same.  ' + ExtraMsg);
+  end;
 end;
 
 
@@ -351,7 +406,8 @@ end;
 procedure TExpect.ToBeGreaterThan(ExpectedValue: Integer; ExtraMessage: string = '');
 begin
   try
-    ExpectInt(Ord(FActualValueInt > ExpectedValue), 1, IntToStr(FActualValueInt) + ' is not greater than ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
+    if not (FActualValueInt > ExpectedValue) then
+      raise EExp.Create('Expected ' + IntToStr(FActualValueInt) + ' to be greater than ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
   finally
     Free;
   end;
@@ -361,7 +417,8 @@ end;
 procedure TExpect.ToBeGreaterThanOrEqualTo(ExpectedValue: Integer; ExtraMessage: string = '');
 begin
   try
-    ExpectInt(Ord(FActualValueInt >= ExpectedValue), 1, IntToStr(FActualValueInt) + ' is not greater than or equal to ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
+    if not (FActualValueInt >= ExpectedValue) then
+      raise EExp.Create('Expected ' + IntToStr(FActualValueInt) + ' to be greater than or equal to ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
   finally
     Free;
   end;
@@ -371,7 +428,8 @@ end;
 procedure TExpect.ToBeLessThan(ExpectedValue: Integer; ExtraMessage: string = '');
 begin
   try
-    ExpectInt(Ord(FActualValueInt < ExpectedValue), 1, IntToStr(FActualValueInt) + ' is not less than ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
+    if not (FActualValueInt < ExpectedValue) then
+      raise EExp.Create('Expected ' + IntToStr(FActualValueInt) + ' to be less than ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
   finally
     Free;
   end;
@@ -381,7 +439,8 @@ end;
 procedure TExpect.ToBeLessThanOrEqualTo(ExpectedValue: Integer; ExtraMessage: string = '');
 begin
   try
-    ExpectInt(Ord(FActualValueInt <= ExpectedValue), 1, IntToStr(FActualValueInt) + ' is not less than or equal to ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
+    if not (FActualValueInt <= ExpectedValue) then
+      raise EExp.Create('Expected ' + IntToStr(FActualValueInt) + ' to be less than or equal to ' + IntToStr(ExpectedValue) + '.  ' + ExtraMessage);
   finally
     Free;
   end;

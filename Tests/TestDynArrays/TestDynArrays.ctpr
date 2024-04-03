@@ -65,6 +65,14 @@
         <Filename Value="TestDynOfDynOfDynOfByteCase.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit>
+      <Unit>
+        <Filename Value="TestDynArraysOfWord.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynOfDynOfWordCase.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -91,7 +99,7 @@
     </Linking>
     <Other>
       <CustomOptions Value="-dMMFreeBlocks
--d_UsingDynTFT"/>
+-dUsingDynTFT"/>
     </Other>
   </CompilerOptions>
   <Debugging>
