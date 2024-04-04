@@ -1,7 +1,7 @@
 {
     Copyright (C) 2023 VCC
     creation date: Apr 2023
-    initial release date: 23 Apr 2023
+    initial release date: 23 Apr 2024
 
     author: VCC
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -441,6 +441,8 @@ begin
   CopyFromDynArray(Dest, Src, 3, 7);
 
   Expect(DynArrayOfByteToString(Dest)).ToBe('3456789');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
 end;
 
 
@@ -453,6 +455,8 @@ begin
   CopyFromDynArray(Dest, Src, 3, 0);
 
   Expect(DynArrayOfByteToString(Dest)).ToBe('');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
 end;
 
 
@@ -465,6 +469,8 @@ begin
   CopyFromDynArray(Dest, Src, 10, 20);
 
   Expect(DynArrayOfByteToString(Dest)).ToBe('ABCDEF');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
 end;
 
 
@@ -477,6 +483,8 @@ begin
   CopyFromDynArray(Dest, Src, 50, 20);
 
   Expect(DynArrayOfByteToString(Dest)).ToBe('');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
 end;
 
 
@@ -488,6 +496,8 @@ begin
   CopyFromDynArray(Dest, Src, 0, 20);
 
   Expect(DynArrayOfByteToString(Dest)).ToBe('');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
 end;
 
 

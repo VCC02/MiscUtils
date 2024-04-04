@@ -452,6 +452,8 @@ begin
   CopyFromDynArrayOfWord(Dest, Src, 3, 7);
 
   Expect(DynArrayOfWordToString(Dest)).ToBe('6789ABCDEFGHIJ');
+  FreeDynArrayOfWord(Src);
+  FreeDynArrayOfWord(Dest);
 end;
 
 
@@ -464,6 +466,8 @@ begin
   CopyFromDynArrayOfWord(Dest, Src, 3, 0);
 
   Expect(DynArrayOfWordToString(Dest)).ToBe('');
+  FreeDynArrayOfWord(Src);
+  FreeDynArrayOfWord(Dest);
 end;
 
 
@@ -477,6 +481,8 @@ begin
   Expect(Dest.Len).ToBe(3); //  CopyFromDynArrayOfWord doesn't care about the content.
 
   Expect(DynArrayOfWordToString(Dest)).ToBe('ABCDEF');
+  FreeDynArrayOfWord(Src);
+  FreeDynArrayOfWord(Dest);
 end;
 
 
@@ -489,6 +495,8 @@ begin
   CopyFromDynArrayOfWord(Dest, Src, 50, 20);
 
   Expect(DynArrayOfWordToString(Dest)).ToBe('');
+  FreeDynArrayOfWord(Src);
+  FreeDynArrayOfWord(Dest);
 end;
 
 
@@ -500,6 +508,8 @@ begin
   CopyFromDynArrayOfWord(Dest, Src, 0, 20);
 
   Expect(DynArrayOfWordToString(Dest)).ToBe('');
+  FreeDynArrayOfWord(Src);
+  FreeDynArrayOfWord(Dest);
 end;
 
 

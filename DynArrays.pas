@@ -422,6 +422,7 @@ function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayO
 
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 function StringToDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfWord): Boolean;   //assumes ADest is initialized
+function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
 function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
 function AddStringToDynOfDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfWord): Boolean;
@@ -488,6 +489,25 @@ implementation
 {$ENDIF}
 
 
+{$IFDEF IsDesktop}
+  {$IFDEF UsingDynTFT}
+    var
+      MMCritSec: TRTLCriticalSection;
+
+    procedure GetMem(var P: TPtrRec; Size: DWord);
+    begin
+      MemManager.GetMem(P, Size);
+    end;
+
+
+    procedure FreeMem(var P: TPtrRec; Size: DWord);
+    begin
+      MemManager.FreeMem(P, Size);
+    end;
+  {$ENDIF}
+{$ENDIF}
+
+
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 var
   TempLen: TDynArrayLength;
@@ -511,9 +531,11 @@ var
   TempLen: TDynArrayLength;
 begin
   TempLen := TDynArrayLength(Length(AString));
-  TempLen := TempLen shr 1;
+
   if (TempLen and 1) = 1 then
     Inc(TempLen);  //add one more item if odd
+
+  TempLen := TempLen shr 1;
 
   Result := SetDynOfWordLength(ADest, TempLen);
 
@@ -528,14 +550,38 @@ begin
 end;
 
 
+function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
+var
+  TempLen: TDynArrayLength;
+begin
+  TempLen := TDynArrayLength(Length(AArray));
+  Result := SetDynLength(ADest, TempLen);
+
+  if not Result then
+    Exit;
+
+  {$IFDEF IsDesktop}
+    MemMove(ADest.Content, @AArray[1], TempLen);
+  {$ELSE}
+    MemMove(PByte(ADest.Content), PByte(@AArray[0]), TempLen);
+  {$ENDIF}
+end;
+
+
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string);  {$IFDEF IsDesktop} overload; {$ENDIF}
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArray(AArr);
     SetLength(ADestStr, AArr.Len);
 
+    if AArr.Len = 0 then
+      Exit;
+
     MemMove(@ADestStr[1], AArr.Content, AArr.Len);
   {$ELSE}
+    if AArr.Len = 0 then
+      Exit;
+
     MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len);
   {$ENDIF}
 end;
@@ -547,8 +593,14 @@ begin
     CheckInitializedDynArrayOfWord(AArr);
     SetLength(ADestStr, AArr.Len shl 1);
 
+    if AArr.Len = 0 then
+      Exit;
+
     MemMove(@ADestStr[1], AArr.Content, AArr.Len shl 1);
   {$ELSE}
+    if AArr.Len = 0 then
+      Exit;
+
     MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len shl 1);
   {$ENDIF}
 end;
@@ -608,7 +660,16 @@ end;
   //for compatibility with mP
   procedure MemMove(ADest, ASrc: Pointer; ACount: Integer);
   begin
-    Move(ASrc^, ADest^, ACount); //(src, dst, cnt);
+    {$IFDEF UsingDynTFT}
+      EnterCriticalSection(MMCritSec);
+      try
+    {$ENDIF}
+        Move(ASrc^, ADest^, ACount); //(src, dst, cnt);
+    {$IFDEF UsingDynTFT}
+      finally
+        LeaveCriticalSection(MMCritSec);
+      end;
+    {$ENDIF}
   end;
 {$ENDIF}
 
@@ -775,7 +836,7 @@ var
 begin
   Result := True;
 
-  if ACount > AArr.Len then
+  if ACount >= AArr.Len then
   begin
     FreeDynArray(AArr);
     Exit;
@@ -1305,7 +1366,7 @@ var
 begin
   Result := True;
 
-  if ACount > AArr.Len then
+  if ACount >= AArr.Len then
   begin
     FreeDynArrayOfWord(AArr);
     Exit;
@@ -2379,5 +2440,13 @@ begin
     AArr.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
   {$ENDIF}
 end;
+
+{$IFDEF UsingDynTFT}
+  initialization
+    InitCriticalSection(MMCritSec);
+
+  finalization
+    DoneCriticalSection(MMCritSec);
+{$ENDIF}
 
 end.
