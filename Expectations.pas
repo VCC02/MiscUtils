@@ -136,6 +136,8 @@ type
 
 
 function GetTextFileContent(APath: string): string;
+function FastReplace0To1(s: string): string;
+
 
 function Expect(ActualValue: string): TExpect; overload;
 function Expect(ActualValue: Integer): TExpect; overload;

@@ -56,6 +56,7 @@ type
 
     procedure TestDeleteFirstBytes_ZeroLength;
     procedure TestDeleteFirstBytes_LessThanLength;
+    procedure TestDeleteFirstBytes_LessThanLength_MoreItems;
     procedure TestDeleteFirstBytes_SameAsLength;
     procedure TestDeleteFirstBytes_GreaterThanLength;
 
@@ -395,6 +396,35 @@ begin
 
   Expect(Arr.Len).ToBe(1);
   Expect(Arr.Content^[0]).ToBe(50);
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFirstBytes_LessThanLength_MoreItems;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 8);
+  Arr.Content^[0] := 30;
+  Arr.Content^[1] := 40;
+  Arr.Content^[2] := 50;
+  Arr.Content^[3] := 60;
+  Arr.Content^[4] := 70;
+  Arr.Content^[5] := 80;
+  Arr.Content^[6] := 90;
+  Arr.Content^[7] := 100;
+
+  RemoveStartBytesFromDynArray(2, Arr);
+
+  Expect(Arr.Len).ToBe(6);
+  Expect(Arr.Content^[0]).ToBe(50);
+  Expect(Arr.Content^[1]).ToBe(60);
+  Expect(Arr.Content^[2]).ToBe(70);
+  Expect(Arr.Content^[3]).ToBe(80);
+  Expect(Arr.Content^[4]).ToBe(90);
+  Expect(Arr.Content^[5]).ToBe(100);
 
   FreeDynArray(Arr);
 end;

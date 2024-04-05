@@ -832,7 +832,8 @@ end;
 
 function RemoveStartBytesFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfByte): Boolean;
 var
-  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  PartialArr: TDynArrayOfByte;
+  NewLen: TDynArrayLength;
 begin
   Result := True;
 
@@ -845,14 +846,18 @@ begin
   if ACount = 0 then
     Exit;
 
-  {$IFnDEF IsDesktop}
-    OldPointer := DWord(AArr.Content) + ACount;
-  {$ELSE}
-    OldPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt(ACount));
-  {$ENDIF}
-  MemMove(AArr.Content, OldPointer, ACount);
+  InitDynArrayToEmpty(PartialArr);
+  NewLen := AArr.Len - ACount;
+  if not CopyFromDynArray(PartialArr, AArr, ACount, NewLen) then
+  begin
+    Result := False;
+    Exit;
+  end;
 
-  SetDynLength(AArr, AArr.Len - ACount);
+  MemMove(AArr.Content, PartialArr.Content, NewLen);
+  FreeDynArray(PartialArr);
+
+  Result := SetDynLength(AArr, NewLen);
 end;
 
 
