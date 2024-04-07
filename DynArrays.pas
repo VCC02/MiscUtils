@@ -91,7 +91,7 @@ unit DynArrays;
       {$ENDIF}
   {$ELSE}
     {$IFDEF UsingMPMM} //mP's memoy manager
-      __Lib_MemManager  //users may still want to use the a different flavor of the same memoy manager, without the DynTFT dependencies
+      __Lib_MemManager  //users may still want to use a different flavor of the same memoy manager, without the DynTFT dependencies
     {$ELSE}
       //this is FP's memory manager
     {$ENDIF}
@@ -426,6 +426,8 @@ function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynA
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
 function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
 function AddStringToDynOfDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfWord): Boolean;
+function CopyBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DWord; {$ENDIF} ALen: TDynArrayLength; var ADest: TDynArrayOfByte): Boolean; //overwrites ADest
+function AddBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DWord; {$ENDIF} ALen: TDynArrayLength; var ADest: TDynArrayOfByte): Boolean;  //concatenates with ADest
 
 {$IFDEF IsDesktop}
   function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF IsDesktop} overload; {$ENDIF}
@@ -434,6 +436,24 @@ function AddStringToDynOfDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AStr: s
 
   //for compatibility with mP
   procedure MemMove(ADest, ASrc: Pointer; ACount: Integer);
+{$ENDIF}
+
+
+{$IFDEF IsDesktop}
+  {$IFDEF UsingDynTFT}
+    {$IFDEF LogMem}
+      type
+        TOnAfterGetMem = procedure(ARequestedSize: DWord);
+        TOnAfterFreeMem = procedure(ARequestedSize: DWord);
+
+      var
+        OnAfterGetMem: TOnAfterGetMem;
+        OnAfterFreeMem: TOnAfterFreeMem;
+
+      procedure DoOnAfterGetMem(ARequestedSize: DWord);
+      procedure DoOnAfterFreeMem(ARequestedSize: DWord);
+    {$ENDIF}
+  {$ENDIF}
 {$ENDIF}
 
 
@@ -497,12 +517,20 @@ implementation
     procedure GetMem(var P: TPtrRec; Size: DWord);
     begin
       MemManager.GetMem(P, Size);
+
+      {$IFDEF LogMem}
+        DoOnAfterGetMem(Size);
+      {$ENDIF}
     end;
 
 
     procedure FreeMem(var P: TPtrRec; Size: DWord);
     begin
       MemManager.FreeMem(P, Size);
+
+      {$IFDEF LogMem}
+        DoOnAfterFreeMem(Size);
+      {$ENDIF}
     end;
   {$ENDIF}
 {$ENDIF}
@@ -625,6 +653,36 @@ begin
   Result := StringToDynArrayOfWord(AStr, TempArr);
   Result := Result and AddDynArrayOfWordToDynOfDynOfWord(ADest, TempArr);
   FreeDynArrayOfWord(TempArr);
+end;
+
+
+function CopyBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DWord; {$ENDIF} ALen: TDynArrayLength; var ADest: TDynArrayOfByte): Boolean; //overwrites ADest
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArray(ADest);
+  {$ENDIF}
+
+  Result := SetDynLength(ADest, ALen);
+  if Result and (ALen > 0) then
+    MemMove(ADest.Content, ABuf, ALen);
+end;
+
+
+function AddBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DWord; {$ENDIF} ALen: TDynArrayLength; var ADest: TDynArrayOfByte): Boolean;  //concatenates with ADest
+begin
+  if ALen = 0 then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArray(ADest);
+  {$ENDIF}
+
+  Result := SetDynLength(ADest, ADest.Len + ALen);
+  if Result then
+    MemMove(PPtrUInt(PtrUInt(ADest.Content) + ALen), ABuf, ALen);
 end;
 
 
@@ -2446,12 +2504,40 @@ begin
   {$ENDIF}
 end;
 
-{$IFDEF UsingDynTFT}
-  initialization
-    InitCriticalSection(MMCritSec);
 
-  finalization
-    DoneCriticalSection(MMCritSec);
+{$IFDEF IsDesktop}
+  {$IFDEF UsingDynTFT}
+    {$IFDEF LogMem}
+      procedure DoOnAfterGetMem(ARequestedSize: DWord);
+      begin
+        if Assigned(OnAfterGetMem) then
+          OnAfterGetMem(ARequestedSize);
+      end;
+
+      procedure DoOnAfterFreeMem(ARequestedSize: DWord);
+      begin
+        if Assigned(OnAfterFreeMem) then
+          OnAfterFreeMem(ARequestedSize);
+      end;
+    {$ENDIF}
+
+      initialization
+        InitCriticalSection(MMCritSec);
+
+        {$IFDEF LogMem}
+          OnAfterGetMem := nil;
+          OnAfterFreeMem := nil;
+        {$ENDIF}
+
+      finalization
+        DoneCriticalSection(MMCritSec);
+
+        {$IFDEF LogMem}
+          OnAfterGetMem := nil;
+          OnAfterFreeMem := nil;
+        {$ENDIF}
+  {$ENDIF}
 {$ENDIF}
+
 
 end.

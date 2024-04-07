@@ -8,8 +8,9 @@ uses
   {$ENDIF}
 
   Interfaces, Forms, GuiTestRunner, TestDynArraysMainCase, DynArrays,
-  Expectations, DynTFTTypes, TestDynOfDynOfByteCase, 
-  TestDynOfDynOfDynOfByteCase, TestDynArraysOfWord, TestDynOfDynOfWordCase;
+  Expectations, DynTFTTypes, TestDynOfDynOfByteCase,
+  TestDynOfDynOfDynOfByteCase, TestDynArraysOfWord, TestDynOfDynOfWordCase,
+  DynArrayFIFO;
 
 {$R *.res}
 
