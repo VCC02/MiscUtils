@@ -443,15 +443,15 @@ function AddBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DW
   {$IFDEF UsingDynTFT}
     {$IFDEF LogMem}
       type
-        TOnAfterGetMem = procedure(ARequestedSize: DWord);
-        TOnAfterFreeMem = procedure(ARequestedSize: DWord);
+        TOnAfterGetMem = procedure(AAllocatedAddress, ARequestedSize: DWord);
+        TOnAfterFreeMem = procedure(AAllocatedAddress, ARequestedSize: DWord);
 
       var
         OnAfterGetMem: TOnAfterGetMem;
         OnAfterFreeMem: TOnAfterFreeMem;
 
-      procedure DoOnAfterGetMem(ARequestedSize: DWord);
-      procedure DoOnAfterFreeMem(ARequestedSize: DWord);
+      procedure DoOnAfterGetMem(AAllocatedAddress, ARequestedSize: DWord);
+      procedure DoOnAfterFreeMem(AAllocatedAddress, ARequestedSize: DWord);
     {$ENDIF}
   {$ENDIF}
 {$ENDIF}
@@ -516,21 +516,46 @@ implementation
 
     procedure GetMem(var P: TPtrRec; Size: DWord);
     begin
-      MemManager.GetMem(P, Size);
+      {$IFDEF UsingDynTFT}
+        EnterCriticalSection(MMCritSec);
+        try
+      {$ENDIF}
+          MemManager.GetMem(P, Size);
 
-      {$IFDEF LogMem}
-        DoOnAfterGetMem(Size);
+          {$IFDEF LogMem}
+            DoOnAfterGetMem(P, Size);
+          {$ENDIF}
+      {$IFDEF UsingDynTFT}
+        finally
+          LeaveCriticalSection(MMCritSec);
+        end;
       {$ENDIF}
     end;
 
 
     procedure FreeMem(var P: TPtrRec; Size: DWord);
+    var
+      TempPointer: TPtrRec;
     begin
-      MemManager.FreeMem(P, Size);
+      if P = 0 then
+        Exit;
 
-      {$IFDEF LogMem}
-        DoOnAfterFreeMem(Size);
+      {$IFDEF UsingDynTFT}
+        EnterCriticalSection(MMCritSec);
+        try
       {$ENDIF}
+          TempPointer := P;
+          MemManager.FreeMem(P, Size);
+
+          {$IFDEF LogMem}
+            DoOnAfterFreeMem(TempPointer, Size);
+          {$ENDIF}
+
+        {$IFDEF UsingDynTFT}
+          finally
+            LeaveCriticalSection(MMCritSec);
+          end;
+        {$ENDIF}
     end;
   {$ENDIF}
 {$ENDIF}
@@ -785,6 +810,9 @@ begin
   end;
 
   OldPointer := PIntPtr(AArr.Content);
+
+  if (OldPointer = nil) and (AArr.Len > 0) then
+    Exit;
 
   {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength);
@@ -1055,6 +1083,9 @@ begin
     OldPointer := PDynArrayOfTDynArrayOfByteContent(AArr.Content);
   {$ENDIF}
 
+  if (OldPointer = nil) and (AArr.Len > 0) then
+    Exit;
+
   {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte));    //SizeOf pointer
     if MM_error or (AArr.Content = nil) then
@@ -1321,6 +1352,9 @@ begin
   end;
 
   OldPointer := PIntPtr(AArr.Content);
+
+  if (OldPointer = nil) and (AArr.Len > 0) then
+    Exit;
 
   {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength shl 1);
@@ -1656,6 +1690,9 @@ begin
     OldPointer := PDynArrayOfTDynArrayOfWordContent(AArr.Content);
   {$ENDIF}
 
+  if (OldPointer = nil) and (AArr.Len > 0) then
+    Exit;
+
   {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfWord));    //SizeOf pointer
     if MM_error or (AArr.Content = nil) then
@@ -1923,6 +1960,9 @@ begin
 
   OldPointer := PIntPtr(AArr.Content);
 
+  if (OldPointer = nil) and (AArr.Len > 0) then
+    Exit;
+
   {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength shl 2);
     if MM_error or (AArr.Content = nil) then
@@ -2173,6 +2213,9 @@ begin
   end;
 
   OldPointer := PIntPtr(AArr.Content);
+
+  if (OldPointer = nil) and (AArr.Len > 0) then
+    Exit;
 
   {$IFnDEF IsDesktop}
     GetMem(AArr.Content, ANewLength shl CArchBitShift);
@@ -2508,16 +2551,16 @@ end;
 {$IFDEF IsDesktop}
   {$IFDEF UsingDynTFT}
     {$IFDEF LogMem}
-      procedure DoOnAfterGetMem(ARequestedSize: DWord);
+      procedure DoOnAfterGetMem(AAllocatedAddress, ARequestedSize: DWord);
       begin
         if Assigned(OnAfterGetMem) then
-          OnAfterGetMem(ARequestedSize);
+          OnAfterGetMem(AAllocatedAddress, ARequestedSize);
       end;
 
-      procedure DoOnAfterFreeMem(ARequestedSize: DWord);
+      procedure DoOnAfterFreeMem(AAllocatedAddress, ARequestedSize: DWord);
       begin
         if Assigned(OnAfterFreeMem) then
-          OnAfterFreeMem(ARequestedSize);
+          OnAfterFreeMem(AAllocatedAddress, ARequestedSize);
       end;
     {$ENDIF}
 
