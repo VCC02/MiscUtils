@@ -1,7 +1,7 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2024 VCC
     creation date: Apr 2023
-    initial release date: 23 Apr 2024
+    initial release date: 23 Apr 2023
 
     author: VCC
     Permission is hereby granted, free of charge, to any person obtaining a copy

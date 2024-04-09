@@ -515,9 +515,22 @@ implementation
       MMCritSec: TRTLCriticalSection;
 
     procedure GetMem(var P: TPtrRec; Size: DWord);
+    {$IFDEF RoundAlloc}
+      var
+        Remainder: Byte;
+    {$ENDIF}
     begin
       EnterCriticalSection(MMCritSec);
       try
+        {$IFDEF RoundAlloc} //this will save some FreeMem blocks in MemManager, by allocating multiple by pointer size.
+          {$IFnDEF IsMCU}
+            Remainder := {$IFDEF CPU64} (8 - Byte(Size) and 7) and 7; {$ELSE} (4 - Byte(Size) and 3) and 3; {$ENDIF}
+          {$ELSE}
+            ///////// For MCU, the GetMem and FreeMem procedures have to be rewritten.
+          {$ENDIF}
+          Size := Size + Remainder;
+        {$ENDIF}
+
         MemManager.GetMem(P, Size);
 
         {$IFDEF LogMem}
@@ -534,6 +547,10 @@ implementation
       var
         TempPointer: TPtrRec;
     {$ENDIF}
+    {$IFDEF RoundAlloc}
+      var
+        Remainder: Byte;
+    {$ENDIF}
     begin
       if P = 0 then
         Exit;
@@ -542,6 +559,15 @@ implementation
       try
         {$IFDEF LogMem}
           TempPointer := P;
+        {$ENDIF}
+
+        {$IFDEF RoundAlloc} //this will save some FreeMem blocks in MemManager, by allocating multiple by pointer size.
+          {$IFnDEF IsMCU}
+            Remainder := {$IFDEF CPU64} (8 - Size and 7) and 7; {$ELSE} (4 - Size and 3) and 3; {$ENDIF}
+          {$ELSE}
+            ///////// For MCU, the GetMem and FreeMem procedures have to be rewritten.
+          {$ENDIF}
+          Size := Size + Remainder;
         {$ENDIF}
 
         MemManager.FreeMem(P, Size);
