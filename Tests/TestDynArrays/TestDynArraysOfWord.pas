@@ -54,10 +54,11 @@ type
     procedure Test_CallConcatDynArrays_WithoutFirstInitDynArray;
     procedure Test_CallConcatDynArrays_WithoutSecondInitDynArray;
 
-    procedure TestDeleteFirstBytes_ZeroLength;
-    procedure TestDeleteFirstBytes_LessThanLength;
-    procedure TestDeleteFirstBytes_SameAsLength;
-    procedure TestDeleteFirstBytes_GreaterThanLength;
+    procedure TestDeleteFirstWords_ZeroLength;
+    procedure TestDeleteFirstWords_LessThanLength;
+    procedure TestDeleteFirstWords_LessThanLength_MoreItems;
+    procedure TestDeleteFirstWords_SameAsLength;
+    procedure TestDeleteFirstWords_GreaterThanLength;
 
     procedure TestCopyFromDynArray_HappyFlow;
     procedure TestCopyFromDynArray_0Length;
@@ -371,7 +372,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstBytes_ZeroLength;
+procedure TTestDynArraysOfWord.TestDeleteFirstWords_ZeroLength;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -392,7 +393,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstBytes_LessThanLength;
+procedure TTestDynArraysOfWord.TestDeleteFirstWords_LessThanLength;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -411,7 +412,36 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstBytes_SameAsLength;
+procedure TTestDynArraysOfWord.TestDeleteFirstWords_LessThanLength_MoreItems;
+var
+  Arr: TDynArrayOfWord;
+begin
+  InitDynArrayOfWordToEmpty(Arr);
+  SetDynOfWordLength(Arr, 8);
+  Arr.Content^[0] := 2030;
+  Arr.Content^[1] := 2040;
+  Arr.Content^[2] := 2050;
+  Arr.Content^[3] := 2060;
+  Arr.Content^[4] := 2070;
+  Arr.Content^[5] := 2080;
+  Arr.Content^[6] := 2090;
+  Arr.Content^[7] := 20100;
+
+  RemoveStartWordsFromDynArray(2, Arr);
+
+  Expect(Arr.Len).ToBe(6);
+  Expect(Arr.Content^[0]).ToBe(2050);
+  Expect(Arr.Content^[1]).ToBe(2060);
+  Expect(Arr.Content^[2]).ToBe(2070);
+  Expect(Arr.Content^[3]).ToBe(2080);
+  Expect(Arr.Content^[4]).ToBe(2090);
+  Expect(Arr.Content^[5]).ToBe(20100);
+
+  FreeDynArrayOfWord(Arr);
+end;
+
+
+procedure TTestDynArraysOfWord.TestDeleteFirstWords_SameAsLength;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -429,7 +459,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstBytes_GreaterThanLength;
+procedure TTestDynArraysOfWord.TestDeleteFirstWords_GreaterThanLength;
 var
   Arr: TDynArrayOfWord;
 begin

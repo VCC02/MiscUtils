@@ -422,7 +422,6 @@ function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayO
 
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 function StringToDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfWord): Boolean;   //assumes ADest is initialized
-function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
 function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
 function AddStringToDynOfDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfWord): Boolean;
@@ -433,6 +432,7 @@ function AddBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DW
   function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynArrayOfWordToString(var AArr: TDynArrayOfWord): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynOfDynArrayOfByteToString(var AArr: TDynArrayOfTDynArrayOfByte; ASeparator: string = #13#10): string;
+  function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 
   //for compatibility with mP
   procedure MemMove(ADest, ASrc: Pointer; ACount: Integer);
@@ -516,46 +516,43 @@ implementation
 
     procedure GetMem(var P: TPtrRec; Size: DWord);
     begin
-      {$IFDEF UsingDynTFT}
-        EnterCriticalSection(MMCritSec);
-        try
-      {$ENDIF}
-          MemManager.GetMem(P, Size);
+      EnterCriticalSection(MMCritSec);
+      try
+        MemManager.GetMem(P, Size);
 
-          {$IFDEF LogMem}
-            DoOnAfterGetMem(P, Size);
-          {$ENDIF}
-      {$IFDEF UsingDynTFT}
-        finally
-          LeaveCriticalSection(MMCritSec);
-        end;
-      {$ENDIF}
+        {$IFDEF LogMem}
+          DoOnAfterGetMem(P, Size);
+        {$ENDIF}
+      finally
+        LeaveCriticalSection(MMCritSec);
+      end;
     end;
 
 
     procedure FreeMem(var P: TPtrRec; Size: DWord);
-    var
-      TempPointer: TPtrRec;
+    {$IFDEF LogMem}
+      var
+        TempPointer: TPtrRec;
+    {$ENDIF}
     begin
       if P = 0 then
         Exit;
 
-      {$IFDEF UsingDynTFT}
-        EnterCriticalSection(MMCritSec);
-        try
-      {$ENDIF}
+      EnterCriticalSection(MMCritSec);
+      try
+        {$IFDEF LogMem}
           TempPointer := P;
-          MemManager.FreeMem(P, Size);
-
-          {$IFDEF LogMem}
-            DoOnAfterFreeMem(TempPointer, Size);
-          {$ENDIF}
-
-        {$IFDEF UsingDynTFT}
-          finally
-            LeaveCriticalSection(MMCritSec);
-          end;
         {$ENDIF}
+
+        MemManager.FreeMem(P, Size);
+
+        {$IFDEF LogMem}
+          DoOnAfterFreeMem(TempPointer, Size);
+        {$ENDIF}
+
+      finally
+        LeaveCriticalSection(MMCritSec);
+      end;
     end;
   {$ENDIF}
 {$ENDIF}
@@ -599,24 +596,6 @@ begin
     MemMove(ADest.Content, @AString[1], TempLen shl 1);
   {$ELSE}
     MemMove(PByte(ADest.Content), PByte(@AString[0]), TempLen shl 1);
-  {$ENDIF}
-end;
-
-
-function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
-var
-  TempLen: TDynArrayLength;
-begin
-  TempLen := TDynArrayLength(Length(AArray));
-  Result := SetDynLength(ADest, TempLen);
-
-  if not Result then
-    Exit;
-
-  {$IFDEF IsDesktop}
-    MemMove(ADest.Content, @AArray[1], TempLen);
-  {$ELSE}
-    MemMove(PByte(ADest.Content), PByte(@AArray[0]), TempLen);
   {$ENDIF}
 end;
 
@@ -707,7 +686,11 @@ begin
 
   Result := SetDynLength(ADest, ADest.Len + ALen);
   if Result then
-    MemMove(PPtrUInt(PtrUInt(ADest.Content) + ALen), ABuf, ALen);
+    {$IFDEF IsDesktop}
+      MemMove(PPtrUInt(PtrUInt(ADest.Content) + ALen), ABuf, ALen);
+    {$ELSE}
+      MemMove(PByte(PtrUInt(ADest.Content) + ALen), ABuf, ALen);
+    {$ENDIF}
 end;
 
 
@@ -739,6 +722,25 @@ end;
       Result := Result + TempStr + ASeparator;
     end;
   end;
+  
+  
+  function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
+  var
+    TempLen: TDynArrayLength;
+  begin
+    TempLen := TDynArrayLength(Length(AArray));
+    Result := SetDynLength(ADest, TempLen);
+
+    if not Result then
+      Exit;
+
+    {$IFDEF IsDesktop}
+      MemMove(ADest.Content, @AArray[1], TempLen);
+    {$ELSE}
+      MemMove(PByte(ADest.Content), PByte(@AArray[0]), TempLen);
+    {$ENDIF}
+  end;
+
 
   //for compatibility with mP
   procedure MemMove(ADest, ASrc: Pointer; ACount: Integer);
@@ -1459,7 +1461,8 @@ end;
 
 function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfWord): Boolean;
 var
-  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  PartialArr: TDynArrayOfWord;
+  NewLen: TDynArrayLength;
 begin
   Result := True;
 
@@ -1472,14 +1475,18 @@ begin
   if ACount = 0 then
     Exit;
 
-  {$IFnDEF IsDesktop}
-    OldPointer := DWord(AArr.Content) + ACount shl 1;
-  {$ELSE}
-    OldPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt(ACount shl 1));
-  {$ENDIF}
-  MemMove(AArr.Content, OldPointer, ACount shl 1);
+  InitDynArrayOfWordToEmpty(PartialArr);
+  NewLen := AArr.Len - ACount;
+  if not CopyFromDynArrayOfWord(PartialArr, AArr, ACount, NewLen) then
+  begin
+    Result := False;
+    Exit;
+  end;
 
-  SetDynOfWordLength(AArr, AArr.Len - ACount);  //no "shl 1" here
+  MemMove(AArr.Content, PartialArr.Content, NewLen shl 1);
+  FreeDynArrayOfWord(PartialArr);
+
+  Result := SetDynOfWordLength(AArr, NewLen);
 end;
 
 
