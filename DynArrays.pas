@@ -523,11 +523,7 @@ implementation
       EnterCriticalSection(MMCritSec);
       try
         {$IFDEF RoundAlloc} //this will save some FreeMem blocks in MemManager, by allocating multiple by pointer size.
-          {$IFnDEF IsMCU}
-            Remainder := {$IFDEF CPU64} (8 - Byte(Size) and 7) and 7; {$ELSE} (4 - Byte(Size) and 3) and 3; {$ENDIF}
-          {$ELSE}
-            ///////// For MCU, the GetMem and FreeMem procedures have to be rewritten.
-          {$ENDIF}
+          Remainder := {$IFDEF CPU64} (8 - Byte(Size) and 7) and 7; {$ELSE} (4 - Byte(Size) and 3) and 3; {$ENDIF}
           Size := Size + Remainder;
         {$ENDIF}
 
@@ -562,11 +558,7 @@ implementation
         {$ENDIF}
 
         {$IFDEF RoundAlloc} //this will save some FreeMem blocks in MemManager, by allocating multiple by pointer size.
-          {$IFnDEF IsMCU}
-            Remainder := {$IFDEF CPU64} (8 - Size and 7) and 7; {$ELSE} (4 - Size and 3) and 3; {$ENDIF}
-          {$ELSE}
-            ///////// For MCU, the GetMem and FreeMem procedures have to be rewritten.
-          {$ENDIF}
+          Remainder := {$IFDEF CPU64} (8 - Size and 7) and 7; {$ELSE} (4 - Size and 3) and 3; {$ENDIF}
           Size := Size + Remainder;
         {$ENDIF}
 
@@ -575,10 +567,41 @@ implementation
         {$IFDEF LogMem}
           DoOnAfterFreeMem(TempPointer, Size);
         {$ENDIF}
-
       finally
         LeaveCriticalSection(MMCritSec);
       end;
+    end;
+  {$ENDIF}
+{$ELSE}
+  {$IFDEF RoundAlloc}
+    procedure GetMemRound(var P: {$IFDEF UsingDynTFT} TPtrRec; {$ELSE} ^Byte; {$ENDIF} Size: DWord);
+    var
+      Remainder: Byte;
+    begin
+      {$IFDEF AppArch32}
+        Remainder := (4 - Byte(Size) and 3) and 3;
+      {$ENDIF}
+      {$IFDEF AppArch16}
+        Remainder := (2 - Byte(Size) and 1) and 1;
+      {$ENDIF}
+
+      Size := Size + Remainder;
+      GetMem(P, Size);
+    end;
+
+    procedure FreeMemRound(var P: {$IFDEF UsingDynTFT} TPtrRec; {$ELSE} ^Byte; {$ENDIF} Size: DWord);
+    var
+      Remainder: Byte;
+    begin
+      {$IFDEF AppArch32}
+        Remainder := (4 - Byte(Size) and 3) and 3;
+      {$ENDIF}
+      {$IFDEF AppArch16}
+        Remainder := (2 - Byte(Size) and 1) and 1;
+      {$ENDIF}
+
+      Size := Size + Remainder;
+      FreeMem(P, Size);
     end;
   {$ENDIF}
 {$ENDIF}
@@ -822,14 +845,14 @@ begin
   begin
     if AArr.Len > 0 then
     begin
-      {$IFDEF UsingDynTFT}
-        {$IFDEF IsMCU}
-          FreeMem(AArr.Content, AArr.Len);
-        {$ELSE}
-          FreeMem(TPtrRec(AArr.Content), AArr.Len);
-        {$ENDIF}
+      {$IFnDEF IsDesktop}
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content, AArr.Len);
       {$ELSE}
-        FreeMem(AArr.Content, AArr.Len);
+        {$IFDEF UsingDynTFT}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len);
+        {$ELSE}
+          FreeMem(AArr.Content, AArr.Len);
+        {$ENDIF}
       {$ENDIF}
     end;
 
@@ -843,7 +866,7 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    GetMem(AArr.Content, ANewLength);
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength);
     if MM_error or (AArr.Content = nil) then
     begin
       Result := False;
@@ -874,14 +897,14 @@ begin
 
   if AArr.Len > 0 then
   begin
-    {$IFDEF UsingDynTFT}
-      {$IFDEF IsMCU}
+    {$IFnDEF IsDesktop}
+      {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len);
+    {$ELSE}
+      {$IFDEF UsingDynTFT}
         FreeMem(TPtrRec(OldPointer), AArr.Len);
       {$ELSE}
-        FreeMem(TPtrRec(OldPointer), AArr.Len);
+        FreeMem(OldPointer, AArr.Len);
       {$ENDIF}
-    {$ELSE}
-      FreeMem(OldPointer, AArr.Len);
     {$ENDIF}
   end;
 
@@ -1084,20 +1107,20 @@ begin
         FreeDynArray(AArr.Content^[i]^);
 
         {$IFnDEF IsDesktop}
-          Freemem(AArr.Content^[i], SizeOf(TDynArrayOfByte));
+          {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfByte));
         {$ELSE}
           Dispose(AArr.Content^[i]);
         {$ENDIF}
       end;
 
-      {$IFDEF UsingDynTFT}
-        {$IFDEF IsMCU}
-          FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfByte));
-        {$ELSE}
-          FreeMem(TPtrRec(AArr.Content), AArr.Len * SizeOf(PDynArrayOfByte));
-        {$ENDIF}
+      {$IFnDEF IsDesktop}
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content, AArr.Len * SizeOf(PDynArrayOfByte));
       {$ELSE}
-        FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfByte));
+        {$IFDEF UsingDynTFT}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len * SizeOf(PDynArrayOfByte));
+        {$ELSE}
+          FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfByte));
+        {$ENDIF}
       {$ENDIF}
     end;
 
@@ -1115,7 +1138,7 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte));    //SizeOf pointer
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte));    //SizeOf pointer
     if MM_error or (AArr.Content = nil) then
     begin
       Result := False;
@@ -1124,7 +1147,7 @@ begin
 
     for i := 0 to ANewLength - 1 do
     begin
-      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
       if MM_error or (AArr.Content = nil) then
       begin
         Result := False;
@@ -1169,20 +1192,21 @@ begin
       FreeDynArray(OldPointer^[i]^);    /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
 
       {$IFnDEF IsDesktop}
-        Freemem(OldPointer^[i], SizeOf(TDynArrayOfByte));
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer^[i], SizeOf(TDynArrayOfByte));
       {$ELSE}
         Dispose(OldPointer^[i]);
       {$ENDIF}
     end;
 
-    {$IFDEF UsingDynTFT}
-      {$IFDEF IsMCU}
-        FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
-      {$ELSE}
-        FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfByte));
-      {$ENDIF}
+
+    {$IFnDEF IsDesktop}
+      {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
     {$ELSE}
-      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+      {$IFDEF UsingDynTFT}
+        FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfByte));
+      {$ELSE}
+        FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+      {$ENDIF}
     {$ENDIF}
   end;
 
@@ -1224,13 +1248,13 @@ begin
     FreeDynArray(AArr.Content^[i]^);
 
     {$IFnDEF IsDesktop}
-      Freemem(AArr.Content^[i], SizeOf(TDynArrayOfByte));
+      {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfByte));
     {$ELSE}
       Dispose(AArr.Content^[i]);
     {$ENDIF}
 
     {$IFnDEF IsDesktop}
-      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
       if MM_error or (AArr.Content = nil) then
       begin
         Result := False;
@@ -1249,7 +1273,7 @@ begin
   FreeDynArray(AArr.Content^[AArr.Len - 1]^);
 
   {$IFnDEF IsDesktop}
-    Freemem(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfByte));
+    {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfByte));
   {$ELSE}
     Dispose(AArr.Content^[AArr.Len - 1]);
   {$ENDIF}
@@ -1260,7 +1284,7 @@ begin
   if NewLen > 0 then
   begin
     {$IFnDEF IsDesktop}
-      GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfByte));    //SizeOf pointer
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, NewLen * SizeOf(PDynArrayOfByte));    //SizeOf pointer
       if MM_error or (AArr.Content = nil) then
       begin
         Result := False;
@@ -1282,14 +1306,14 @@ begin
 
   MemMove(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfByte));
 
-  {$IFDEF UsingDynTFT}
-    {$IFDEF IsMCU}
-      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
-    {$ELSE}
-      FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfByte));
-    {$ENDIF}
+  {$IFnDEF IsDesktop}
+    {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
   {$ELSE}
-    FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+    {$IFDEF UsingDynTFT}
+      FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfByte));
+    {$ELSE}
+      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
+    {$ENDIF}
   {$ENDIF}
 
   AArr.Len := AArr.Len - 1;
@@ -1364,14 +1388,14 @@ begin
   begin
     if AArr.Len > 0 then
     begin
-      {$IFDEF UsingDynTFT}
-        {$IFDEF IsMCU}
-          FreeMem(AArr.Content, AArr.Len shl 1);
-        {$ELSE}
-          FreeMem(TPtrRec(AArr.Content), AArr.Len shl 1);
-        {$ENDIF}
+      {$IFnDEF IsDesktop}
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content, AArr.Len shl 1);
       {$ELSE}
-        FreeMem(AArr.Content, AArr.Len shl 1);
+        {$IFDEF UsingDynTFT}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len shl 1);
+        {$ELSE}
+          FreeMem(AArr.Content, AArr.Len shl 1);
+        {$ENDIF}
       {$ENDIF}
     end;
 
@@ -1385,7 +1409,7 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    GetMem(AArr.Content, ANewLength shl 1);
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength shl 1);
     if MM_error or (AArr.Content = nil) then
     begin
       Result := False;
@@ -1415,14 +1439,14 @@ begin
 
   if AArr.Len > 0 then
   begin
-    {$IFDEF UsingDynTFT}
-      {$IFDEF IsMCU}
+    {$IFnDEF IsDesktop}
+      {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len shl 1);
+    {$ELSE}
+      {$IFDEF UsingDynTFT}
         FreeMem(TPtrRec(OldPointer), AArr.Len shl 1);
       {$ELSE}
-        FreeMem(TPtrRec(OldPointer), AArr.Len shl 1);
+        FreeMem(OldPointer, AArr.Len shl 1);
       {$ENDIF}
-    {$ELSE}
-      FreeMem(OldPointer, AArr.Len shl 1);
     {$ENDIF}
   end;
 
@@ -1696,20 +1720,20 @@ begin
         FreeDynArrayOfWord(AArr.Content^[i]^);
 
         {$IFnDEF IsDesktop}
-          Freemem(AArr.Content^[i], SizeOf(TDynArrayOfWord));
+          {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfWord));
         {$ELSE}
           Dispose(AArr.Content^[i]);
         {$ENDIF}
       end;
 
-      {$IFDEF UsingDynTFT}
-        {$IFDEF IsMCU}
-          FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfWord));
-        {$ELSE}
-          FreeMem(TPtrRec(AArr.Content), AArr.Len * SizeOf(PDynArrayOfWord));
-        {$ENDIF}
+      {$IFnDEF IsDesktop}
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content, AArr.Len* SizeOf(PDynArrayOfWord));
       {$ELSE}
-        FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfWord));
+        {$IFDEF UsingDynTFT}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len* SizeOf(PDynArrayOfWord));
+        {$ELSE}
+          FreeMem(AArr.Content, AArr.Len* SizeOf(PDynArrayOfWord));
+        {$ENDIF}
       {$ENDIF}
     end;
 
@@ -1727,7 +1751,7 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfWord));    //SizeOf pointer
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength * SizeOf(PDynArrayOfWord));    //SizeOf pointer
     if MM_error or (AArr.Content = nil) then
     begin
       Result := False;
@@ -1736,7 +1760,7 @@ begin
 
     for i := 0 to ANewLength - 1 do
     begin
-      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfWord));           //SizeOf struct
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfWord));           //SizeOf struct
       if MM_error or (AArr.Content = nil) then
       begin
         Result := False;
@@ -1781,20 +1805,20 @@ begin
       FreeDynArrayOfWord(OldPointer^[i]^);    /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
 
       {$IFnDEF IsDesktop}
-        Freemem(OldPointer^[i], SizeOf(TDynArrayOfWord));
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer^[i], SizeOf(TDynArrayOfWord));
       {$ELSE}
         Dispose(OldPointer^[i]);
       {$ENDIF}
     end;
 
-    {$IFDEF UsingDynTFT}
-      {$IFDEF IsMCU}
-        FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
-      {$ELSE}
-        FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfWord));
-      {$ENDIF}
+    {$IFnDEF IsDesktop}
+      {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
     {$ELSE}
-      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
+      {$IFDEF UsingDynTFT}
+        FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfWord));
+      {$ELSE}
+        FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
+      {$ENDIF}
     {$ENDIF}
   end;
 
@@ -1836,13 +1860,13 @@ begin
     FreeDynArrayOfWord(AArr.Content^[i]^);
 
     {$IFnDEF IsDesktop}
-      Freemem(AArr.Content^[i], SizeOf(TDynArrayOfWord));
+      {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfWord));
     {$ELSE}
       Dispose(AArr.Content^[i]);
     {$ENDIF}
 
     {$IFnDEF IsDesktop}
-      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfWord));           //SizeOf struct
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfWord));           //SizeOf struct
       if MM_error or (AArr.Content = nil) then
       begin
         Result := False;
@@ -1861,7 +1885,7 @@ begin
   FreeDynArrayOfWord(AArr.Content^[AArr.Len - 1]^);
 
   {$IFnDEF IsDesktop}
-    Freemem(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfWord));
+    {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfWord));
   {$ELSE}
     Dispose(AArr.Content^[AArr.Len - 1]);
   {$ENDIF}
@@ -1872,7 +1896,7 @@ begin
   if NewLen > 0 then
   begin
     {$IFnDEF IsDesktop}
-      GetMem(AArr.Content, NewLen * SizeOf(PDynArrayOfWord));    //SizeOf pointer
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, NewLen * SizeOf(PDynArrayOfWord));    //SizeOf pointer
       if MM_error or (AArr.Content = nil) then
       begin
         Result := False;
@@ -1894,14 +1918,14 @@ begin
 
   MemMove(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfWord));
 
-  {$IFDEF UsingDynTFT}
-    {$IFDEF IsMCU}
-      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
-    {$ELSE}
-      FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfWord));
-    {$ENDIF}
+  {$IFnDEF IsDesktop}
+    {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
   {$ELSE}
-    FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
+    {$IFDEF UsingDynTFT}
+      FreeMem(TPtrRec(OldPointer), AArr.Len * SizeOf(PDynArrayOfWord));
+    {$ELSE}
+      FreeMem(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
+    {$ENDIF}
   {$ENDIF}
 
   AArr.Len := AArr.Len - 1;
@@ -1976,14 +2000,14 @@ begin
   begin
     if AArr.Len > 0 then
     begin
-      {$IFDEF UsingDynTFT}
-        {$IFDEF IsMCU}
-          FreeMem(AArr.Content, AArr.Len shl 2);
-        {$ELSE}
-          FreeMem(TPtrRec(AArr.Content), AArr.Len shl 2);
-        {$ENDIF}
+      {$IFnDEF IsDesktop}
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content, AArr.Len shl 2);
       {$ELSE}
-        FreeMem(AArr.Content, AArr.Len shl 2);
+        {$IFDEF UsingDynTFT}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len shl 2);
+        {$ELSE}
+          FreeMem(AArr.Content, AArr.Len shl 2);
+        {$ENDIF}
       {$ENDIF}
     end;
 
@@ -1997,7 +2021,7 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    GetMem(AArr.Content, ANewLength shl 2);
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength shl 2);
     if MM_error or (AArr.Content = nil) then
     begin
       Result := False;
@@ -2027,14 +2051,14 @@ begin
 
   if AArr.Len > 0 then
   begin
-    {$IFDEF UsingDynTFT}
-      {$IFDEF IsMCU}
+    {$IFnDEF IsDesktop}
+      {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len shl 2);
+    {$ELSE}
+      {$IFDEF UsingDynTFT}
         FreeMem(TPtrRec(OldPointer), AArr.Len shl 2);
       {$ELSE}
-        FreeMem(TPtrRec(OldPointer), AArr.Len shl 2);
+        FreeMem(OldPointer, AArr.Len shl 2);
       {$ENDIF}
-    {$ELSE}
-      FreeMem(OldPointer, AArr.Len shl 2);
     {$ENDIF}
   end;
 
@@ -2230,14 +2254,14 @@ begin
   begin
     if AArr.Len > 0 then
     begin
-      {$IFDEF UsingDynTFT}
-        {$IFDEF IsMCU}
-          FreeMem(AArr.Content, AArr.Len shl CArchBitShift); 
-        {$ELSE}
-          FreeMem(TPtrRec(AArr.Content), AArr.Len shl CArchBitShift);
-        {$ENDIF}
+      {$IFnDEF IsDesktop}
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content, AArr.Len shl CArchBitShift);
       {$ELSE}
-        FreeMem(AArr.Content, AArr.Len shl CArchBitShift);
+        {$IFDEF UsingDynTFT}
+          FreeMem(TPtrRec(AArr.Content), AArr.Len shl CArchBitShift);
+        {$ELSE}
+          FreeMem(AArr.Content, AArr.Len shl CArchBitShift);
+        {$ENDIF}
       {$ENDIF}
     end;
 
@@ -2251,7 +2275,7 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    GetMem(AArr.Content, ANewLength shl CArchBitShift);
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength shl CArchBitShift);
     if MM_error or (AArr.Content = nil) then
     begin
       Result := False;
@@ -2281,14 +2305,14 @@ begin
 
   if AArr.Len > 0 then
   begin
-    {$IFDEF UsingDynTFT}
-      {$IFDEF IsMCU}
+    {$IFnDEF IsDesktop}
+      {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len shl CArchBitShift);
+    {$ELSE}
+      {$IFDEF UsingDynTFT}
         FreeMem(TPtrRec(OldPointer), AArr.Len shl CArchBitShift);
       {$ELSE}
-        FreeMem(TPtrRec(OldPointer), AArr.Len shl CArchBitShift);
+        FreeMem(OldPointer, AArr.Len shl CArchBitShift);
       {$ENDIF}
-    {$ELSE}
-      FreeMem(OldPointer, AArr.Len shl CArchBitShift);
     {$ENDIF}
   end;
 
@@ -2435,10 +2459,10 @@ begin
     begin
       FreeDynOfDynOfByteArray(AArr.Content^[i]^);
 
-      {$IFnDEF MCU}
-        Dispose(AArr.Content^[i]);
+      {$IFnDEF IsDesktop}
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
       {$ELSE}
-        FreeMem(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
+        Dispose(AArr.Content^[i]);
       {$ENDIF}
     end;
   end;
@@ -2461,7 +2485,7 @@ begin
     {$IFnDEF MCU}
       New(AArr.Content^[i]);  //AArr.Content^[i] is a pointer to a PDynArrayOfTDynArrayOfByte
     {$ELSE}
-      GetMem(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
     {$ENDIF}
 
     InitDynOfDynOfByteToEmpty(AArr.Content^[i]^);
@@ -2521,7 +2545,7 @@ begin
   {$IFnDEF IsMCU}
     New(TempNewPDynArrayOfTDynArrayOfByte);
   {$ELSE}
-    GetMem(TempNewPDynArrayOfTDynArrayOfByte, SizeOf(TempNewPDynArrayOfTDynArrayOfByte^));
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(TempNewPDynArrayOfTDynArrayOfByte, SizeOf(TempNewPDynArrayOfTDynArrayOfByte^));
   {$ENDIF}
 
   InitDynOfDynOfByteToEmpty(TempNewPDynArrayOfTDynArrayOfByte^);
@@ -2570,7 +2594,7 @@ begin
     Dispose(AArr.Content^[ADelIndex]);
     Result := DeleteItemFromDynArraysOfPtrUInt(TDynArrayOfPtrUInt(AArr), ADelIndex);
   {$ELSE}
-    FreeMem(AArr.Content^[ADelIndex], SizeOf(TDynArrayOfTDynArrayOfByte));
+    {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[ADelIndex], SizeOf(TDynArrayOfTDynArrayOfByte));
 
     TempDynArrayOfPtrUInt.Len := AArr.Len;
     TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));
