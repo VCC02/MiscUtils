@@ -59,6 +59,8 @@ type
     procedure TestDeleteFirstBytes_LessThanLength_MoreItems;
     procedure TestDeleteFirstBytes_SameAsLength;
     procedure TestDeleteFirstBytes_GreaterThanLength;
+    procedure TestDeleteFirstBytes_OneItemArray;
+    procedure TestDeleteFirstBytes_EmptyArray;
 
     procedure TestCopyFromDynArray_HappyFlow;
     procedure TestCopyFromDynArray_0Length;
@@ -72,6 +74,8 @@ type
     procedure TestDeleteFromDynArray_HappyFlow2;
 
     procedure TestDoubleFree;
+
+    procedure TestAddBufferToDynArrayOfByte;
   end;
 
 
@@ -462,6 +466,33 @@ begin
 end;
 
 
+procedure TTestDynArrays.TestDeleteFirstBytes_OneItemArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 1);
+  RemoveStartBytesFromDynArray(1, Arr);
+
+  Expect(Arr.Len).ToBe(0);
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays.TestDeleteFirstBytes_EmptyArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  RemoveStartBytesFromDynArray(1, Arr);
+
+  Expect(Arr.Len).ToBe(0);
+
+  FreeDynArray(Arr);
+end;
+
+
 procedure TTestDynArrays.TestCopyFromDynArray_HappyFlow;
 var
   Src, Dest: TDynArrayOfByte;
@@ -631,6 +662,32 @@ begin
     on E: Exception do
       Expect(E.Message).ToBe('No exception is expected!');
   end;
+end;
+
+
+procedure TTestDynArrays.TestAddBufferToDynArrayOfByte;
+const
+  CInitLen = 3;
+var
+  Arr: TDynArrayOfByte;
+  Buf: array[0..3] of Byte;
+begin
+  Buf[0] := 30;
+  Buf[1] := 40;
+  Buf[2] := 50;
+  Buf[3] := 60;
+
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, CInitLen);
+
+  Arr.Content^[0] := 1;
+  Arr.Content^[1] := 2;
+  Arr.Content^[2] := 3;
+
+  Expect(AddBufferToDynArrayOfByte(@Buf[0], Length(Buf), Arr)).ToBe(True);
+  Expect(Arr.Len).ToBe(CInitLen + Length(Buf));
+
+  Expect(@Arr.Content^, Arr.Len).ToBe(@[1, 2, 3, 30, 40, 50, 60]);
 end;
 
 

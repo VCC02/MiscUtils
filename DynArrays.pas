@@ -722,6 +722,8 @@ end;
 
 
 function AddBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DWord; {$ENDIF} ALen: TDynArrayLength; var ADest: TDynArrayOfByte): Boolean;  //concatenates with ADest
+var
+  OldLen: TDynArrayLength;
 begin
   if ALen = 0 then
   begin
@@ -733,12 +735,13 @@ begin
     CheckInitializedDynArray(ADest);
   {$ENDIF}
 
-  Result := SetDynLength(ADest, ADest.Len + ALen);
+  OldLen := ADest.Len;
+  Result := SetDynLength(ADest, OldLen + ALen);
   if Result then
     {$IFDEF IsDesktop}
-      MemMove(PPtrUInt(PtrUInt(ADest.Content) + ALen), ABuf, ALen);
+      MemMove(PPtrUInt(PtrUInt(@ADest.Content^[OldLen])), ABuf, ALen);
     {$ELSE}
-      MemMove(PByte(PtrUInt(ADest.Content) + ALen), ABuf, ALen);
+      MemMove(PByte(PtrUInt(@ADest.Content^[OldLen])), ABuf, ALen);
     {$ENDIF}
 end;
 
