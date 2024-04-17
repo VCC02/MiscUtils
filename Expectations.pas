@@ -203,14 +203,14 @@ end;
 procedure ExpectInt(ActualValue, ExpectedValue: Integer; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise EExp.Create('Expected ' + IntToStr(ExpectedValue) + ', but is was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected ' + IntToStr(ExpectedValue) + ', but it was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectDWord(ActualValue, ExpectedValue: DWord; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise EExp.Create('Expected ' + IntToStr(ExpectedValue) + ', but is was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected ' + IntToStr(ExpectedValue) + ', but it was ' + IntToStr(ActualValue) + '.  ' + ExtraMsg);
 end;
 
 
@@ -240,7 +240,7 @@ begin
       ExpectedValue := Copy(ExpectedValue, 1, 255);
     {$ENDIF}
 
-    raise EExp.Create('Expected "' + ExpectedValue + '", but is was "' + ActualValue + '".  Diff at index ' + IntToStr(DiffAt) + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected "' + ExpectedValue + '", but it was "' + ActualValue + '".  Diff at index ' + IntToStr(DiffAt) + '.  ' + ExtraMsg);
   end;
 end;
 
@@ -260,14 +260,14 @@ end;
 procedure ExpectBoolean(ActualValue, ExpectedValue: Boolean; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise EExp.Create('Expected ' + BoolToStr(ExpectedValue, 'True', 'False') + ', but is was ' + BoolToStr(ActualValue, 'True', 'False') + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected ' + BoolToStr(ExpectedValue, 'True', 'False') + ', but it was ' + BoolToStr(ActualValue, 'True', 'False') + '.  ' + ExtraMsg);
 end;
 
 
 procedure ExpectPointer(ActualValue, ExpectedValue: Pointer; ExtraMsg: string = '');
 begin
   if ExpectedValue <> ActualValue then
-    raise EExp.Create('Expected $' + IntToHex(QWord(ExpectedValue), 8) + ', but is was $' + IntToHex(QWord(ActualValue), 8) + '.  ' + ExtraMsg);
+    raise EExp.Create('Expected $' + IntToHex(QWord(ExpectedValue), 8) + ', but it was $' + IntToHex(QWord(ActualValue), 8) + '.  ' + ExtraMsg);
 end;
 
 
@@ -284,7 +284,7 @@ begin
       if s <> '' then
         s := s + #13#10;
 
-      s := s + 'Expected ' + IntToStr(ExpectedValue^[i]) + ', but is was ' + IntToStr(ActualValue[i]) + ' at index ' + IntToStr(i) + '.  ' + ExtraMsg;
+      s := s + 'Expected ' + IntToStr(ExpectedValue^[i]) + ', but it was ' + IntToStr(ActualValue[i]) + ' at index ' + IntToStr(i) + '.  ' + ExtraMsg;
     end;
 
   if s <> '' then
@@ -404,7 +404,6 @@ begin
 end;
 
 
-
 procedure TExpect.ToBeGreaterThan(ExpectedValue: Integer; ExtraMessage: string = '');
 begin
   try
@@ -472,7 +471,7 @@ begin
 
   for i := 0 to ExpectedLength - 1 do
     if FActualValueStringList.Strings[i] <> ExpectedValue^[i] then
-      raise EExp.Create('Expected "' + ExpectedValue^[i] + '", but is was "' + FActualValueStringList.Strings[i] + '"  at index ' + IntToStr(i) + '  ' + ExtraMessage);
+      raise EExp.Create('Expected "' + ExpectedValue^[i] + '", but it was "' + FActualValueStringList.Strings[i] + '"  at index ' + IntToStr(i) + '  ' + ExtraMessage);
 end;
 
 
@@ -925,4 +924,3 @@ begin
 end;
 
 end.
-

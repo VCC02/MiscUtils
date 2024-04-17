@@ -1,0 +1,791 @@
+{
+    Copyright (C) 2024 VCC
+    creation date: 16 Apr 2024
+    initial release date: 17 Apr 2024
+
+    author: VCC
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}
+
+
+unit Expectations;
+
+type
+  TConstByteArr = array[0..0] of Byte;
+  PConstByteArr = ^TConstByteArr;
+  
+  TToBeString = procedure(var ExpectedValue: string; var ExtraMessage: string);
+  PToBeString = ^TToBeString;
+  
+  TToBeInteger = procedure(ExpectedValue: LongInt; var ExtraMessage: string);
+  PToBeInteger = ^TToBeInteger;
+  
+  TToBeDWord = procedure(ExpectedValue: DWord; var ExtraMessage: string);   //the unsigned version of TToBeInteger
+  PToBeDWord = ^TToBeDWord;
+  
+  TToBeBoolean = procedure(ExpectedValue: Boolean; var ExtraMessage: string);
+  PToBeBoolean = ^TToBeBoolean;
+  
+  TToBeData = procedure(ExpectedValue: PConstByteArr; var ExtraMessage: string);
+  PToBeData = ^TToBeData;
+
+  TExpectString = record
+    ToBe: PToBeString;
+    NotToBe: PToBeString;
+  end;
+  
+  TExpectInteger = record
+    ToBe: PToBeInteger;
+    NotToBe: PToBeInteger;
+    ToBeGreaterThan: PToBeInteger;
+    ToBeGreaterThanOrEqualTo: PToBeInteger;
+    ToBeLessThan: PToBeInteger;
+    ToBeLessThanOrEqualTo: PToBeInteger;
+  end;
+
+  TExpectDWord = record
+    ToBe: PToBeDWord;
+    NotToBe: PToBeDWord;
+    ToBeGreaterThan: PToBeDWord;
+    ToBeGreaterThanOrEqualTo: PToBeDWord;
+    ToBeLessThan: PToBeDWord;
+    ToBeLessThanOrEqualTo: PToBeDWord;
+  end;
+  
+  TExpectBoolean = record
+    ToBe: PToBeBoolean;
+    NotToBe: PToBeBoolean;
+  end;
+  
+  TExpectData = record
+    ToBe: PToBeData;
+    NotToBe: PToBeData;
+  end;
+  
+  
+function ExpectString(var ActualValue: string): TExpectString;
+function ExpectInteger(ActualValue: LongInt): TExpectInteger;
+function ExpectDWord(ActualValue: DWord): TExpectDWord;     //the unsigned version of Integer
+function ExpectBoolean(ActualValue: Boolean): TExpectBoolean;
+function ExpectData(ActualValue: PConstByteArr; ALen: LongInt): TExpectData;
+
+
+implementation
+
+var
+  ExceptionMsg: string[300]; volatile;
+  GExpectString: TExpectString;
+  GExpectInteger: TExpectInteger;
+  GExpectDWord: TExpectDWord;
+  GExpectBoolean: TExpectBoolean;
+  GExpectData: TExpectData;
+  
+  FActualValueString: string[300];
+  FActualValueInteger: LongInt;
+  FActualValueDWord: DWord;
+  FActualValueBoolean: Boolean;
+  FActualValueData: PConstByteArr;
+  
+  GExpectedDataLen: LongInt;
+  
+  
+{$IFDEF GenerateException}
+  procedure GenExcept;
+  var
+    Cause, Address: DWord;
+    CauseStr, AddressStr: array[20] of Char;
+  begin
+    Cause := CP0_GET(CP0_CAUSE);
+    //Cause := (Cause and $7C) shr 2;
+    Address := CP0_GET(CP0_EPC);
+
+    {$IFnDEF SkipLoggingException}  //useful on simulator
+      UART_WriteLn_Text(ExceptionMsg);
+    {$ENDIF}
+  end;
+{$ENDIF}
+
+  
+procedure ExceptionCreate(var AMsg: string);
+{$IFDEF GenerateException}
+  var
+    x, y: Integer;
+{$ENDIF}
+begin
+  strcpy(ExceptionMsg, AMsg);
+  
+  {$IFDEF GenerateException}
+    y := 0;
+    x := x div y; //generate a Div by 0 exception
+  {$ELSE}
+    {$IFnDEF SkipLoggingException}  //useful on simulator
+      UART_WriteLn_Text(ExceptionMsg);
+    {$ENDIF}
+  {$ENDIF}
+end;
+  
+  
+procedure FastReplace0To1(var s: string; var Res: string);
+var
+  i, LenM1: Integer;
+begin
+  strcpy(Res, s);
+  LenM1 := Length(s) - 1;
+  
+  for i := 0 to LenM1 do
+    if s[i] = #0 then
+      Res[i] := #1;
+end;
+
+  
+procedure ExpectStr_Validator(var ActualValue, ExpectedValue: string; var ExtraMsg: string);
+var
+  i, DiffAt, LenM1: Integer;
+  TempMsg: string[300];
+  DiffAtStr: string[6];
+begin
+  if strcmp(ExpectedValue, ActualValue) <> 0 then
+  begin
+    {$IFDEF ConvExMsg}
+      FastReplace0To1(ActualValue, ActualValue);
+      FastReplace0To1(ExpectedValue, ExpectedValue);
+    {$ENDIF}
+
+    if (Length(ActualValue) = 0) or (Length(ExpectedValue) = 0) then
+      DiffAt := 0
+    else
+    begin
+      LenM1 := Min(Length(ActualValue), Length(ExpectedValue)) - 1;
+      for i := 0 to LenM1 do
+        if ExpectedValue[i] <> ActualValue[i] then
+        begin
+          DiffAt := i;
+          Break
+        end;
+    end;
+
+    {$IFDEF TruncateDiffMsg}
+      ActualValue := Copy(ActualValue, 1, 255);
+      ExpectedValue := Copy(ExpectedValue, 1, 255);
+    {$ENDIF}
+    
+    IntToStr(DiffAt, DiffAtStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, ExpectedValue);
+    strcat(TempMsg, '", but it was "');
+    strcat(TempMsg, ActualValue);
+    strcat(TempMsg, '".  Diff at index ');
+    strcat(TempMsg, DiffAtStr);
+    strcat(TempMsg, ExtraMsg);
+    
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectStrDifferent_Validator(var ActualValue, ExpectedValue: string; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+begin
+  if strcmp(ExpectedValue, ActualValue) = 0 then
+  begin
+    {$IFDEF ConvExMsg}
+      FastReplace0To1(ActualValue, ActualValue);
+      FastReplace0To1(ExpectedValue, ExpectedValue);
+    {$ENDIF}
+
+    {$IFDEF TruncateDiffMsg}
+      ActualValue := Copy(ActualValue, 1, 255);
+      ExpectedValue := Copy(ExpectedValue, 1, 255);
+    {$ENDIF}
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, ExpectedValue);
+    strcat(TempMsg, '" to be different than "');
+    strcat(TempMsg, ActualValue);
+    strcat(TempMsg, '", but they are the same.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectInt_Validator(ActualValue, ExpectedValue: LongInt; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if ExpectedValue <> ActualValue then
+  begin
+    LongIntToStr(ExpectedValue, TempExpectedValueStr);
+    LongIntToStr(ActualValue, TempActualValueStr);
+    
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, ', but it was ');
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+    
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectIntDifferent_Validator(ActualValue, ExpectedValue: LongInt; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if ExpectedValue = ActualValue then
+  begin
+    LongIntToStr(ExpectedValue, TempExpectedValueStr);
+    LongIntToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, ' to be different than ');
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ', but they are the same.  ');
+    strcat(TempMsg, ExtraMsg);
+    
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectIntGreaterThan_Validator(ActualValue, ExpectedValue: LongInt; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if not (ActualValue > ExpectedValue) then
+  begin
+    LongIntToStr(ExpectedValue, TempExpectedValueStr);
+    LongIntToStr(ActualValue, TempActualValueStr);
+    
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ' to be greater than ');
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectIntGreaterThanOrEqualTo_Validator(ActualValue, ExpectedValue: LongInt; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if not (ActualValue >= ExpectedValue) then
+  begin
+    LongIntToStr(ExpectedValue, TempExpectedValueStr);
+    LongIntToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ' to be greater than or equal to ');
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectIntLessThan_Validator(ActualValue, ExpectedValue: LongInt; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if not (ActualValue < ExpectedValue) then
+  begin
+    LongIntToStr(ExpectedValue, TempExpectedValueStr);
+    LongIntToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ' to be less than ');
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectIntLessThanOrEqualTo_Validator(ActualValue, ExpectedValue: LongInt; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if not (ActualValue <= ExpectedValue) then
+  begin
+    LongIntToStr(ExpectedValue, TempExpectedValueStr);
+    LongIntToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ' to be less than or equal to ');
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+///
+
+
+procedure ExpectDWord_Validator(ActualValue, ExpectedValue: DWord; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if ExpectedValue <> ActualValue then
+  begin
+    LongWordToStr(ExpectedValue, TempExpectedValueStr);
+    LongWordToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, ', but it was ');
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectDWordDifferent_Validator(ActualValue, ExpectedValue: DWord; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if ExpectedValue = ActualValue then
+  begin
+    LongWordToStr(ExpectedValue, TempExpectedValueStr);
+    LongWordToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, ' to be different than ');
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ', but they are the same.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectDWordGreaterThan_Validator(ActualValue, ExpectedValue: DWord; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if not (ActualValue > ExpectedValue) then
+  begin
+    LongWordToStr(ExpectedValue, TempExpectedValueStr);
+    LongWordToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ' to be greater than ');
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectDWordGreaterThanOrEqualTo_Validator(ActualValue, ExpectedValue: DWord; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if not (ActualValue >= ExpectedValue) then
+  begin
+    LongWordToStr(ExpectedValue, TempExpectedValueStr);
+    LongWordToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ' to be greater than or equal to ');
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectDWordLessThan_Validator(ActualValue, ExpectedValue: DWord; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if not (ActualValue < ExpectedValue) then
+  begin
+    LongWordToStr(ExpectedValue, TempExpectedValueStr);
+    LongWordToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ' to be less than ');
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectDWordLessThanOrEqualTo_Validator(ActualValue, ExpectedValue: DWord; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[11];
+begin
+  if not (ActualValue <= ExpectedValue) then
+  begin
+    LongWordToStr(ExpectedValue, TempExpectedValueStr);
+    LongWordToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ' to be less than or equal to ');
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+///
+const
+  CBoolStr: array[0..1] of string[6] = ('False', 'True');
+  
+procedure BoolToStr(ABool: Boolean; var Res: string);
+begin
+  strcpy(Res, CBoolStr[Byte(ABool) and 1]);
+end;
+
+
+procedure ExpectBoolean_Validator(ActualValue, ExpectedValue: Boolean; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[6];
+begin
+  if ExpectedValue <> ActualValue then
+  begin
+    BoolToStr(ExpectedValue, TempExpectedValueStr);
+    BoolToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, ', but it was ');
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, '.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectBooleanDifferent_Validator(ActualValue, ExpectedValue: Boolean; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+  TempExpectedValueStr, TempActualValueStr: string[6];
+begin
+  if ExpectedValue = ActualValue then
+  begin
+    BoolToStr(ExpectedValue, TempExpectedValueStr);
+    BoolToStr(ActualValue, TempActualValueStr);
+
+    TempMsg := 'Expected "';
+    strcat(TempMsg, TempExpectedValueStr);
+    strcat(TempMsg, ' to be different than ');
+    strcat(TempMsg, TempActualValueStr);
+    strcat(TempMsg, ', but they are the same.  ');
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+///
+
+
+procedure ExpectData_Validator(ActualValue, ExpectedValue: PConstByteArr; ALen: LongInt; var ExtraMsg: string);
+var
+  i, DiffAt: LongInt;
+  TempMsg: string[300];
+  DiffAtStr: string[6];
+  LenM1: LongInt;
+begin
+  if memcmp(ExpectedValue, ActualValue, ALen) <> 0 then
+  begin
+    {$IFDEF ConvExMsg}
+      FastReplace0To1(ActualValue, ActualValue);
+      FastReplace0To1(ExpectedValue, ExpectedValue);
+    {$ENDIF}
+
+    LenM1 := ALen - 1;
+    for i := 0 to LenM1 do
+      if ExpectedValue^[i] <> ActualValue^[i] then
+      begin
+        DiffAt := i;
+        Break
+      end;
+
+    {$IFDEF TruncateDiffMsg}
+      ActualValue := Copy(ActualValue, 1, 255);
+      ExpectedValue := Copy(ExpectedValue, 1, 255);
+    {$ENDIF}
+
+    IntToStr(DiffAt, DiffAtStr);
+
+    TempMsg := 'Expected data to be the same.  Diff at index ';
+    strcat(TempMsg, DiffAtStr);
+    strcat(TempMsg, ExtraMsg);
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+procedure ExpectDataDifferent_Validator(ActualValue, ExpectedValue: PConstByteArr; ALen: LongInt; var ExtraMsg: string);
+var
+  TempMsg: string[300];
+begin
+  if memcmp(ExpectedValue, ActualValue, ALen) = 0 then
+  begin
+    {$IFDEF ConvExMsg}
+      FastReplace0To1(ActualValue, ActualValue);
+      FastReplace0To1(ExpectedValue, ExpectedValue);
+    {$ENDIF}
+
+    {$IFDEF TruncateDiffMsg}
+      ActualValue := Copy(ActualValue, 1, 255);
+      ExpectedValue := Copy(ExpectedValue, 1, 255);
+    {$ENDIF}
+
+    TempMsg := 'Expected data to be different.';
+
+    ExceptionCreate(TempMsg);
+  end;
+end;
+
+
+//==============================================================================
+
+
+procedure ToBeString(var ExpectedValue: string; var ExtraMessage: string);
+begin
+  ExpectStr_Validator(FActualValueString, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeDifferentString(var ExpectedValue: string; var ExtraMessage: string);
+begin
+  ExpectStrDifferent_Validator(FActualValueString, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeInteger(ExpectedValue: LongInt; var ExtraMessage: string);
+begin
+  ExpectInt_Validator(FActualValueInteger, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeDifferentInteger(ExpectedValue: LongInt; var ExtraMessage: string);
+begin
+  ExpectIntDifferent_Validator(FActualValueInteger, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeGreaterThanInteger(ExpectedValue: LongInt; var ExtraMessage: string);
+begin
+  ExpectIntGreaterThan_Validator(FActualValueInteger, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeGreaterThanOrEqualToInteger(ExpectedValue: LongInt; var ExtraMessage: string);
+begin
+  ExpectIntGreaterThanOrEqualTo_Validator(FActualValueInteger, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeLessThanInteger(ExpectedValue: LongInt; var ExtraMessage: string);
+begin
+  ExpectIntLessThan_Validator(FActualValueInteger, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeLessThanOrEqualToInteger(ExpectedValue: LongInt; var ExtraMessage: string);
+begin
+  ExpectIntLessThanOrEqualTo_Validator(FActualValueInteger, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeDWord(ExpectedValue: DWord; var ExtraMessage: string);
+begin
+  ExpectDWord_Validator(FActualValueDWord, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeDifferentDWord(ExpectedValue: DWord; var ExtraMessage: string);
+begin
+  ExpectDWordDifferent_Validator(FActualValueDWord, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeGreaterThanDWord(ExpectedValue: DWord; var ExtraMessage: string);
+begin
+  ExpectDWordGreaterThan_Validator(FActualValueDWord, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeGreaterThanOrEqualToDWord(ExpectedValue: DWord; var ExtraMessage: string);
+begin
+  ExpectDWordGreaterThanOrEqualTo_Validator(FActualValueDWord, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeLessThanDWord(ExpectedValue: DWord; var ExtraMessage: string);
+begin
+  ExpectDWordLessThan_Validator(FActualValueDWord, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeLessThanOrEqualToDWord(ExpectedValue: DWord; var ExtraMessage: string);
+begin
+  ExpectDWordLessThanOrEqualTo_Validator(FActualValueDWord, ExpectedValue, ExtraMessage);
+end;
+
+
+
+procedure ToBeBoolean(ExpectedValue: Boolean; var ExtraMessage: string);
+begin
+  ExpectDWord_Validator(FActualValueBoolean, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeDifferentBoolean(ExpectedValue: Boolean; var ExtraMessage: string);
+begin
+  ExpectDWordDifferent_Validator(FActualValueBoolean, ExpectedValue, ExtraMessage);
+end;
+
+
+procedure ToBeData(ExpectedValue: PConstByteArr; var ExtraMessage: string);
+begin
+  ExpectData_Validator(FActualValueData, ExpectedValue, GExpectedDataLen, ExtraMessage);
+end;
+
+
+procedure ToBeDifferentData(ExpectedValue: PConstByteArr; var ExtraMessage: string);
+begin
+  ExpectDataDifferent_Validator(FActualValueData, ExpectedValue, GExpectedDataLen, ExtraMessage);
+end;
+
+//==============================================================================
+
+
+function ExpectString(var ActualValue: string): TExpectString;
+begin
+  strcpy(FActualValueString, ActualValue);
+  
+  GExpectString.ToBe := @ToBeString;
+  GExpectString.NotToBe := @ToBeDifferentString;
+  
+  Result := GExpectString;
+end;
+
+
+function ExpectInteger(ActualValue: LongInt): TExpectInteger;
+begin
+  FActualValueInteger := ActualValue;
+  
+  GExpectInteger.ToBe := @ToBeInteger;
+  GExpectInteger.NotToBe := @ToBeDifferentInteger;
+  GExpectInteger.ToBeGreaterThan := @ToBeGreaterThanInteger;
+  GExpectInteger.ToBeGreaterThanOrEqualTo := @ToBeGreaterThanOrEqualToInteger;
+  GExpectInteger.ToBeLessThan := @ToBeLessThanInteger;
+  GExpectInteger.ToBeLessThanOrEqualTo := @ToBeLessThanOrEqualToInteger;
+  
+  Result := GExpectInteger;
+end;
+
+
+function ExpectDWord(ActualValue: DWord): TExpectDWord;
+begin
+  FActualValueDWord := ActualValue;
+
+  GExpectDWord.ToBe := @ToBeDWord;
+  GExpectDWord.NotToBe := @ToBeDifferentDWord;
+  GExpectDWord.ToBeGreaterThan := @ToBeGreaterThanDWord;
+  GExpectDWord.ToBeGreaterThanOrEqualTo := @ToBeGreaterThanOrEqualToDWord;
+  GExpectDWord.ToBeLessThan := @ToBeLessThanDWord;
+  GExpectDWord.ToBeLessThanOrEqualTo := @ToBeLessThanOrEqualToDWord;
+
+  Result := GExpectDWord;
+end;
+
+
+function ExpectBoolean(ActualValue: Boolean): TExpectBoolean;
+begin
+  FActualValueBoolean := ActualValue;
+
+  GExpectBoolean.ToBe := @ToBeBoolean;
+  GExpectBoolean.NotToBe := @ToBeDifferentBoolean;
+
+  Result := GExpectBoolean;
+end;
+
+
+function ExpectData(ActualValue: PConstByteArr; ALen: LongInt): TExpectData;
+begin
+  FActualValueData := ActualValue;
+  GExpectedDataLen := ALen;
+
+  GExpectData.ToBe := @ToBeData;
+  GExpectData.NotToBe := @ToBeDifferentData;
+
+  Result := GExpectData;
+end;
+
+end.

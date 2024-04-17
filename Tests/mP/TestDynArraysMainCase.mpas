@@ -1,0 +1,737 @@
+{
+    Copyright (C) 2024 VCC
+    creation date: 16 Apr 2024
+    initial release date: 17 Apr 2024
+
+    author: VCC
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}
+
+unit TestDynArraysMainCase;
+
+uses
+  DynArrays, Expectations, TestUtilsMik;
+  
+type
+  TTestDynArrays = record
+    SetUp: PTestProc;
+    TearDown: PTestProc;
+    Tests: TNamedTestProcArr;
+    TestCount: Integer;
+  end;
+
+
+procedure TTestDynArrays_RunTests;
+procedure RegisterTTestDynArraysProcs;
+
+
+implementation
+
+
+var
+  TestDynArrays: TTestDynArrays;
+  
+  
+procedure TTestDynArrays_RunTests;
+var
+  i, TestCountM1: Integer;
+  TestName: string[60];
+begin
+  RegisterTTestDynArraysProcs;
+  
+  TestCountM1 := TestDynArrays.TestCount - 1;
+  
+  for i := 0 to TestCountM1 do
+  begin
+    UART_WriteLn_Text('SetUp_TTestDynArrays');
+    TestDynArrays.SetUp();
+    
+    TestName := 'RunTest_';
+    strcat(TestName, TestDynArrays.Tests[i].Name);
+    UART_WriteLn_Text(TestName);
+    
+    TestDynArrays.Tests[i].TestProc();
+    
+    UART_WriteLn_Text('TearDown_TTestDynArrays');
+    TestDynArrays.TearDown();
+  end;
+end;
+
+
+procedure TTestDynArrays_SetUp;
+begin
+  MM_Init;
+end;
+
+
+procedure TTestDynArrays_TearDown;
+begin
+  //nothing so far
+end;
+
+
+procedure TTestDynArrays_TestSimpleAllocation;
+var
+  Arr: TDynArrayOfByte;
+  AllocationResult: Boolean;
+begin
+  InitDynArrayToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynLength(Arr, 7);
+  //try
+    ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), '');
+    ExpectDWord(Arr.Len).ToBe(7, '');
+  //finally
+    FreeDynArray(Arr);  //the array has to be manually freed, because there is no reference counting
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestWritingToArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 20);
+  //try
+    Arr.Content^[17] := 80;
+    ExpectDWord(Arr.Content^[17]).ToBe(80, '');
+  //finally
+    FreeDynArray(Arr);
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestReallocationToLargerArray;
+var
+  Arr: TDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr);
+  ExpectBoolean(SetDynLength(Arr, 20)).ToBe(True, '');
+
+  for i := 0 to DynLength(Arr) - 1 do
+    Arr.Content^[i] := i * 10;
+
+  ExpectBoolean(SetDynLength(Arr, 30)).ToBe(True, 'expecting successful reallocation');
+  //try
+    for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
+      ExpectDWord(Arr.Content^[i]).ToBe(DWord(i * 10), '');
+  //finally
+    FreeDynArray(Arr);
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestReallocationToSmallerArray;
+var
+  Arr: TDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 20);
+
+  for i := 0 to DynLength(Arr) - 1 do
+    Arr.Content^[i] := i * 10;
+
+  SetDynLength(Arr, 10);
+  //try
+    for i := 0 to 10 - 1 do  //test up to the old length, as this content has to be valid only
+      ExpectDWord(Arr.Content^[i]).ToBe(DWord(i * 10), '');
+  //finally
+    FreeDynArray(Arr);
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestConcatDynArrays_HappyFlow;
+var
+  Arr1, Arr2: TDynArrayOfByte;
+  AllocationResult: Boolean;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr1);
+  InitDynArrayToEmpty(Arr2);
+
+  //try
+    AllocationResult := SetDynLength(Arr1, 20);
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'Allocation_20 should succeed.');
+    for i := 0 to DynLength(Arr1) - 1 do
+      Arr1.Content^[i] := i * 10;
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'First allocation Result is overwritten.');
+
+    AllocationResult := SetDynLength(Arr2, 15);
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'Allocation_15 should succeed.');
+    for i := 0 to DynLength(Arr2) - 1 do
+      Arr2.Content^[i] := i * 10;
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'Second allocation Result is overwritten.');
+
+    AllocationResult := ConcatDynArrays(Arr1, Arr2);
+
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'Concat Result is overwritten or memory is full.');
+    ExpectBoolean(AllocationResult).ToBe(True, '');
+    ExpectDWord(Arr1.Len).ToBe(35, '');
+
+    for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
+      ExpectDWord(Arr1.Content^[i]).ToBe(DWord(i * 10), '');
+
+    for i := 20 to 35 - 1 do  //test up to the old length, as this content has to be valid only
+      ExpectDWord(Arr1.Content^[i]).ToBe(DWord((i - 20) * 10), '');
+  //finally
+    FreeDynArray(Arr1);
+    FreeDynArray(Arr2);
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestConcatDynArray_WithEmpty;
+var
+  Arr1, Arr2: TDynArrayOfByte;
+  AllocationResult: Boolean;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr1);
+  InitDynArrayToEmpty(Arr2);
+
+  //try
+    AllocationResult := SetDynLength(Arr1, 20);
+    for i := 0 to DynLength(Arr1) - 1 do
+      Arr1.Content^[i] := i * 10;
+
+    AllocationResult := ConcatDynArrays(Arr1, Arr2);
+    ExpectBoolean(AllocationResult).ToBe(True, '');
+    ExpectDWord(Arr1.Len).ToBe(20, '');
+
+    for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
+      ExpectDWord(Arr1.Content^[i]).ToBe(DWord(i * 10), '');
+  //finally
+    FreeDynArray(Arr1);
+    FreeDynArray(Arr2);
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestConcatEmptyDynArray_WithValid;
+var
+  Arr1, Arr2: TDynArrayOfByte;
+  AllocationResult: Boolean;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr1);
+  InitDynArrayToEmpty(Arr2);
+
+  //try
+    AllocationResult := SetDynLength(Arr2, 15);
+    for i := 0 to DynLength(Arr2) - 1 do
+      Arr2.Content^[i] := i * 10;
+
+    AllocationResult := ConcatDynArrays(Arr1, Arr2);
+    ExpectBoolean(AllocationResult).ToBe(True, '');
+    ExpectDWord(Arr1.Len).ToBe(15, '');
+
+    for i := 0 to 15 - 1 do  //test up to the old length, as this content has to be valid only
+      ExpectDWord(Arr1.Content^[i]).ToBe(DWord(i * 10), '');
+  //finally
+    FreeDynArray(Arr1);
+    FreeDynArray(Arr2);
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestConcatEmptyDynArray_WithEmpty;
+var
+  Arr1, Arr2: TDynArrayOfByte;
+  AllocationResult: Boolean;
+begin
+  InitDynArrayToEmpty(Arr1);
+  InitDynArrayToEmpty(Arr2);
+
+  //try
+    AllocationResult := ConcatDynArrays(Arr1, Arr2);
+    ExpectBoolean(AllocationResult).ToBe(True, '');
+    ExpectDWord(Arr1.Len).ToBe(0, '');
+  //finally
+    FreeDynArray(Arr1);
+    FreeDynArray(Arr2);
+  //end;
+end;
+
+
+procedure TTestDynArrays_Test_CallDynLength_WithoutInitDynArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  //try
+  //  DynLength(Arr);
+  //except
+    //on E: Exception do
+    //  Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg);
+  //end;
+end;
+
+
+procedure TTestDynArrays_Test_CallSetDynLength_WithoutInitDynArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  //try
+  //  SetDynLength(Arr, 3);
+  //except
+  //  on E: Exception do
+  //    Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg);
+  //end;
+end;
+
+
+procedure TTestDynArrays_Test_CallConcatDynArrays_WithoutFirstInitDynArray;
+var
+  Arr1, Arr2: TDynArrayOfByte;
+begin
+  //InitDynArrayToEmpty(Arr2);
+  //SetDynLength(Arr2, 3);
+
+  //try
+  //  ConcatDynArrays(Arr1, Arr2);
+  //except
+  //  on E: Exception do
+  //    Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg);
+  //end;
+
+  //FreeDynArray(Arr2);
+end;
+
+
+procedure TTestDynArrays_Test_CallConcatDynArrays_WithoutSecondInitDynArray;
+var
+  Arr1, Arr2: TDynArrayOfByte;
+begin
+  //InitDynArrayToEmpty(Arr1);
+  //SetDynLength(Arr1, 3);
+
+  //try
+  //  ConcatDynArrays(Arr1, Arr2);
+  //except
+  //  on E: Exception do
+  //    Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg);
+  //end;
+
+  //FreeDynArray(Arr1);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFirstBytes_ZeroLength;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+  Arr.Content^[0] := 30;
+  Arr.Content^[1] := 40;
+  Arr.Content^[2] := 50;
+
+  RemoveStartBytesFromDynArray(0, Arr);
+
+  ExpectDWord(Arr.Len).ToBe(3, '');
+  ExpectDWord(Arr.Content^[0]).ToBe(30, '');
+  ExpectDWord(Arr.Content^[1]).ToBe(40, '');
+  ExpectDWord(Arr.Content^[2]).ToBe(50, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFirstBytes_LessThanLength;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+  Arr.Content^[0] := 30;
+  Arr.Content^[1] := 40;
+  Arr.Content^[2] := 50;
+
+  RemoveStartBytesFromDynArray(2, Arr);
+
+  ExpectDWord(Arr.Len).ToBe(1, '');
+  ExpectDWord(Arr.Content^[0]).ToBe(50, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFirstBytes_LessThanLength_MoreItems;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 8);
+  Arr.Content^[0] := 30;
+  Arr.Content^[1] := 40;
+  Arr.Content^[2] := 50;
+  Arr.Content^[3] := 60;
+  Arr.Content^[4] := 70;
+  Arr.Content^[5] := 80;
+  Arr.Content^[6] := 90;
+  Arr.Content^[7] := 100;
+
+  RemoveStartBytesFromDynArray(2, Arr);
+
+  ExpectDWord(Arr.Len).ToBe(6, '');
+  ExpectDWord(Arr.Content^[0]).ToBe(50, '');
+  ExpectDWord(Arr.Content^[1]).ToBe(60, '');
+  ExpectDWord(Arr.Content^[2]).ToBe(70, '');
+  ExpectDWord(Arr.Content^[3]).ToBe(80, '');
+  ExpectDWord(Arr.Content^[4]).ToBe(90, '');
+  ExpectDWord(Arr.Content^[5]).ToBe(100, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFirstBytes_SameAsLength;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+  Arr.Content^[0] := 30;
+  Arr.Content^[1] := 40;
+  Arr.Content^[2] := 50;
+
+  RemoveStartBytesFromDynArray(3, Arr);
+
+  ExpectDWord(Arr.Len).ToBe(0, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFirstBytes_GreaterThanLength;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+  RemoveStartBytesFromDynArray(7, Arr);
+
+  ExpectDWord(Arr.Len).ToBe(0, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFirstBytes_OneItemArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 1);
+  RemoveStartBytesFromDynArray(1, Arr);
+
+  ExpectDWord(Arr.Len).ToBe(0, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFirstBytes_EmptyArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  RemoveStartBytesFromDynArray(1, Arr);
+
+  ExpectDWord(Arr.Len).ToBe(0, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestCopyFromDynArray_HappyFlow;
+var
+  Src, Dest: TDynArrayOfByte;
+  TempStr: string[20];
+begin
+  InitDynArrayToEmpty(Src);
+  ExpectBoolean(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True, '');
+  CopyFromDynArray(Dest, Src, 3, 7);
+  
+  DynArrayOfByteToString(Dest, TempStr);
+  ExpectString(TempStr).ToBe('3456789', '');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
+end;
+
+
+procedure TTestDynArrays_TestCopyFromDynArray_0Length;
+var
+  Src, Dest: TDynArrayOfByte;
+  TempStr: string[20];
+begin
+  InitDynArrayToEmpty(Src);
+  ExpectBoolean(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True, '');
+  CopyFromDynArray(Dest, Src, 3, 0);
+
+  DynArrayOfByteToString(Dest, TempStr);
+  ExpectString(TempStr).ToBe('', '');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
+end;
+
+
+procedure TTestDynArrays_TestCopyFromDynArray_PartialOutOfContent;
+var
+  Src, Dest: TDynArrayOfByte;
+  TempStr: string[20];
+begin
+  InitDynArrayToEmpty(Src);
+  ExpectBoolean(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True, '');
+  CopyFromDynArray(Dest, Src, 10, 20);
+
+  DynArrayOfByteToString(Dest, TempStr);
+  ExpectString(TempStr).ToBe('ABCDEF', '');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
+end;
+
+
+procedure TTestDynArrays_TestCopyFromDynArray_CompletelyOutOfContent;
+var
+  Src, Dest: TDynArrayOfByte;
+  TempStr: string[20];
+begin
+  InitDynArrayToEmpty(Src);
+  ExpectBoolean(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True, '');
+  CopyFromDynArray(Dest, Src, 50, 20);
+
+  DynArrayOfByteToString(Dest, TempStr);
+  ExpectString(TempStr).ToBe('', '');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
+end;
+
+
+procedure TTestDynArrays_TestCopyFromDynArray_EmptySource;
+var
+  Src, Dest: TDynArrayOfByte;
+  TempStr: string[20];
+begin
+  InitDynArrayToEmpty(Src);
+  CopyFromDynArray(Dest, Src, 0, 20);
+
+  DynArrayOfByteToString(Dest, TempStr);
+  ExpectString(TempStr).ToBe('', '');
+  FreeDynArray(Src);
+  FreeDynArray(Dest);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFromDynArray_EmptyArray;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  DeleteItemFromDynArray(Arr, 0);
+  ExpectDWord(Arr.Len).ToBe(0, '');
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFromDynArray_IndexOutOfBounds;
+var
+  Arr: TDynArrayOfByte;
+  //FoundException: Boolean;
+begin
+  //FoundException := False;
+  InitDynArrayToEmpty(Arr);
+  //try
+    SetDynLength(Arr, 3);
+    ExpectBoolean(DeleteItemFromDynArray(Arr, 3)).ToBe(False, '');   //exception on Desktop,  returns False on MCU
+  //except
+  //  on E: Exception do
+  //  begin
+  //    FoundException := True;
+  //    Expect(E.Message).ToBe('Delete index out of bounds in DeleteItemFromDynArray.');
+  //  end;
+  //end;
+
+  //Expect(FoundException).ToBe(True);
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFromDynArray_HappyFlow1;
+var
+  Arr: TDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr);
+
+  SetDynLength(Arr, 7);
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := i + 20;
+
+  DeleteItemFromDynArray(Arr, 3);
+
+  ExpectDWord(Arr.Len).ToBe(6, '');
+
+  for i := 0 to 2 do
+    ExpectDWord(Arr.Content^[i]).ToBe(i + 20, '');
+
+  for i := 3 to Arr.Len - 1 do
+    ExpectDWord(Arr.Content^[i]).ToBe(i + 20 + 1, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDeleteFromDynArray_HappyFlow2;
+var
+  Arr: TDynArrayOfByte;
+  i: Integer;
+begin
+  InitDynArrayToEmpty(Arr);
+
+  SetDynLength(Arr, 7);
+  for i := 0 to Arr.Len - 1 do
+    Arr.Content^[i] := i + 20;
+
+  DeleteItemFromDynArray(Arr, 0);
+
+  ExpectDWord(Arr.Len).ToBe(6, '');
+
+  for i := 0 to Arr.Len - 1 do
+    ExpectDWord(Arr.Content^[i]).ToBe(i + 20 + 1, '');
+
+  FreeDynArray(Arr);
+end;
+
+
+procedure TTestDynArrays_TestDoubleFree;
+var
+  Arr: TDynArrayOfByte;
+begin
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, 3);
+
+  FreeDynArray(Arr);
+  ExpectDWord(Arr.Len).ToBe(0, '');
+  ExpectDWord(Arr.Content).ToBe(DWord(nil), '');
+
+  //try                            //Free again. The structure should stay the same. No exception is expected.
+    FreeDynArray(Arr);
+    ExpectDWord(Arr.Len).ToBe(0, '');
+    ExpectDWord(Arr.Content).ToBe(DWord(nil), '');
+  //except
+  //  on E: Exception do
+  //    Expect(E.Message).ToBe('No exception is expected!');
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestAddBufferToDynArrayOfByte;
+const
+  CInitLen = 3;
+  CBufLen = 4;
+  CExpectedData: array[7] of Byte = (1, 2, 3, 30, 40, 50, 60);
+var
+  Arr: TDynArrayOfByte;
+  Buf: array[0..CBufLen - 1] of Byte;
+begin
+  Buf[0] := 30;
+  Buf[1] := 40;
+  Buf[2] := 50;
+  Buf[3] := 60;
+
+  InitDynArrayToEmpty(Arr);
+  SetDynLength(Arr, CInitLen);
+
+  Arr.Content^[0] := 1;
+  Arr.Content^[1] := 2;
+  Arr.Content^[2] := 3;
+
+  ExpectBoolean(AddBufferToDynArrayOfByte(@Buf[0], CBufLen, Arr)).ToBe(True, '');
+  ExpectDWord(Arr.Len).ToBe(CInitLen + CBufLen, '');
+
+  ExpectData(@Arr.Content^, Arr.Len).ToBe(@CExpectedData, '');
+end;
+
+
+//==============================================================================
+
+procedure RegisterTest(var ATestName: string; ATestProc: PTestProc);
+begin
+  if TestDynArrays.TestCount >= CMaxTestCountPerSuite then
+  begin
+    UART_WriteLn_Text('Error_Cannot register more tests to TTestDynArrays.');
+    Exit;
+  end;
+  
+  if Length(ATestName) > CMaxTesNameLength then
+  begin
+    UART_WriteLn_Text('Error_Cannot register test with long name to TTestDynArrays.');
+    UART_WriteLn_Text('Error_LongTestName:');
+    UART_WriteLn_Text(ATestName);
+    Exit;
+  end;
+  
+  TestDynArrays.Tests[TestDynArrays.TestCount].Name := ATestName;
+  TestDynArrays.Tests[TestDynArrays.TestCount].TestProc := ATestProc;
+  Inc(TestDynArrays.TestCount);
+end;
+
+
+procedure RegisterTTestDynArraysProcs;
+begin
+  TestDynArrays.TestCount := 0;
+  TestDynArrays.SetUp := @TTestDynArrays_SetUp;
+  TestDynArrays.TearDown := @TTestDynArrays_TearDown;
+  
+  RegisterTest('TestSimpleAllocation', @TTestDynArrays_TestSimpleAllocation);
+  RegisterTest('TestWritingToArray', @TTestDynArrays_TestWritingToArray);
+  RegisterTest('TestReallocationToLargerArray', @TTestDynArrays_TestReallocationToLargerArray);
+  RegisterTest('TestReallocationToSmallerArray', @TTestDynArrays_TestReallocationToSmallerArray);
+  RegisterTest('TestConcatDynArrays_HappyFlow', @TTestDynArrays_TestConcatDynArrays_HappyFlow);
+  RegisterTest('TestConcatDynArray_WithEmpty', @TTestDynArrays_TestConcatDynArray_WithEmpty);
+  RegisterTest('TestConcatEmptyDynArray_WithValid', @TTestDynArrays_TestConcatEmptyDynArray_WithValid);
+  RegisterTest('TestConcatEmptyDynArray_WithEmpty', @TTestDynArrays_TestConcatEmptyDynArray_WithEmpty);
+  RegisterTest('Test_CallDynLength_WithoutInitDynArray', @TTestDynArrays_Test_CallDynLength_WithoutInitDynArray);
+  RegisterTest('Test_CallSetDynLength_WithoutInitDynArray', @TTestDynArrays_Test_CallSetDynLength_WithoutInitDynArray);
+  RegisterTest('Test_CallConcatDynArrays_WithoutFirstInitDynArray', @TTestDynArrays_Test_CallConcatDynArrays_WithoutFirstInitDynArray);
+  RegisterTest('Test_CallConcatDynArrays_WithoutSecondInitDynArray', @TTestDynArrays_Test_CallConcatDynArrays_WithoutSecondInitDynArray);
+  RegisterTest('TestDeleteFirstBytes_ZeroLength', @TTestDynArrays_TestDeleteFirstBytes_ZeroLength);
+  RegisterTest('TestDeleteFirstBytes_LessThanLength', @TTestDynArrays_TestDeleteFirstBytes_LessThanLength);
+  RegisterTest('TestDeleteFirstBytes_LessThanLength_MoreItems', @TTestDynArrays_TestDeleteFirstBytes_LessThanLength_MoreItems);
+  RegisterTest('TestDeleteFirstBytes_SameAsLength', @TTestDynArrays_TestDeleteFirstBytes_SameAsLength);
+  RegisterTest('TestDeleteFirstBytes_GreaterThanLength', @TTestDynArrays_TestDeleteFirstBytes_GreaterThanLength);
+  RegisterTest('TestDeleteFirstBytes_OneItemArray', @TTestDynArrays_TestDeleteFirstBytes_OneItemArray);
+  RegisterTest('TestDeleteFirstBytes_EmptyArray', @TTestDynArrays_TestDeleteFirstBytes_EmptyArray);
+  RegisterTest('TestCopyFromDynArray_HappyFlow', @TTestDynArrays_TestCopyFromDynArray_HappyFlow);
+  RegisterTest('TestCopyFromDynArray_0Length', @TTestDynArrays_TestCopyFromDynArray_0Length);
+  RegisterTest('TestCopyFromDynArray_PartialOutOfContent', @TTestDynArrays_TestCopyFromDynArray_PartialOutOfContent);
+  RegisterTest('TestCopyFromDynArray_CompletelyOutOfContent', @TTestDynArrays_TestCopyFromDynArray_CompletelyOutOfContent);
+  RegisterTest('TestCopyFromDynArray_EmptySource', @TTestDynArrays_TestCopyFromDynArray_EmptySource);
+  RegisterTest('TestDeleteFromDynArray_EmptyArray', @TTestDynArrays_TestDeleteFromDynArray_EmptyArray);
+  RegisterTest('TestDeleteFromDynArray_IndexOutOfBounds', @TTestDynArrays_TestDeleteFromDynArray_IndexOutOfBounds);
+  RegisterTest('TestDeleteFromDynArray_HappyFlow1', @TTestDynArrays_TestDeleteFromDynArray_HappyFlow1);
+  RegisterTest('TestDeleteFromDynArray_HappyFlow2', @TTestDynArrays_TestDeleteFromDynArray_HappyFlow2);
+  RegisterTest('TestDoubleFree', @TTestDynArrays_TestDoubleFree);
+  RegisterTest('TestAddBufferToDynArrayOfByte', @TTestDynArrays_TestAddBufferToDynArrayOfByte);
+end;
+
+end.
