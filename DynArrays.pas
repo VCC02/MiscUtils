@@ -325,14 +325,17 @@ type
 const
   {$IFDEF AppArch64}
     CArchBitShift = 3;   //shl 3 means  multiply by SizeOf(Pointer)
+    CArchBitMask = 7;
   {$ENDIF}
 
   {$IFDEF AppArch32}
     CArchBitShift = 2;   //shl 2 means  multiply by SizeOf(Pointer)
+    CArchBitMask = 3;
   {$ENDIF}
 
   {$IFDEF AppArch16}
     CArchBitShift = 1;   //shl 1 means  multiply by SizeOf(Pointer)
+    CArchBitMask = 1;
   {$ENDIF}
 
 
@@ -397,7 +400,9 @@ function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArr
 procedure FreeDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
 function ConcatDynArraysOfPtrUInt(var AArr1, AArr2: TDynArrayOfPtrUInt): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddPtrUIntToDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ANewPtrUInt: PtrUInt): Boolean;
-function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: TDynArrayLengthSig): Boolean;
+function RemoveStartPtrUIntsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfPtrUInt): Boolean;
+function CopyFromDynArrayOfPtrUInt(var ADestArr, ASrcArr: TDynArrayOfPtrUInt; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+function DeleteItemFromDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: TDynArrayLengthSig): Boolean;
 
 
 procedure InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(var AArr: TDynArrayOfPDynArrayOfTDynArrayOfByte); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -422,7 +427,11 @@ function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayO
 
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 function StringToDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfWord): Boolean;   //assumes ADest is initialized
+function StringToDynArrayOfPtrUInt({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfPtrUInt): Boolean;   //assumes ADest is initialized
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
+procedure DynArrayOfWordToString(var AArr: TDynArrayOfWord; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
+procedure DynArrayOfPtrUIntToString(var AArr: TDynArrayOfPtrUInt; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
+
 function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
 function AddStringToDynOfDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfWord): Boolean;
 function CopyBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DWord; {$ENDIF} ALen: TDynArrayLength; var ADest: TDynArrayOfByte): Boolean; //overwrites ADest
@@ -431,6 +440,7 @@ function AddBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DW
 {$IFDEF IsDesktop}
   function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynArrayOfWordToString(var AArr: TDynArrayOfWord): string; {$IFDEF IsDesktop} overload; {$ENDIF}
+  function DynArrayOfPtrUIntToString(var AArr: TDynArrayOfPtrUInt): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynOfDynArrayOfByteToString(var AArr: TDynArrayOfTDynArrayOfByte; ASeparator: string = #13#10): string;
   function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 
@@ -649,6 +659,63 @@ begin
 end;
 
 
+{$IFnDEF IsDesktop}
+  function OrdBool(B: Boolean): Byte;
+  begin
+    Result := Byte(B) and 1;
+  end;
+{$ENDIF}
+
+{$IFnDEF IsDesktop}
+  type
+    PPtrUInt = ^PtrUInt;
+{$ENDIF}
+
+
+function StringToDynArrayOfPtrUInt({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfPtrUInt): Boolean;   //assumes ADest is initialized
+const
+  CZeroLen = 1 shl CArchBitShift;
+var
+  TempLen, ZeroPaddingSize: TDynArrayLength;
+  IsPartial: Byte;
+  i: Byte;
+  ZeroString: string {$IFnDEF IsDesktop}[CZeroLen]{$ENDIF};
+begin
+  TempLen := TDynArrayLength(Length(AString));
+
+  IsPartial := {$IFnDEF IsDesktop} OrdBool {$ELSE} Ord {$ENDIF}((TempLen and CArchBitMask) <> 0);
+  TempLen := (TempLen shr CArchBitShift) + IsPartial;  //add one more item if odd or "misaligned"
+
+  Result := SetDynOfPtrUIntLength(ADest, TempLen);
+
+  if not Result then
+    Exit;
+
+  {$IFDEF IsDesktop}
+    SetLength(ZeroString, CZeroLen);
+  {$ENDIF}
+
+  {$IFDEF IsDesktop}
+    for i := 1 to CZeroLen do
+  {$ELSE}
+    for i := 0 to CZeroLen - 1 do
+  {$ENDIF}
+      ZeroString[i] := #0;
+
+  {$IFDEF IsDesktop}
+    MemMove(ADest.Content, @AString[1], TempLen shl CArchBitShift);
+  {$ELSE}
+    MemMove(PByte(ADest.Content), PByte(@AString[0]), TempLen shl CArchBitShift);
+  {$ENDIF}
+
+  if IsPartial > 0 then
+  begin
+    ZeroPaddingSize := (TempLen shl CArchBitShift) - Length(AString);
+    MemMove(PPtrUInt(PtrUint(@ADest.Content^[TempLen - 1]) + ZeroPaddingSize), @ZeroString[{$IFDEF IsDesktop}1{$ELSE}0{$ENDIF}], ZeroPaddingSize);
+  end;
+end;
+
+
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string);  {$IFDEF IsDesktop} overload; {$ENDIF}
 begin
   {$IFDEF IsDesktop}
@@ -691,6 +758,43 @@ begin
 
     MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len shl 1);
     ADestStr[AArr.Len shl 1] := #0;
+  {$ENDIF}
+end;
+
+
+procedure DynArrayOfPtrUIntToString(var AArr: TDynArrayOfPtrUInt; var ADestStr: string);  {$IFDEF IsDesktop} overload; {$ENDIF}
+{$IFDEF IsDesktop}
+  var
+    LastNonZeroIndex: LongInt;
+{$ENDIF}
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfPtrUInt(AArr);
+    SetLength(ADestStr, AArr.Len shl CArchBitShift);
+
+    if AArr.Len = 0 then
+      Exit;
+
+    MemMove(@ADestStr[1], AArr.Content, AArr.Len shl CArchBitShift);
+
+    if Length(ADestStr) > 0 then  //delete trailing null characters
+    begin
+      LastNonZeroIndex := Length(ADestStr);
+      while ADestStr[LastNonZeroIndex] = #0 do
+        Dec(LastNonZeroIndex);
+
+      if LastNonZeroIndex > 0 then
+        ADestStr := Copy(ADestStr, 1, LastNonZeroIndex);
+    end;
+  {$ELSE}
+    if AArr.Len = 0 then
+    begin
+      ADestStr[0] := #0;
+      Exit;
+    end;
+
+    MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len shl CArchBitShift);
+    ADestStr[AArr.Len shl CArchBitShift] := #0;
   {$ENDIF}
 end;
 
@@ -766,6 +870,13 @@ end;
   begin
     Result := 'no string content';
     DynArrayOfWordToString(AArr, Result);
+  end;
+
+
+  function DynArrayOfPtrUIntToString(var AArr: TDynArrayOfPtrUInt): string; {$IFDEF IsDesktop} overload; {$ENDIF}
+  begin
+    Result := 'no string content';
+    DynArrayOfPtrUIntToString(AArr, Result);
   end;
 
 
@@ -2388,14 +2499,81 @@ begin
 end;
 
 
-function DeleteItemFromDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: TDynArrayLengthSig): Boolean;
+function RemoveStartPtrUIntsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfPtrUInt): Boolean;
+var
+  PartialArr: TDynArrayOfPtrUInt;
+  NewLen: TDynArrayLength;
+begin
+  Result := True;
+
+  if ACount >= AArr.Len then
+  begin
+    FreeDynArrayOfPtrUInt(AArr);
+    Exit;
+  end;
+
+  if ACount = 0 then
+    Exit;
+
+  InitDynArrayOfPtrUIntToEmpty(PartialArr);
+  NewLen := AArr.Len - ACount;
+  if not CopyFromDynArrayOfPtrUInt(PartialArr, AArr, ACount, NewLen) then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  MemMove(AArr.Content, PartialArr.Content, NewLen shl CArchBitShift);
+  FreeDynArrayOfPtrUInt(PartialArr);
+
+  Result := SetDynOfPtrUIntLength(AArr, NewLen);
+end;
+
+
+function CopyFromDynArrayOfPtrUInt(var ADestArr, ASrcArr: TDynArrayOfPtrUInt; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+var
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  Result := True;
+  InitDynArrayOfPtrUIntToEmpty(ADestArr);
+
+  if ACount = 0 then
+    Exit;
+
+  if AIndex > ASrcArr.Len then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  if ACount > ASrcArr.Len - AIndex then
+    ACount := ASrcArr.Len - AIndex;
+
+  SetDynOfPtrUIntLength(ADestArr, ACount);
+
+  {$IFnDEF IsDesktop}
+    OldPointer := DWord(ASrcArr.Content) + AIndex shl CArchBitShift;
+  {$ELSE}
+    OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex shl CArchBitShift));
+  {$ENDIF}
+  MemMove(ADestArr.Content, OldPointer, ACount shl CArchBitShift);
+end;
+
+
+function DeleteItemFromDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: TDynArrayLengthSig): Boolean;
 var
   DelPointer, NextPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
+  if AArr.Len = 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+
   if (ADelIndex < 0) or (ADelIndex > TDynArrayLengthSig(AArr.Len) - 1) then
   begin
     {$IFDEF IsDesktop}
-      raise Exception.Create('Index out of range when deleting item from DynArrayOfPtrUInt.');
+      raise Exception.Create('Delete index out of bounds in DeleteItemFromDynArrayOfPtrUInt.');
     {$ELSE}
       Result := False;
       Exit;
@@ -2607,13 +2785,13 @@ begin
 
   {$IFnDEF IsMCU}
     Dispose(AArr.Content^[ADelIndex]);
-    Result := DeleteItemFromDynArraysOfPtrUInt(TDynArrayOfPtrUInt(AArr), ADelIndex);
+    Result := DeleteItemFromDynArrayOfPtrUInt(TDynArrayOfPtrUInt(AArr), ADelIndex);
   {$ELSE}
     {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[ADelIndex], SizeOf(TDynArrayOfTDynArrayOfByte));
 
     TempDynArrayOfPtrUInt.Len := AArr.Len;
     TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));
-    Result := DeleteItemFromDynArraysOfPtrUInt(TempDynArrayOfPtrUInt, ADelIndex);
+    Result := DeleteItemFromDynArrayOfPtrUInt(TempDynArrayOfPtrUInt, ADelIndex);
     AArr.Len := TempDynArrayOfPtrUInt.Len;
     AArr.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
   {$ENDIF}

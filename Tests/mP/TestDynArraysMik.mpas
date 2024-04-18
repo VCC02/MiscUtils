@@ -117,6 +117,7 @@ begin
 
   TTestDynArrays_RunTests;
   TTestDynOfDynOfByteCase_RunTests;
+  TTestDynOfDynOfDynOfByteCase_RunTests;
   
   UART_WriteLn_Text('Done_All');
   LED1 := 1;

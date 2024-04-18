@@ -39,8 +39,23 @@ type
   
   TNamedTestProcArr = array[0..CMaxTestCountPerSuite - 1] of TNamedTestProc;
   
+  
+procedure IterationsToStr(i, j: Integer; var OutRes: string);
+
 
 implementation
 
+
+procedure IterationsToStr(i, j: Integer; var OutRes: string);
+var
+  s1: string[6];
+begin
+  strcat(OutRes, ' at i = ');
+  IntToStr(i, s1);
+  strcat(OutRes, s1);
+  strcat(OutRes, '  j = ');
+  IntToStr(j, s1);
+  strcat(OutRes, s1);
+end;
 
 end.

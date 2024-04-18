@@ -1,0 +1,613 @@
+{
+    Copyright (C) 2024 VCC
+    creation date: 18 Apr 2024
+    initial release date: 18 Apr 2024
+
+    author: VCC
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}
+
+unit TestDynOfDynOfDynOfByteCase;
+
+uses
+  DynArrays, Expectations, TestUtilsMik;
+
+type
+  TTestDynOfDynOfDynOfByteCase = record
+    SetUp: PTestProc;
+    TearDown: PTestProc;
+    Tests: TNamedTestProcArr;
+    TestCount: Integer;
+  end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_RunTests;
+procedure RegisterTTestDynOfDynOfDynOfByteCaseProcs;
+
+
+implementation
+
+var
+  TestDynOfDynOfDynOfByteCase: TTestDynOfDynOfDynOfByteCase;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_RunTests;
+var
+  i, TestCountM1: Integer;
+  TestName: string[60];
+begin
+  RegisterTTestDynOfDynOfDynOfByteCaseProcs;
+
+  TestCountM1 := TestDynOfDynOfDynOfByteCase.TestCount - 1;
+
+  for i := 0 to TestCountM1 do
+  begin
+    UART_WriteLn_Text('SetUp_TTestDynOfDynOfDynOfByteCase');
+    TestDynOfDynOfDynOfByteCase.SetUp();
+
+    TestName := 'RunTest_';
+    strcat(TestName, TestDynOfDynOfDynOfByteCase.Tests[i].Name);
+    UART_WriteLn_Text(TestName);
+
+    TestDynOfDynOfDynOfByteCase.Tests[i].TestProc();
+
+    UART_WriteLn_Text('TearDown_TTestDynOfDynOfDynOfByteCase');
+    TestDynOfDynOfDynOfByteCase.TearDown();
+    UART_WriteLn_Text('_');
+  end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_SetUp;
+begin
+  MM_Init;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TearDown;
+begin
+  //nothing so far
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestSimpleAllocation;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  AllocationResult: Boolean;
+  //i: Integer;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 7);
+  //try
+    ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), '');
+    ExpectDWord(Arr.Len).ToBe(7, '');
+
+    //for i := 0 to Arr.Len - 1 do
+    //  CheckInitializedDynOfDynArray(Arr.Content^[i]^);    //the inner arrays are initialized automatically by SetDynOfPDynArrayOfTDynArrayOfByteLength
+  //finally
+    FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);  //the array has to be manually freed, because there is no reference counting
+  //end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestWritingToArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  i, k: Integer;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
+
+  //try
+    for k := 0 to Arr.Len - 1 do
+    begin
+      SetDynOfDynOfByteLength(Arr.Content^[k]^, 20);
+      //try
+        for i := 0 to Arr.Content^[k]^.Len - 1 do
+        begin
+          SetDynLength(Arr.Content^[k]^.Content^[i]^, 3);
+          Arr.Content^[k]^.Content^[i]^.Content^[2] := 80 + i;
+          ExpectDWord(Arr.Content^[k]^.Content^[i]^.Content^[2]).ToBe(DWord(80 + i), '');
+        end;
+      //finally
+        FreeDynOfDynOfByteArray(Arr.Content^[k]^);
+      //end;
+    end;
+  //finally
+    FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+  //end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestReallocationToLargerArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  i, j, k: Integer;
+  s: string[30];
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
+
+  //try
+    for k := 0 to Arr.Len - 1 do
+    begin
+      SetDynOfDynOfByteLength(Arr.Content^[k]^, 20);
+
+      for i := 0 to DynOfDynOfByteLength(Arr.Content^[k]^) - 1 do
+      begin
+        ExpectBoolean(SetDynLength(Arr.Content^[k]^.Content^[i]^, 3)).ToBe(True, 'Internal array allocation');
+
+        for j := 0 to 2 do
+          Arr.Content^[k]^.Content^[i]^.Content^[j] := i * 10 + j;
+      end;
+
+      ExpectBoolean(SetDynOfDynOfByteLength(Arr.Content^[k]^, 30)).ToBe(True, 'External array re-allocation');
+      //try
+        for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
+          for j := 0 to 2 do
+          begin
+            IterationsToStr(i, j, s);
+            ExpectDWord(Arr.Content^[k]^.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), s);
+          end;
+      //finally
+        FreeDynOfDynOfByteArray(Arr.Content^[k]^);
+      //end;
+    end;
+  //finally
+    FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+  //end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestReallocationToSmallerArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  i, j, k: Integer;
+  s: string[30];
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
+
+  //try
+    for k := 0 to Arr.Len - 1 do
+    begin
+      SetDynOfDynOfByteLength(Arr.Content^[k]^, 20);
+
+      for i := 0 to DynOfDynOfByteLength(Arr.Content^[k]^) - 1 do
+      begin
+        SetDynLength(Arr.Content^[k]^.Content^[i]^, 3);
+
+        for j := 0 to 2 do
+          Arr.Content^[k]^.Content^[i]^.Content^[j] := i * 10 + j;
+      end;
+
+      SetDynOfDynOfByteLength(Arr.Content^[k]^, 10);
+      //try
+        for i := 0 to 10 - 1 do  //test up to the old length, as this content has to be valid only
+          for j := 0 to 2 do
+          begin
+            IterationsToStr(i, j, s);
+            ExpectDWord(Arr.Content^[k]^.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), s);
+          end;
+      //finally
+        FreeDynOfDynOfByteArray(Arr.Content^[k]^);
+      //end;
+    end;
+  //finally
+    FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+  //end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow1;
+const
+  CBufLen = 7;
+  CExpectedData: array[CBufLen] of Byte = (200, 201, 202, 203, 204, 205, 206);
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  NewArr: TDynArrayOfByte;
+  i, j, k: Integer;
+  s: string[30];
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
+  //try
+    for k := 0 to Arr.Len - 1 do
+    begin
+      ExpectBoolean(SetDynOfDynOfByteLength(Arr.Content^[k]^, 20)).ToBe(True, '');
+
+      for i := 0 to DynOfDynOfByteLength(Arr.Content^[k]^) - 1 do
+      begin
+        ExpectBoolean(SetDynLength(Arr.Content^[k]^.Content^[i]^, 3)).ToBe(True, '');
+
+        for j := 0 to 2 do
+          Arr.Content^[k]^.Content^[i]^.Content^[j] := i * 10 + j;
+      end;
+
+      InitDynArrayToEmpty(NewArr);
+      ExpectBoolean(SetDynLength(NewArr, 7)).ToBe(True, '');
+      for j := 0 to NewArr.Len - 1 do
+        NewArr.Content^[j] := 200 + j;
+
+      //try
+        ExpectBoolean(AddDynArrayOfByteToDynOfDynOfByte(Arr.Content^[k]^, NewArr)).ToBe(True, '');
+      //finally
+        FreeDynArray(NewArr);
+      //end;
+
+      for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
+        for j := 0 to 2 do
+        begin
+          IterationsToStr(i, j, s);
+          ExpectDWord(Arr.Content^[k]^.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), s);
+        end;
+
+      ExpectDWord(Arr.Content^[k]^.Len).ToBe(21, '');
+      ExpectData(Arr.Content^[k]^.Content^[20]^.Content, CBufLen).ToBe(@CExpectedData, '');
+
+      FreeDynOfDynOfByteArray(Arr.Content^[k]^); //freeing only if successfully allocated
+    end;
+  //finally
+    FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+  //end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow2;
+const
+  CExpectedContentF = 'First';
+  CExpectedContentS = 'Second';
+  CExpectedContent1 = 'one';
+  CExpectedContent2 = 'two';
+  CExpectedContent3 = 'three';
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  NewArr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 1);
+  //try
+    ExpectBoolean(AddStringToDynOfDynArrayOfByte('First', Arr.Content^[0]^)).ToBe(True, '');
+    ExpectBoolean(AddStringToDynOfDynArrayOfByte('Second', Arr.Content^[0]^)).ToBe(True, '');
+
+    InitDynOfDynOfByteToEmpty(NewArr);
+
+    AddStringToDynOfDynArrayOfByte('one', NewArr);
+    AddStringToDynOfDynArrayOfByte('two', NewArr);
+    AddStringToDynOfDynArrayOfByte('three', NewArr);
+
+    ExpectBoolean(AddDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(Arr, NewArr)).ToBe(True, '');
+    ExpectDWord(Arr.Len).ToBe(2, '');
+
+    FreeDynOfDynOfByteArray(NewArr);
+
+    ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 5).ToBe(@CExpectedContentF, '');
+    ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 6).ToBe(@CExpectedContentS, '');
+
+    ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 3).ToBe(@CExpectedContent1, '');
+    ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 3).ToBe(@CExpectedContent2, '');
+    ExpectData(@Arr.Content^[1]^.Content^[2]^.Content^, 4).ToBe(@CExpectedContent3, '');
+  //finally
+    FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+  //end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  NewArr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynOfDynOfByteToEmpty(NewArr);
+  SetDynOfDynOfByteLength(NewArr, 3);
+
+  //try
+  //  AddDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(Arr, NewArr);
+  //except
+  //  on E: Exception do
+  //    Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg1);
+  //end;
+
+  FreeDynOfDynOfByteArray(NewArr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  NewArr: TDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
+
+  //try
+  //  AddDynArrayOfTDynArrayOfByteToDynArraysOfPDynArrayOfTDynArrayOfByte(Arr, NewArr);
+  //except
+  //  on E: Exception do
+  //    Expect(E.Message).ToBe(CUninitializedDynArrayErrMsg2);
+  //end;
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDoubleFree;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+  ExpectDWord(Arr.Len).ToBe(0, '');
+  ExpectDWord(Arr.Content).ToBe(nil, '');
+
+  //try                            //Free again. The structure should stay the same. No exception is expected.
+    FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+    ExpectDWord(Arr.Len).ToBe(0, '');
+    ExpectDWord(Arr.Content).ToBe(nil, '');
+  //except
+  //  on E: Exception do
+  //    Expect(E.Message).ToBe('No exception is expected!');
+  //end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromEmptyArray;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+  //ErrMsg: string;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+
+  //ErrMsg := 'no err';
+  //try
+    ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(False, '');
+  //except
+  //  on E: Exception do
+  //    ErrMsg := E.Message;
+  //end;
+
+  //ExpectString(ErrMsg).ToBe('Index out of range when deleting item from DynArrayOfPDynArrayOfTDynArrayOfByte.');
+  ExpectBoolean(Arr.Len).ToBe(0, 'no action');
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray_NoContent;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 1);
+
+  ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True, '');
+  ExpectDWord(Arr.Len).ToBe(0, 'successful deletion');
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray_WithContent;
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 1);
+
+  InitDynOfDynOfByteToEmpty(Arr.Content^[0]^);
+  ExpectBoolean(AddStringToDynOfDynArrayOfByte('First', Arr.Content^[0]^)).ToBe(True, '');
+
+  ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True, '');
+  ExpectDWord(Arr.Len).ToBe(0, 'successful deletion');
+end;
+
+
+procedure AddTwoItemsToBigArray(var Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
+var
+  i: Integer;
+  s: string[15];
+  s1: string[6];
+begin
+  for i := 0 to Arr.Len - 1 do
+  begin
+    InitDynOfDynOfByteToEmpty(Arr.Content^[i]^);
+    
+    IntToStr(i, s1);
+    
+    s := 'First';
+    strcat(s, s1);
+    ExpectBoolean(AddStringToDynOfDynArrayOfByte(s, Arr.Content^[i]^)).ToBe(True, '');
+    
+    s := 'Second';
+    strcat(s, s1);
+    ExpectBoolean(AddStringToDynOfDynArrayOfByte(s, Arr.Content^[i]^)).ToBe(True, '');
+  end;
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDeleteFirstItem_FromTwoItemArray;
+const
+  CExpectedContentF = 'First1';
+  CExpectedContentS = 'Second1';
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
+
+  AddTwoItemsToBigArray(Arr);
+
+  ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True, '');
+  ExpectDWord(Arr.Len).ToBe(1, 'successful deletion');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF, '');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS, '');
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDeleteSecondItem_FromTwoItemArray;
+const
+  CExpectedContentF = 'First0';
+  CExpectedContentS = 'Second0';
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
+
+  AddTwoItemsToBigArray(Arr);
+
+  ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 1)).ToBe(True, '');
+  ExpectDWord(Arr.Len).ToBe(1, 'successful deletion');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF, '');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS, '');
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDeleteFirstItem_FromThreeItemArray;
+const
+  CExpectedContentF1 = 'First1';
+  CExpectedContentS1 = 'Second1';
+  CExpectedContentF2 = 'First2';
+  CExpectedContentS2 = 'Second2';
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
+
+  AddTwoItemsToBigArray(Arr);
+
+  ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True, '');
+  ExpectDWord(Arr.Len).ToBe(2, 'successful deletion');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF1, '');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS1, '');
+
+  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF2, '');
+  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS2, '');
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDeleteSecondItem_FromThreeItemArray;
+const
+  CExpectedContentF0 = 'First0';
+  CExpectedContentS0 = 'Second0';
+  CExpectedContentF2 = 'First2';
+  CExpectedContentS2 = 'Second2';
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
+
+  AddTwoItemsToBigArray(Arr);
+
+  ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 1)).ToBe(True, '');
+  ExpectDWord(Arr.Len).ToBe(2, 'successful deletion');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF0, '');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS0, '');
+
+  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF2, '');
+  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS2, '');
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+procedure TTestDynOfDynOfDynOfByteCase_TestDeleteThirdItem_FromThreeItemArray;
+const
+  CExpectedContentF0 = 'First0';
+  CExpectedContentS0 = 'Second0';
+  CExpectedContentF1 = 'First1';
+  CExpectedContentS1 = 'Second1';
+var
+  Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte;
+begin
+  InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
+  SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
+
+  AddTwoItemsToBigArray(Arr);
+
+  ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 2)).ToBe(True, '');
+  ExpectDWord(Arr.Len).ToBe(2, 'successful deletion');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF0, '');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS0, '');
+
+  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF1, '');
+  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS1, '');
+
+  FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
+end;
+
+
+//==============================================================================
+
+procedure RegisterTest(var ATestName: string; ATestProc: PTestProc);
+begin
+  if TestDynOfDynOfDynOfByteCase.TestCount >= CMaxTestCountPerSuite then
+  begin
+    UART_WriteLn_Text('Error_Cannot register more tests to TestDynOfDynOfDynOfByteCase.');
+    Exit;
+  end;
+
+  if Length(ATestName) > CMaxTestNameLength then
+  begin
+    UART_WriteLn_Text('Error_Cannot register test with long name to TestDynOfDynOfDynOfByteCase.');
+    UART_WriteLn_Text('Error_LongTestName:');
+    UART_WriteLn_Text(ATestName);
+    Exit;
+  end;
+
+  TestDynOfDynOfDynOfByteCase.Tests[TestDynOfDynOfDynOfByteCase.TestCount].Name := ATestName;
+  TestDynOfDynOfDynOfByteCase.Tests[TestDynOfDynOfDynOfByteCase.TestCount].TestProc := ATestProc;
+  Inc(TestDynOfDynOfDynOfByteCase.TestCount);
+end;
+
+
+procedure RegisterTTestDynOfDynOfDynOfByteCaseProcs;
+begin
+  TestDynOfDynOfDynOfByteCase.TestCount := 0;
+  TestDynOfDynOfDynOfByteCase.SetUp := @TTestDynOfDynOfDynOfByteCase_SetUp;
+  TestDynOfDynOfDynOfByteCase.TearDown := @TTestDynOfDynOfDynOfByteCase_TearDown;
+
+  RegisterTest('TestSimpleAllocation', @TTestDynOfDynOfDynOfByteCase_TestSimpleAllocation);
+  RegisterTest('TestWritingToArray', @TTestDynOfDynOfDynOfByteCase_TestWritingToArray);
+  RegisterTest('TestReallocationToLargerArray', @TTestDynOfDynOfDynOfByteCase_TestReallocationToLargerArray);
+  RegisterTest('TestReallocationToSmallerArray', @TTestDynOfDynOfDynOfByteCase_TestReallocationToSmallerArray);
+  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow1', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow1);
+  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow2', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow2);
+  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray);
+  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray);
+  RegisterTest('TestDoubleFree', @TTestDynOfDynOfDynOfByteCase_TestDoubleFree);
+  RegisterTest('TestDeleteItem_FromEmptyArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromEmptyArray);
+  RegisterTest('TestDeleteItem_FromOneItemArray_NoContent', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray_NoContent);
+  RegisterTest('TestDeleteItem_FromOneItemArray_WithContent', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray_WithContent);
+  RegisterTest('TestDeleteFirstItem_FromTwoItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteFirstItem_FromTwoItemArray);
+  RegisterTest('TestDeleteSecondItem_FromTwoItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteSecondItem_FromTwoItemArray);
+  RegisterTest('TestDeleteFirstItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteFirstItem_FromThreeItemArray);
+  RegisterTest('TestDeleteSecondItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteSecondItem_FromThreeItemArray);
+  RegisterTest('TestDeleteThirdItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteThirdItem_FromThreeItemArray);
+end;
+
+end.

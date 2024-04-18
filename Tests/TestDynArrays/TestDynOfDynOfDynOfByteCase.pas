@@ -412,7 +412,7 @@ begin
 end;
 
 
-procedure AddToItemsToBigArray(var Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
+procedure AddTwoItemsToBigArray(var Arr: TDynArrayOfPDynArrayOfTDynArrayOfByte);
 var
   i: Integer;
 begin
@@ -432,7 +432,7 @@ begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
 
-  AddToItemsToBigArray(Arr);
+  AddTwoItemsToBigArray(Arr);
 
   Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True);
   Expect(Arr.Len).ToBe(1, 'successful deletion');
@@ -450,7 +450,7 @@ begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 2);
 
-  AddToItemsToBigArray(Arr);
+  AddTwoItemsToBigArray(Arr);
 
   Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 1)).ToBe(True);
   Expect(Arr.Len).ToBe(1, 'successful deletion');
@@ -468,7 +468,7 @@ begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
 
-  AddToItemsToBigArray(Arr);
+  AddTwoItemsToBigArray(Arr);
 
   Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True);
   Expect(Arr.Len).ToBe(2, 'successful deletion');
@@ -489,7 +489,7 @@ begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
 
-  AddToItemsToBigArray(Arr);
+  AddTwoItemsToBigArray(Arr);
 
   Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 1)).ToBe(True);
   Expect(Arr.Len).ToBe(2, 'successful deletion');
@@ -510,7 +510,7 @@ begin
   InitDynArrayOfPDynArrayOfTDynArrayOfByteToEmpty(Arr);
   SetDynOfPDynArrayOfTDynArrayOfByteLength(Arr, 3);
 
-  AddToItemsToBigArray(Arr);
+  AddTwoItemsToBigArray(Arr);
 
   Expect(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 2)).ToBe(True);
   Expect(Arr.Len).ToBe(2, 'successful deletion');
