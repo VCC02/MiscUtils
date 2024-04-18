@@ -661,9 +661,13 @@ begin
     MemMove(@ADestStr[1], AArr.Content, AArr.Len);
   {$ELSE}
     if AArr.Len = 0 then
+    begin
+      ADestStr[0] := #0;
       Exit;
+    end;
 
     MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len);
+    ADestStr[AArr.Len] := #0;
   {$ENDIF}
 end;
 
@@ -680,9 +684,13 @@ begin
     MemMove(@ADestStr[1], AArr.Content, AArr.Len shl 1);
   {$ELSE}
     if AArr.Len = 0 then
+    begin
+      ADestStr[0] := #0;
       Exit;
+    end;
 
     MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len shl 1);
+    ADestStr[AArr.Len shl 1] := #0;
   {$ENDIF}
 end;
 
@@ -1242,6 +1250,7 @@ begin
     {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynOfDynArrayOfByte.');
     {$ELSE}
+      Result := False;
       Exit;
     {$ENDIF}
   end;
@@ -1854,6 +1863,7 @@ begin
     {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynOfDynArrayOfWord.');
     {$ELSE}
+      Result := False;
       Exit;
     {$ENDIF}
   end;
@@ -2387,6 +2397,7 @@ begin
     {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynArrayOfPtrUInt.');
     {$ELSE}
+      Result := False;
       Exit;
     {$ENDIF}
   end;
@@ -2580,6 +2591,7 @@ begin
     {$IFDEF IsDesktop}
       raise Exception.Create('Index out of range when deleting item from DynArrayOfPDynArrayOfTDynArrayOfByte.');
     {$ELSE}
+      Result := False;
       Exit;
     {$ENDIF}
   end;

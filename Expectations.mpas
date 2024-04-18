@@ -84,6 +84,11 @@ function ExpectBoolean(ActualValue: Boolean): TExpectBoolean;
 function ExpectData(ActualValue: PConstByteArr; ALen: LongInt): TExpectData;
 
 
+const
+  CCRLF = #13 + #10;
+  
+procedure UART_WriteLn_Text(var AString: string);
+
 implementation
 
 var
@@ -101,6 +106,13 @@ var
   FActualValueData: PConstByteArr;
   
   GExpectedDataLen: LongInt;
+  
+  
+procedure UART_WriteLn_Text(var AString: string);
+begin
+  UART_Write_Text(AString);
+  UART_Write_Text(CCRLF);
+end;
   
   
 {$IFDEF GenerateException}

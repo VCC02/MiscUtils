@@ -26,8 +26,7 @@ unit TestUtilsMik;
 
 const
   CMaxTestCountPerSuite = 40;
-  CMaxTesNameLength = 50;
-  CCRLF = #13 + #10;
+  CMaxTestNameLength = 80;
 
 type
   TTestProc = procedure;
@@ -35,20 +34,13 @@ type
   
   TNamedTestProc = record
     TestProc: PTestProc;
-    Name: string[CMaxTesNameLength];
+    Name: string[CMaxTestNameLength];
   end;
   
   TNamedTestProcArr = array[0..CMaxTestCountPerSuite - 1] of TNamedTestProc;
   
-procedure UART_WriteLn_Text(var AString: string);
 
 implementation
 
-
-procedure UART_WriteLn_Text(var AString: string);
-begin
-  UART_Write_Text(AString);
-  UART_Write_Text(CCRLF);
-end;
 
 end.

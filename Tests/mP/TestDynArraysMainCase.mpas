@@ -68,6 +68,7 @@ begin
     
     UART_WriteLn_Text('TearDown_TTestDynArrays');
     TestDynArrays.TearDown();
+    UART_WriteLn_Text('_');
   end;
 end;
 
@@ -682,7 +683,7 @@ begin
     Exit;
   end;
   
-  if Length(ATestName) > CMaxTesNameLength then
+  if Length(ATestName) > CMaxTestNameLength then
   begin
     UART_WriteLn_Text('Error_Cannot register test with long name to TTestDynArrays.');
     UART_WriteLn_Text('Error_LongTestName:');
