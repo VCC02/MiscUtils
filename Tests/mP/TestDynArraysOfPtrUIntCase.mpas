@@ -49,7 +49,7 @@ var
 procedure TTestDynArraysOfPtrUIntCase_RunTests;
 var
   i, TestCountM1: Integer;
-  TestName: string[60];
+  TestName: string[80];
 begin
   RegisterTTestDynArraysOfPtrUIntCaseProcs;
 

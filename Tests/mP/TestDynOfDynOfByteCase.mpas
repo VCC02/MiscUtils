@@ -49,7 +49,7 @@ var
 procedure TTestDynOfDynOfByteCase_RunTests;
 var
   i, TestCountM1: Integer;
-  TestName: string[60];
+  TestName: string[80];
 begin
   RegisterTTestDynOfDynOfByteCaseProcs;
 
@@ -469,7 +469,7 @@ begin
 
   RegisterTest('TestSimpleAllocation', @TTestDynOfDynOfByteCase_TestSimpleAllocation);
   RegisterTest('TestWritingToArray', @TTestDynOfDynOfByteCase_TestWritingToArray);
-  RegisterTest('TestReallocationToLargerArray', @TTestDynOfDynOfByteCase_TestReallocationToLargerArray);
+  RegisterTest('TestReallocationToLargerArray', @TTestDynOfDynOfByteCase_TestReallocationToLargerArray);  /////////////// first test to cause memory corruption (maybe stack)
   RegisterTest('TestReallocationToSmallerArray', @TTestDynOfDynOfByteCase_TestReallocationToSmallerArray);
   RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow', @TTestDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow);
   RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray', @TTestDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray);

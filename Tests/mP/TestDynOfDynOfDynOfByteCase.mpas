@@ -48,7 +48,7 @@ var
 procedure TTestDynOfDynOfDynOfByteCase_RunTests;
 var
   i, TestCountM1: Integer;
-  TestName: string[60];
+  TestName: string[100];
 begin
   RegisterTTestDynOfDynOfDynOfByteCaseProcs;
 
@@ -428,7 +428,9 @@ begin
   begin
     InitDynOfDynOfByteToEmpty(Arr.Content^[i]^);
     
-    IntToStr(i, s1);
+    //IntToStr(i, s1); //this is righ-justified
+    s1[0] := 48 + i; //should work if i < 10
+    s1[1] := #0;     //should work if i < 10
     
     s := 'First';
     strcat(s, s1);
@@ -455,8 +457,8 @@ begin
 
   ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True, '');
   ExpectDWord(Arr.Len).ToBe(1, 'successful deletion');
-  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF, '');
-  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS, '');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF, 'F1');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS, 'S1');
 
   FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
 end;
@@ -476,8 +478,8 @@ begin
 
   ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 1)).ToBe(True, '');
   ExpectDWord(Arr.Len).ToBe(1, 'successful deletion');
-  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF, '');
-  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS, '');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF, 'F0');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS, 'S0');
 
   FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
 end;
@@ -499,11 +501,11 @@ begin
 
   ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 0)).ToBe(True, '');
   ExpectDWord(Arr.Len).ToBe(2, 'successful deletion');
-  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF1, '');
-  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS1, '');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF1, 'F1');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS1, 'S1');
 
-  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF2, '');
-  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS2, '');
+  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF2, 'F2');
+  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS2, 'S2');
 
   FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
 end;
@@ -525,11 +527,11 @@ begin
 
   ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 1)).ToBe(True, '');
   ExpectDWord(Arr.Len).ToBe(2, 'successful deletion');
-  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF0, '');
-  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS0, '');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF0, 'F0');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS0, 'S0');
 
-  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF2, '');
-  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS2, '');
+  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF2, 'F2');
+  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS2, 'S2');
 
   FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
 end;
@@ -551,11 +553,11 @@ begin
 
   ExpectBoolean(DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(Arr, 2)).ToBe(True, '');
   ExpectDWord(Arr.Len).ToBe(2, 'successful deletion');
-  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF0, '');
-  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS0, '');
+  ExpectData(@Arr.Content^[0]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF0, 'F0');
+  ExpectData(@Arr.Content^[0]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS0, 'S0');
 
-  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF1, '');
-  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS1, '');
+  ExpectData(@Arr.Content^[1]^.Content^[0]^.Content^, 6).ToBe(@CExpectedContentF1, 'F1');
+  ExpectData(@Arr.Content^[1]^.Content^[1]^.Content^, 7).ToBe(@CExpectedContentS1, 'S1');
 
   FreeDynArrayOfPDynArrayOfTDynArrayOfByte(Arr);
 end;

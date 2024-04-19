@@ -1352,7 +1352,7 @@ end;
 
 function DeleteItemFromDynOfDynOfByte(var AArr: TDynArrayOfTDynArrayOfByte; ADelIndex: TDynArrayLengthSig): Boolean;
 var
-  i: Integer;
+  i: TDynArrayLengthSig;
   OldPointer: PDynArrayOfTDynArrayOfByteContent;
   NewLen: DWord;
 begin
@@ -1364,6 +1364,12 @@ begin
       Result := False;
       Exit;
     {$ENDIF}
+  end;
+
+  if AArr.Len = 0 then  //verify again, in case the above typecasting doesn't work
+  begin
+    Result := True;
+    Exit;
   end;
 
   for i := ADelIndex to AArr.Len - 2 do
@@ -1464,6 +1470,10 @@ begin
   {$ENDIF}
 
   Result := True;
+
+  if AArr2.Len = 0 then
+    Exit;
+
   for i := 0 to TDynArrayLengthSig(AArr2.Len) - 1 do
   begin
     Result := Result and AddDynArrayOfByteToDynOfDynOfByte(AArr1, AArr2.Content^[i]^);

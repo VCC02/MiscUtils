@@ -48,7 +48,7 @@ implementation
 
 procedure IterationsToStr(i, j: Integer; var OutRes: string);
 var
-  s1: string[6];
+  s1: string[10];
 begin
   strcat(OutRes, ' at i = ');
   IntToStr(i, s1);

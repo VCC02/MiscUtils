@@ -64,6 +64,45 @@ var
   i: Integer;
   sss: string[20];
   
+  CauseStr, AddressStr: string[30];
+  
+procedure GenExcept;
+var
+  Cause, Address: DWord;
+begin
+  Cause := CP0_GET(CP0_CAUSE);
+  //Cause := (Cause and $7C) shr 2;
+  Address := CP0_GET(CP0_EPC);
+
+  UART_WriteLn_Text('Exception:');
+
+  //LongWordToHex(Cause, CauseStr);      //this call generates another exception
+  //LongWordToHex(Address, AddressStr);  //this call generates another exception
+  LongWordToStr(Cause, CauseStr);
+  LongWordToStr(Address, AddressStr);
+  
+  UART_WriteLn_Text('Cause');
+  UART_WriteLn_Text(CauseStr);
+  UART_WriteLn_Text('Address');
+  UART_WriteLn_Text(AddressStr);
+  
+{  Output example:
+Cause
+   8388636
+
+Address
+2634100740
+
+AddrHex: 9D013004
+}
+
+  repeat
+    LED1 := not LED1;
+    LED2 := not LED1;
+    Delay_ms(500);
+  until False;
+end;
+  
 
 procedure SetPins;
 begin
@@ -115,9 +154,10 @@ begin
   UART2_Write(#10);
   UART_Set_Active(@UART2_Read, @UART2_Write, @UART2_Data_Ready, @UART2_Tx_Idle); // set UART2 active
 
-  TTestDynArrays_RunTests;
+  //TTestDynArrays_RunTests;
   TTestDynOfDynOfByteCase_RunTests;
-  TTestDynOfDynOfDynOfByteCase_RunTests;
+  //TTestDynOfDynOfDynOfByteCase_RunTests;
+  TTestDynArraysOfPtrUIntCase_RunTests;
   
   UART_WriteLn_Text('Done_All');
   LED1 := 1;
