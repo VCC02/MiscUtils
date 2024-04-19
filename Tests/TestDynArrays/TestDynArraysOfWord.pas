@@ -34,7 +34,7 @@ uses
 
 type
 
-  TTestDynArraysOfWord = class(TTestCase)
+  TTestDynArraysOfWordCase = class(TTestCase)
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -104,7 +104,7 @@ const
   CUninitializedDynArrayErrMsg = 'The DynArray is not initialized. Please call InitDynArrayOfWordToEmpty before working with DynArray functions.';
 
 
-procedure TTestDynArraysOfWord.SetUp;
+procedure TTestDynArraysOfWordCase.SetUp;
 begin
   {$IFDEF UsingDynTFT}
     MM_Init;
@@ -116,13 +116,13 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TearDown;
+procedure TTestDynArraysOfWordCase.TearDown;
 begin
 
 end;
 
 
-procedure TTestDynArraysOfWord.TestSimpleAllocation;
+procedure TTestDynArraysOfWordCase.TestSimpleAllocation;
 var
   Arr: TDynArrayOfWord;
   AllocationResult: Boolean;
@@ -140,7 +140,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestWritingToArray;
+procedure TTestDynArraysOfWordCase.TestWritingToArray;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -155,7 +155,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestReallocationToLargerArray;
+procedure TTestDynArraysOfWordCase.TestReallocationToLargerArray;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -176,7 +176,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestReallocationToSmallerArray;
+procedure TTestDynArraysOfWordCase.TestReallocationToSmallerArray;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -197,7 +197,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestConcatDynArrays_HappyFlow;
+procedure TTestDynArraysOfWordCase.TestConcatDynArrays_HappyFlow;
 var
   Arr1, Arr2: TDynArrayOfWord;
   AllocationResult: Boolean;
@@ -237,7 +237,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestConcatDynArray_WithEmpty;
+procedure TTestDynArraysOfWordCase.TestConcatDynArray_WithEmpty;
 var
   Arr1, Arr2: TDynArrayOfWord;
   AllocationResult: Boolean;
@@ -264,7 +264,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestConcatEmptyDynArray_WithValid;
+procedure TTestDynArraysOfWordCase.TestConcatEmptyDynArray_WithValid;
 var
   Arr1, Arr2: TDynArrayOfWord;
   AllocationResult: Boolean;
@@ -291,7 +291,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestConcatEmptyDynArray_WithEmpty;
+procedure TTestDynArraysOfWordCase.TestConcatEmptyDynArray_WithEmpty;
 var
   Arr1, Arr2: TDynArrayOfWord;
   AllocationResult: Boolean;
@@ -310,7 +310,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.Test_CallDynLength_WithoutInitDynArray;
+procedure TTestDynArraysOfWordCase.Test_CallDynLength_WithoutInitDynArray;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -323,7 +323,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.Test_CallSetDynLength_WithoutInitDynArray;
+procedure TTestDynArraysOfWordCase.Test_CallSetDynLength_WithoutInitDynArray;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -336,7 +336,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.Test_CallConcatDynArrays_WithoutFirstInitDynArray;
+procedure TTestDynArraysOfWordCase.Test_CallConcatDynArrays_WithoutFirstInitDynArray;
 var
   Arr1, Arr2: TDynArrayOfWord;
 begin
@@ -354,7 +354,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.Test_CallConcatDynArrays_WithoutSecondInitDynArray;
+procedure TTestDynArraysOfWordCase.Test_CallConcatDynArrays_WithoutSecondInitDynArray;
 var
   Arr1, Arr2: TDynArrayOfWord;
 begin
@@ -372,7 +372,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstWords_ZeroLength;
+procedure TTestDynArraysOfWordCase.TestDeleteFirstWords_ZeroLength;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -393,7 +393,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstWords_LessThanLength;
+procedure TTestDynArraysOfWordCase.TestDeleteFirstWords_LessThanLength;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -412,7 +412,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstWords_LessThanLength_MoreItems;
+procedure TTestDynArraysOfWordCase.TestDeleteFirstWords_LessThanLength_MoreItems;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -441,7 +441,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstWords_SameAsLength;
+procedure TTestDynArraysOfWordCase.TestDeleteFirstWords_SameAsLength;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -459,7 +459,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFirstWords_GreaterThanLength;
+procedure TTestDynArraysOfWordCase.TestDeleteFirstWords_GreaterThanLength;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -473,7 +473,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCopyFromDynArray_HappyFlow;
+procedure TTestDynArraysOfWordCase.TestCopyFromDynArray_HappyFlow;
 var
   Src, Dest: TDynArrayOfWord;
 begin
@@ -487,7 +487,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCopyFromDynArray_0Length;
+procedure TTestDynArraysOfWordCase.TestCopyFromDynArray_0Length;
 var
   Src, Dest: TDynArrayOfWord;
 begin
@@ -501,7 +501,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCopyFromDynArray_PartialOutOfContent;
+procedure TTestDynArraysOfWordCase.TestCopyFromDynArray_PartialOutOfContent;
 var
   Src, Dest: TDynArrayOfWord;
 begin
@@ -516,7 +516,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCopyFromDynArray_CompletelyOutOfContent;
+procedure TTestDynArraysOfWordCase.TestCopyFromDynArray_CompletelyOutOfContent;
 var
   Src, Dest: TDynArrayOfWord;
 begin
@@ -530,7 +530,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCopyFromDynArray_EmptySource;
+procedure TTestDynArraysOfWordCase.TestCopyFromDynArray_EmptySource;
 var
   Src, Dest: TDynArrayOfWord;
 begin
@@ -543,7 +543,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFromDynArray_EmptyArray;
+procedure TTestDynArraysOfWordCase.TestDeleteFromDynArray_EmptyArray;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -554,7 +554,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFromDynArray_IndexOutOfBounds;
+procedure TTestDynArraysOfWordCase.TestDeleteFromDynArray_IndexOutOfBounds;
 var
   Arr: TDynArrayOfWord;
   FoundException: Boolean;
@@ -577,7 +577,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFromDynArray_HappyFlow1;
+procedure TTestDynArraysOfWordCase.TestDeleteFromDynArray_HappyFlow1;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -602,7 +602,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDeleteFromDynArray_HappyFlow2;
+procedure TTestDynArraysOfWordCase.TestDeleteFromDynArray_HappyFlow2;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -624,7 +624,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow1;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_HappyFlow1;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -639,7 +639,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow2;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_HappyFlow2;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -655,7 +655,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow3;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_HappyFlow3;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -675,7 +675,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow4;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_HappyFlow4;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -697,7 +697,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow5;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_HappyFlow5;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -718,7 +718,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_HappyFlow6;  //the search wraps around to find a free number
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_HappyFlow6;  //the search wraps around to find a free number
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -747,7 +747,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_FullArray1;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_FullArray1;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -768,7 +768,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_FullArray2;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_FullArray2;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -789,7 +789,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_FullArray3;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_FullArray3;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -810,7 +810,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestCreateUniqueWord_FullArray4;
+procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_FullArray4;
 var
   Arr: TDynArrayOfWord;
   i: Integer;
@@ -831,7 +831,7 @@ begin
 end;
 
 
-procedure TTestDynArraysOfWord.TestDoubleFree;
+procedure TTestDynArraysOfWordCase.TestDoubleFree;
 var
   Arr: TDynArrayOfWord;
 begin
@@ -855,7 +855,7 @@ end;
 
 initialization
 
-  RegisterTest(TTestDynArraysOfWord);
+  RegisterTest(TTestDynArraysOfWordCase);
 end.
 
 

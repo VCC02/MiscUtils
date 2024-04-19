@@ -24,7 +24,9 @@ File4=..\TestUtilsMik.mpas
 File5=TestDynOfDynOfByteCase.mpas
 File6=TestDynOfDynOfDynOfByteCase.mpas
 File7=TestDynArraysOfPtrUIntCase.mpas
-Count=8
+File8=TestDynArraysOfWordCase.mpas
+File9=TestDynOfDynOfWordCase.mpas
+Count=10
 [BINARIES]
 Count=0
 [IMAGES]

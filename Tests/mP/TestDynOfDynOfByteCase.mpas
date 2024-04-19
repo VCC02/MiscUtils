@@ -143,12 +143,13 @@ begin
     for j := 0 to 2 do
       Arr.Content^[i]^.Content^[j] := i * 10 + j;
   end;
-
+                    //so far, so good
   ExpectBoolean(SetDynOfDynOfByteLength(Arr, 30)).ToBe(True, 'External array re-allocation');
   //try
     for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
       for j := 0 to 2 do
       begin
+        s := ' ';
         IterationsToStr(i, j, s);
         ExpectDWord(Arr.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), s);
       end;
@@ -180,6 +181,7 @@ begin
     for i := 0 to 10 - 1 do  //test up to the old length, as this content has to be valid only
       for j := 0 to 2 do
       begin
+        s := ' ';
         IterationsToStr(i, j, s);
         ExpectDWord(Arr.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), s);
       end;
@@ -225,6 +227,7 @@ begin
   for i := 0 to 20 - 1 do  //test up to the old length, as this content has to be valid only
     for j := 0 to 2 do
     begin
+      s := ' ';
       IterationsToStr(i, j, s);
       ExpectDWord(Arr.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), s);
     end;

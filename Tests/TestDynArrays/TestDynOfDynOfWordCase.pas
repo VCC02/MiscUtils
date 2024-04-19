@@ -43,9 +43,9 @@ type
     procedure TestWritingToArray;
     procedure TestReallocationToLargerArray;
     procedure TestReallocationToSmallerArray;
-    procedure Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow;
-    procedure Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray;
-    procedure Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray;
+    procedure Test_AddDynArrayOfWordToDynOfDynOfWord_HappyFlow;
+    procedure Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutFirstInitDynArray;
+    procedure Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutSecondInitDynArray;
     procedure TestDoubleFree;
 
     procedure TestDeleteItem_FromEmptyArray;
@@ -193,7 +193,7 @@ begin
 end;
 
 
-procedure TTestDynOfDynOfWordCase.Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow;
+procedure TTestDynOfDynOfWordCase.Test_AddDynArrayOfWordToDynOfDynOfWord_HappyFlow;
 var
   Arr: TDynArrayOfTDynArrayOfWord;
   NewArr: TDynArrayOfWord;
@@ -227,13 +227,13 @@ begin
       Expect(Arr.Content^[i]^.Content^[j]).ToBe(DWord(i * 10 + j), ' at i = ' + IntToStr(i) + '  j = ' + IntToStr(j));
 
   Expect(Arr.Len).ToBe(21);
-  Expect(Arr.Content^[20]^.Content).ToBe(@[200, 201, 202, 203, 204, 205, 206]);
+  Expect(@Arr.Content^[20]^.Content^, 7 shl 1).ToBe(@[200, 0, 201, 0, 202, 0, 203, 0, 204, 0, 205, 0, 206, 0]);
 
   FreeDynOfDynOfWordArray(Arr); //freeing only if successfully allocated
 end;
 
 
-procedure TTestDynOfDynOfWordCase.Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray;
+procedure TTestDynOfDynOfWordCase.Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutFirstInitDynArray;
 var
   Arr: TDynArrayOfTDynArrayOfWord;
   NewArr: TDynArrayOfWord;
@@ -252,7 +252,7 @@ begin
 end;
 
 
-procedure TTestDynOfDynOfWordCase.Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray;
+procedure TTestDynOfDynOfWordCase.Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutSecondInitDynArray;
 var
   Arr: TDynArrayOfTDynArrayOfWord;
   NewArr: TDynArrayOfWord;

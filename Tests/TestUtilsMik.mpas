@@ -50,6 +50,7 @@ procedure IterationsToStr(i, j: Integer; var OutRes: string);
 var
   s1: string[10];
 begin
+  OutRes[0] := #0;
   strcat(OutRes, ' at i = ');
   IntToStr(i, s1);
   strcat(OutRes, s1);
