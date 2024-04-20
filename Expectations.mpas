@@ -114,24 +114,7 @@ begin
   UART_Write_Text(CCRLF);
 end;
   
-  
-{$IFDEF GenerateException}
-  procedure GenExcept;
-  var
-    Cause, Address: DWord;
-    CauseStr, AddressStr: array[20] of Char;
-  begin
-    Cause := CP0_GET(CP0_CAUSE);
-    //Cause := (Cause and $7C) shr 2;
-    Address := CP0_GET(CP0_EPC);
 
-    {$IFnDEF SkipLoggingException}  //useful on simulator
-      UART_WriteLn_Text(ExceptionMsg);
-    {$ENDIF}
-  end;
-{$ENDIF}
-
-  
 procedure ExceptionCreate(var AMsg: string);
 {$IFDEF GenerateException}
   var

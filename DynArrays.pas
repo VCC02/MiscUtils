@@ -446,8 +446,13 @@ function AddBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DW
   function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 
   //for compatibility with mP
-  procedure MemMove(ADest, ASrc: Pointer; ACount: Integer);
+  procedure MemMove(ADest, ASrc: Pointer; ACount: LongInt);
+{$ELSE}
+  {$IFDEF RedefineMemMove}
+    procedure MemMove32(ADest, ASrc: PByte; ACount: LongInt);
+  {$ENDIF}
 {$ENDIF}
+  function Min32(a, b: LongInt): LongInt;
 
 
 {$IFDEF IsDesktop}
@@ -473,7 +478,7 @@ implementation
 
 {$IFDEF IsDesktop}
   uses
-    SysUtils, Math;
+    SysUtils;
 
   //These checks are not available in mP, but are useful as a debugging means on Desktop.
   procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
@@ -631,7 +636,7 @@ begin
   {$IFDEF IsDesktop}
     MemMove(ADest.Content, @AString[1], TempLen);
   {$ELSE}
-    MemMove(DWord(ADest.Content), DWord(@AString[0]), TempLen);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(ADest.Content), DWord(@AString[0]), TempLen);
   {$ENDIF}
 end;
 
@@ -655,7 +660,7 @@ begin
   {$IFDEF IsDesktop}
     MemMove(ADest.Content, @AString[1], TempLen shl 1);
   {$ELSE}
-    MemMove(DWord(ADest.Content), DWord(@AString[0]), TempLen shl 1);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(ADest.Content), DWord(@AString[0]), TempLen shl 1);
   {$ENDIF}
 end;
 
@@ -706,13 +711,13 @@ begin
   {$IFDEF IsDesktop}
     MemMove(ADest.Content, @AString[1], TempLen shl CArchBitShift);
   {$ELSE}
-    MemMove(DWord(ADest.Content), DWord(@AString[0]), TempLen shl CArchBitShift);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(ADest.Content), DWord(@AString[0]), TempLen shl CArchBitShift);
   {$ENDIF}
 
   if IsPartial > 0 then
   begin
     ZeroPaddingSize := (TempLen shl CArchBitShift) - Length(AString);
-    MemMove(PPtrUInt(PtrUint(@ADest.Content^[TempLen - 1]) + ZeroPaddingSize), @ZeroString[{$IFDEF IsDesktop}1{$ELSE}0{$ENDIF}], ZeroPaddingSize);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(PPtrUInt(PtrUint(@ADest.Content^[TempLen - 1]) + ZeroPaddingSize), @ZeroString[{$IFDEF IsDesktop}1{$ELSE}0{$ENDIF}], ZeroPaddingSize);
   end;
 end;
 
@@ -734,7 +739,7 @@ begin
       Exit;
     end;
 
-    MemMove(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len);
     ADestStr[AArr.Len] := #0;
   {$ENDIF}
 end;
@@ -757,7 +762,7 @@ begin
       Exit;
     end;
 
-    MemMove(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len shl 1);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len shl 1);
     ADestStr[AArr.Len shl 1] := #0;
   {$ENDIF}
 end;
@@ -794,7 +799,7 @@ begin
       Exit;
     end;
 
-    MemMove(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len shl CArchBitShift);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len shl CArchBitShift);
     ADestStr[AArr.Len shl CArchBitShift] := #0;
   {$ENDIF}
 end;
@@ -830,7 +835,7 @@ begin
 
   Result := SetDynLength(ADest, ALen);
   if Result and (ALen > 0) then
-    MemMove(ADest.Content, ABuf, ALen);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(ADest.Content, ABuf, ALen);
 end;
 
 
@@ -854,7 +859,7 @@ begin
     {$IFDEF IsDesktop}
       MemMove(PPtrUInt(PtrUInt(@ADest.Content^[OldLen])), ABuf, ALen);
     {$ELSE}
-      MemMove(DWord(PtrUInt(@ADest.Content^[OldLen])), ABuf, ALen);
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(PtrUInt(@ADest.Content^[OldLen])), ABuf, ALen);
     {$ENDIF}
 end;
 
@@ -909,13 +914,13 @@ end;
     {$IFDEF IsDesktop}
       MemMove(ADest.Content, @AArray[1], TempLen);
     {$ELSE}
-      MemMove(DWord(ADest.Content), DWord(@AArray[0]), TempLen);
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(ADest.Content), DWord(@AArray[0]), TempLen);
     {$ENDIF}
   end;
 
 
   //for compatibility with mP
-  procedure MemMove(ADest, ASrc: Pointer; ACount: Integer);
+  procedure MemMove(ADest, ASrc: Pointer; ACount: LongInt);
   begin
     {$IFDEF UsingDynTFT}
       EnterCriticalSection(MMCritSec);
@@ -928,8 +933,40 @@ end;
       end;
     {$ENDIF}
   end;
+{$ELSE}
+  {$IFDEF RedefineMemMove}
+    procedure MemMove32(ADest, ASrc: PByte; ACount: LongInt);
+    type
+      TZeroArr = array[0..0] of Byte;
+      PZeroArr = ^TZeroArr;
+    var
+      i, ACountM1: LongInt;
+    begin
+      if ADest = ASrc then
+        Exit;
+
+      ACountM1 := ACount - 1;
+      if ADest > ASrc then   //this ensures that the item is being read before being overwritten
+      begin
+        for i := ACountM1 downto 0 do
+          PZeroArr(ADest)^[i] := PZeroArr(ASrc)^[i];
+      end
+      else
+      begin
+        for i := 0 to ACountM1 do
+          PZeroArr(ADest)^[i] := PZeroArr(ASrc)^[i];
+      end;
+    end;
+  {$ENDIF}
 {$ENDIF}
 
+function Min32(a, b: LongInt): LongInt;
+begin
+  if a < b then
+    Result := a
+  else
+    Result := b;
+end;
 
 //array of byte
 
@@ -983,7 +1020,10 @@ begin
     Exit;
   end;
 
-  OldPointer := PIntPtr(AArr.Content);
+  if AArr.Len = 0 then
+    OldPointer := nil
+  else
+    OldPointer := PIntPtr(AArr.Content);
 
   if (OldPointer = nil) and (AArr.Len > 0) then
     Exit;
@@ -996,7 +1036,8 @@ begin
       Exit;
     end;
 
-    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len));   //OldPointer = src, AArr.Content = dest
+    if OldPointer <> nil then
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len));   //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
@@ -1012,7 +1053,8 @@ begin
 
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
 
-      MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len))   // the rest of the content is not initialized
+      if OldPointer <> nil then
+        MemMove(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len))   // the rest of the content is not initialized
     except
       Result := False;
     end;
@@ -1074,7 +1116,7 @@ begin
   {$ELSE}
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len));  //NewPointer := @AArr1.Content^[OldArr1Len];
   {$ENDIF}
-  MemMove(NewPointer, AArr2.Content, AArr2.Len);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(NewPointer, AArr2.Content, AArr2.Len);
 
   Result := True;
 end;
@@ -1114,7 +1156,7 @@ begin
     Exit;
   end;
 
-  MemMove(AArr.Content, PartialArr.Content, NewLen);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, PartialArr.Content, NewLen);
   FreeDynArray(PartialArr);
 
   Result := SetDynLength(AArr, NewLen);
@@ -1153,7 +1195,7 @@ begin
   {$ELSE}
     OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex));
   {$ENDIF}
-  MemMove(ADestArr.Content, OldPointer, ACount);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(ADestArr.Content, OldPointer, ACount);
 end;
 
 
@@ -1297,7 +1339,7 @@ begin
     end;
   {$ENDIF}
 
-  MaxCopyIdx := TDynArrayLengthSig(Min(AArr.Len, ANewLength)) - 1;
+  MaxCopyIdx := TDynArrayLengthSig(Min32(AArr.Len, ANewLength)) - 1;
   for i := 0 to MaxCopyIdx do
   begin
     InitDynArrayToEmpty(AArr.Content^[i]^);
@@ -1434,7 +1476,7 @@ begin
     {$ENDIF}
   end;
 
-  MemMove(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfByte));
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfByte));
 
   {$IFnDEF IsDesktop}
     {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len * SizeOf(PDynArrayOfByte));
@@ -1537,7 +1579,10 @@ begin
     Exit;
   end;
 
-  OldPointer := PIntPtr(AArr.Content);
+  if AArr.Len = 0 then
+    OldPointer := nil
+  else
+    OldPointer := PIntPtr(AArr.Content);
 
   if (OldPointer = nil) and (AArr.Len > 0) then
     Exit;
@@ -1550,7 +1595,8 @@ begin
       Exit;
     end;
 
-    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl 1);  //OldPointer = src, AArr.Content = dest
+    if OldPointer <> nil then
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl 1);  //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
@@ -1564,8 +1610,9 @@ begin
         GetMem(AArr.Content, ANewLength shl 1);
       {$ENDIF}
 
+      if OldPointer <> nil then
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
-      MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl 1);    // the rest of the content is not initialized
+        MemMove(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl 1);    // the rest of the content is not initialized
     except
       Result := False;
     end;
@@ -1627,7 +1674,7 @@ begin
   {$ELSE}
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len shl 1));  //NewPointer := @AArr1.Content^[OldArr1Len shl 1];
   {$ENDIF}
-  MemMove(NewPointer, AArr2.Content, AArr2.Len shl 1);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(NewPointer, AArr2.Content, AArr2.Len shl 1);
 
   Result := True;
 end;
@@ -1667,7 +1714,7 @@ begin
     Exit;
   end;
 
-  MemMove(AArr.Content, PartialArr.Content, NewLen shl 1);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, PartialArr.Content, NewLen shl 1);
   FreeDynArrayOfWord(PartialArr);
 
   Result := SetDynOfWordLength(AArr, NewLen);
@@ -1700,7 +1747,7 @@ begin
   {$ELSE}
     OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex shl 1));
   {$ENDIF}
-  MemMove(ADestArr.Content, OldPointer, ACount shl 1);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(ADestArr.Content, OldPointer, ACount shl 1);
 end;
 
 
@@ -1794,6 +1841,9 @@ begin
         Exit;
 
       Inc(TempNumber);  //Jump past $FFFF, so it should become 0, to verify the other part of the array.
+      if TempNumber > $FFFF then
+        TempNumber := 0;
+
       Result := $FFFF;  //Mark as wrapped around.
     end
     else
@@ -1921,7 +1971,7 @@ begin
     end;
   {$ENDIF}
 
-  MaxCopyIdx := TDynArrayLengthSig(Min(AArr.Len, ANewLength)) - 1;
+  MaxCopyIdx := TDynArrayLengthSig(Min32(AArr.Len, ANewLength)) - 1;
   for i := 0 to MaxCopyIdx do
   begin
     InitDynArrayOfWordToEmpty(AArr.Content^[i]^);
@@ -2051,7 +2101,7 @@ begin
     {$ENDIF}
   end;
 
-  MemMove(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfWord));
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, NewLen * SizeOf(PDynArrayOfWord));
 
   {$IFnDEF IsDesktop}
     {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer, AArr.Len * SizeOf(PDynArrayOfWord));
@@ -2150,7 +2200,10 @@ begin
     Exit;
   end;
 
-  OldPointer := PIntPtr(AArr.Content);
+  if AArr.Len = 0 then
+    OldPointer := nil
+  else
+    OldPointer := PIntPtr(AArr.Content);
 
   if (OldPointer = nil) and (AArr.Len > 0) then
     Exit;
@@ -2163,7 +2216,8 @@ begin
       Exit;
     end;
 
-    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl 2);  //OldPointer = src, AArr.Content = dest
+    if OldPointer <> nil then
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl 2);  //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
@@ -2177,8 +2231,9 @@ begin
         GetMem(AArr.Content, ANewLength shl 2);
       {$ENDIF}
 
+      if OldPointer <> nil then
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
-      MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl 2);    // the rest of the content is not initialized
+        MemMove(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl 2);    // the rest of the content is not initialized
     except
       Result := False;
     end;
@@ -2240,7 +2295,7 @@ begin
   {$ELSE}
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len shl 2));  //NewPointer := @AArr1.Content^[OldArr1Len shl 2];
   {$ENDIF}
-  MemMove(NewPointer, AArr2.Content, AArr2.Len shl 2);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(NewPointer, AArr2.Content, AArr2.Len shl 2);
 
   Result := True;
 end;
@@ -2404,7 +2459,10 @@ begin
     Exit;
   end;
 
-  OldPointer := PIntPtr(AArr.Content);
+  if AArr.Len = 0 then
+    OldPointer := nil
+  else
+    OldPointer := PIntPtr(AArr.Content);
 
   if (OldPointer = nil) and (AArr.Len > 0) then
     Exit;
@@ -2417,7 +2475,8 @@ begin
       Exit;
     end;
 
-    MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl CArchBitShift);  //OldPointer = src, AArr.Content = dest
+    if OldPointer <> nil then
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl CArchBitShift);  //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
@@ -2431,8 +2490,9 @@ begin
         GetMem(AArr.Content, ANewLength shl CArchBitShift);
       {$ENDIF}
 
+      if OldPointer <> nil then
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
-      MemMove(AArr.Content, OldPointer, Min(ANewLength, AArr.Len) shl CArchBitShift);  //OldPointer = src, AArr.Content = dest   // the rest of the content is not initialized
+        MemMove(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl CArchBitShift);  //OldPointer = src, AArr.Content = dest   // the rest of the content is not initialized
     except
       Result := False;
     end;
@@ -2494,7 +2554,7 @@ begin
   {$ELSE}
     NewPointer := Pointer(PtrUInt(AArr1.Content) + PtrUInt(OldArr1Len shl CArchBitShift));  //NewPointer := @AArr1.Content^[OldArr1Len shl CArchBitShift];
   {$ENDIF}
-  MemMove(NewPointer, AArr2.Content, AArr2.Len shl CArchBitShift);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(NewPointer, AArr2.Content, AArr2.Len shl CArchBitShift);
 
   Result := True;
 end;
@@ -2534,7 +2594,7 @@ begin
     Exit;
   end;
 
-  MemMove(AArr.Content, PartialArr.Content, NewLen shl CArchBitShift);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, PartialArr.Content, NewLen shl CArchBitShift);
   FreeDynArrayOfPtrUInt(PartialArr);
 
   Result := SetDynOfPtrUIntLength(AArr, NewLen);
@@ -2567,7 +2627,7 @@ begin
   {$ELSE}
     OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex shl CArchBitShift));
   {$ENDIF}
-  MemMove(ADestArr.Content, OldPointer, ACount shl CArchBitShift);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(ADestArr.Content, OldPointer, ACount shl CArchBitShift);
 end;
 
 
@@ -2605,7 +2665,7 @@ begin
     DelPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt(ADelIndex shl CArchBitShift));  //NewPointer := @AArr.Content^[ADelIndex shl CArchBitShift];
     NextPointer := Pointer(PtrUInt(AArr.Content) + PtrUInt((ADelIndex + 1) shl CArchBitShift));   //NextPointer := DelPointer + SizeOf(Pointer);
   {$ENDIF}
-  MemMove(DelPointer, NextPointer, (TDynArrayLengthSig(AArr.Len) - ADelIndex - 1) shl CArchBitShift);
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DelPointer, NextPointer, (TDynArrayLengthSig(AArr.Len) - ADelIndex - 1) shl CArchBitShift);
 
   Result := SetDynOfPtrUIntLength(AArr, AArr.Len - 1);
 end;

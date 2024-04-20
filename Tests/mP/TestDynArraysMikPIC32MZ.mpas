@@ -1,7 +1,7 @@
 {
     Copyright (C) 2024 VCC
-    creation date: 30 May 2023
-    initial release date: 18 Apr 2024
+    creation date: 20 Apr 2024 - copied from TestDynArraysMik.mpas
+    initial release date: 20 Apr 2024
 
     author: VCC
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,36 +22,31 @@
 }
 
 
-program TestDynArraysMik;
+program TestDynArraysMikPIC32MZ;
 
 uses
   Expectations;
 
-//Board: custom test board with PIC32MX270F256B.
+//Board: PIC32MZ Embedded Connectivity with FPU (EF) Starter Kit.
 
 const HEAP_START: DWord = $A0000FDC;  //make sure this is a valid address and is DWord aligned !
-const HEAP_SIZE: DWord = {$I MaxMM.inc}   //Make sure enough memory is allocated. See the desktop application (simulator) for guidance.
+const HEAP_SIZE: DWord = 500000   //Make sure enough memory is allocated. The largest tested array is 65536 items * 4bytes. More than double may be required.
 ;
 
 
 var
-  U2TX: sbit at LATB.0;
-  U2RX: sbit at PORTB.1;
-  U1TX: sbit at LATB.15;
-  U1RX: sbit at PORTB.13;
-  
-  Btn: sbit at PORTB.4;
+  U2TX: sbit at LATB.14;        //AN9/RPB14/SCK3/RB14
+  U2RX: sbit at PORTG.6;        //AN14/C1IND/RPG6/SCK2/RG6
+
   LED1: sbit at LATA.4;
   LED2: sbit at LATB.14;
   
-  U2TX_dir: sbit at TRISB.0;
-  U2RX_dir: sbit at TRISB.1;
-  U1TX_dir: sbit at TRISB.15;
-  U1RX_dir: sbit at TRISB.13;
-  
-  Btn_dir: sbit at TRISB.4;
-  LED1_dir: sbit at TRISA.4;
-  LED2_dir: sbit at TRISB.14;
+  U2TX_dir: sbit at TRISB.14;
+  U2RX_dir: sbit at TRISG.6;
+
+  LED_R: sbit at LATH.0;    //red
+  LED_G: sbit at LATH.1;    //yellow
+  LED_B: sbit at LATH.2;    //green
 
   CauseStr, AddressStr: string[30];
   
@@ -76,35 +71,47 @@ begin
   UART_WriteLn_Text(AddressStr);
 
   repeat
-    LED1 := not LED1;
-    LED2 := not LED1;
+    LED_R := not LED_R;
+    LED_G := not LED_G;
+    LED_B := not LED_B;
     Delay_ms(500);
   until False;
 end;
   
+  
+procedure InitRGBLED;
+begin
+  TRISH.0 := 0;
+  TRISH.1 := 0;
+  TRISH.2 := 0;
+  LED_R := 0;
+  LED_G := 0;
+  LED_B := 0;
+end;
+
 
 procedure SetPins;
 begin
   ANSELA := 0;
   ANSELB := 0;
+  ANSELC := 0;
+  ANSELD := 0;
+  ANSELE := 0;
+  ANSELF := 0;
+  ANSELG := 0;
+  ANSELH := 0;
+  ANSELJ := 0;
 
   U2TX_dir := 0;
   U2RX_dir := 1;
-  U1TX_dir := 0;
-  U1RX_dir := 1;
+
+  JTAGEN_bit := 0;
   
-  Btn_dir := 1;
-  LED1_dir := 0;
-  LED2_dir := 0;
-  
-  LED1 := 0;
-  LED2 := 0;
+  InitRGBLED;
   
   Unlock_IOLOCK;
-  U2RXR := 2; //RPB1
-  U1RXR := 3; //RPB13
-  RPB0R := 2; //U2TX = RB0
-  RPB15R := 1; //U1TX = RB15
+  U2RXR := 1; //AN14/C1IND/RPG6/SCK2/RG6
+  RPB14R := 2; //U2TX = AN9/RPB14/SCK3/RB14
 
   Lock_IOLOCK;
 end;

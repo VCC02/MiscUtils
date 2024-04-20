@@ -676,11 +676,13 @@ var
   i: LongInt;
 begin
   {$IFDEF P32}
-    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
-    begin
-      UART_WriteLn_Text('Test skipped because of low RAM.');
-      Exit;
-    end;
+    {$IFDEF PIC32MX} //defined in .pld file for PIC32MX only
+      if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+      begin
+        UART_WriteLn_Text('Test skipped because of low RAM.');
+        Exit;
+      end;
+    {$ENDIF}
   {$ENDIF}
 
   InitDynArrayOfWordToEmpty(Arr);
@@ -693,7 +695,7 @@ begin
   ExpectDWord(Arr.Len).ToBe(65535, '');
 
   for i := 0 to 65534 - 1 do
-    ExpectDWord(Arr.Content^[i]).ToBe(i, '');
+    ExpectDWord(Arr.Content^[i]).ToBe(i, '<>');
 
   FreeDynArrayOfWord(Arr);
 end;
@@ -705,32 +707,34 @@ var
   i: LongInt;
 begin
   {$IFDEF P32}
-    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
-    begin
-      UART_WriteLn_Text('Test skipped because of low RAM.');
-      Exit;
-    end;
+    {$IFDEF PIC32MX} //defined in .pld file for PIC32MX only
+      if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+      begin
+        UART_WriteLn_Text('Test skipped because of low RAM.');
+        Exit;
+      end;
+    {$ENDIF}
   {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
 
-  ExpectBoolean(SetDynOfWordLength(Arr, 65534)).ToBe(True, '');
+  ExpectBoolean(SetDynOfWordLength(Arr, 65534)).ToBe(True, 'a');
   for i := 0 to 10 - 1 do
     Arr.Content^[i] := i;
 
   for i := 10 to 65534 - 1 do
     Arr.Content^[i] := i + 1;
 
-  ExpectDWord(CreateUniqueWord(Arr)).ToBe(10, '');
-  ExpectDWord(Arr.Len).ToBe(65535, '');
+  ExpectDWord(CreateUniqueWord(Arr)).ToBe(10, 'b');
+  ExpectDWord(Arr.Len).ToBe(65535, 'c');
 
   for i := 0 to 10 - 1 do
-    ExpectDWord(Arr.Content^[i]).ToBe(i, '');
+    ExpectDWord(Arr.Content^[i]).ToBe(i, 'd');
 
   for i := 10 to 65534 - 1 do
-    ExpectDWord(Arr.Content^[i]).ToBe(i + 1, '');
+    ExpectDWord(Arr.Content^[i]).ToBe(i + 1, 'e');
 
-  ExpectDWord(Arr.Content^[65534]).ToBe(10, '');
+  ExpectDWord(Arr.Content^[65534]).ToBe(10, 'f');
 
   FreeDynArrayOfWord(Arr);
 end;
@@ -742,11 +746,13 @@ var
   i: LongInt;
 begin
   {$IFDEF P32}
-    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
-    begin
-      UART_WriteLn_Text('Test skipped because of low RAM.');
-      Exit;
-    end;
+    {$IFDEF PIC32MX} //defined in .pld file for PIC32MX only
+      if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+      begin
+        UART_WriteLn_Text('Test skipped because of low RAM.');
+        Exit;
+      end;
+    {$ENDIF}
   {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
@@ -771,11 +777,13 @@ var
   i: LongInt;
 begin
   {$IFDEF P32}
-    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
-    begin
-      UART_WriteLn_Text('Test skipped because of low RAM.');
-      Exit;
-    end;
+    {$IFDEF PIC32MX} //defined in .pld file for PIC32MX only
+      if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+      begin
+        UART_WriteLn_Text('Test skipped because of low RAM.');
+        Exit;
+      end;
+    {$ENDIF}
   {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
@@ -800,11 +808,13 @@ var
   i: LongInt;
 begin
   {$IFDEF P32}
-    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
-    begin
-      UART_WriteLn_Text('Test skipped because of low RAM.');
-      Exit;
-    end;
+    {$IFDEF PIC32MX} //defined in .pld file for PIC32MX only
+      if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+      begin
+        UART_WriteLn_Text('Test skipped because of low RAM.');
+        Exit;
+      end;
+    {$ENDIF}
   {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
@@ -829,11 +839,13 @@ var
   i: LongInt;
 begin
   {$IFDEF P32}
-    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
-    begin
-      UART_WriteLn_Text('Test skipped because of low RAM.');
-      Exit;
-    end;
+    {$IFDEF PIC32MX} //defined in .pld file for PIC32MX only
+      if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+      begin
+        UART_WriteLn_Text('Test skipped because of low RAM.');
+        Exit;
+      end;
+    {$ENDIF}
   {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);

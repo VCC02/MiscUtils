@@ -700,7 +700,7 @@ end;
 procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_HappyFlow5;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
+  i: LongInt;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -721,7 +721,7 @@ end;
 procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_HappyFlow6;  //the search wraps around to find a free number
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
+  i: LongInt;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -750,7 +750,7 @@ end;
 procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_FullArray1;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
+  i: LongInt;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -771,7 +771,7 @@ end;
 procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_FullArray2;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
+  i: LongInt;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -792,7 +792,7 @@ end;
 procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_FullArray3;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
+  i: LongInt;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -813,7 +813,7 @@ end;
 procedure TTestDynArraysOfWordCase.TestCreateUniqueWord_FullArray4;
 var
   Arr: TDynArrayOfWord;
-  i: Integer;
+  i: LongInt;
 begin
   InitDynArrayOfWordToEmpty(Arr);
 
