@@ -110,9 +110,6 @@ begin
 end;
 
 
-var
-  Arr: TDynArrayOfByte;
-  Buf: ^Byte; volatile;
 begin
   Delay_ms(100);
 
@@ -128,10 +125,8 @@ begin
   LED2 := 0;
   
   UART2_Init(256000);
-  UART2_Write_Text('Starting tests...');
-  UART2_Write(#13);
-  UART2_Write(#10);
   UART_Set_Active(@UART2_Read, @UART2_Write, @UART2_Data_Ready, @UART2_Tx_Idle); // set UART2 active
+  UART_WriteLn_Text('Starting tests...');
 
   TTestDynArrays_RunTests;
   TTestDynOfDynOfByteCase_RunTests;

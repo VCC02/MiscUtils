@@ -675,7 +675,7 @@ end;
 
 //==============================================================================
 
-procedure RegisterTest(var ATestName: string; ATestProc: PTestProc);
+procedure RegisterTest_TTestDynArrays(var ATestName: string; ATestProc: PTestProc);
 begin
   if TestDynArrays.TestCount >= CMaxTestCountPerSuite then
   begin
@@ -703,36 +703,36 @@ begin
   TestDynArrays.SetUp := @TTestDynArrays_SetUp;
   TestDynArrays.TearDown := @TTestDynArrays_TearDown;
   
-  RegisterTest('TestSimpleAllocation', @TTestDynArrays_TestSimpleAllocation);
-  RegisterTest('TestWritingToArray', @TTestDynArrays_TestWritingToArray);
-  RegisterTest('TestReallocationToLargerArray', @TTestDynArrays_TestReallocationToLargerArray);
-  RegisterTest('TestReallocationToSmallerArray', @TTestDynArrays_TestReallocationToSmallerArray);
-  RegisterTest('TestConcatDynArrays_HappyFlow', @TTestDynArrays_TestConcatDynArrays_HappyFlow);
-  RegisterTest('TestConcatDynArray_WithEmpty', @TTestDynArrays_TestConcatDynArray_WithEmpty);
-  RegisterTest('TestConcatEmptyDynArray_WithValid', @TTestDynArrays_TestConcatEmptyDynArray_WithValid);
-  RegisterTest('TestConcatEmptyDynArray_WithEmpty', @TTestDynArrays_TestConcatEmptyDynArray_WithEmpty);
-  RegisterTest('Test_CallDynLength_WithoutInitDynArray', @TTestDynArrays_Test_CallDynLength_WithoutInitDynArray);
-  RegisterTest('Test_CallSetDynLength_WithoutInitDynArray', @TTestDynArrays_Test_CallSetDynLength_WithoutInitDynArray);
-  RegisterTest('Test_CallConcatDynArrays_WithoutFirstInitDynArray', @TTestDynArrays_Test_CallConcatDynArrays_WithoutFirstInitDynArray);
-  RegisterTest('Test_CallConcatDynArrays_WithoutSecondInitDynArray', @TTestDynArrays_Test_CallConcatDynArrays_WithoutSecondInitDynArray);
-  RegisterTest('TestDeleteFirstBytes_ZeroLength', @TTestDynArrays_TestDeleteFirstBytes_ZeroLength);
-  RegisterTest('TestDeleteFirstBytes_LessThanLength', @TTestDynArrays_TestDeleteFirstBytes_LessThanLength);
-  RegisterTest('TestDeleteFirstBytes_LessThanLength_MoreItems', @TTestDynArrays_TestDeleteFirstBytes_LessThanLength_MoreItems);
-  RegisterTest('TestDeleteFirstBytes_SameAsLength', @TTestDynArrays_TestDeleteFirstBytes_SameAsLength);
-  RegisterTest('TestDeleteFirstBytes_GreaterThanLength', @TTestDynArrays_TestDeleteFirstBytes_GreaterThanLength);
-  RegisterTest('TestDeleteFirstBytes_OneItemArray', @TTestDynArrays_TestDeleteFirstBytes_OneItemArray);
-  RegisterTest('TestDeleteFirstBytes_EmptyArray', @TTestDynArrays_TestDeleteFirstBytes_EmptyArray);
-  RegisterTest('TestCopyFromDynArray_HappyFlow', @TTestDynArrays_TestCopyFromDynArray_HappyFlow);
-  RegisterTest('TestCopyFromDynArray_0Length', @TTestDynArrays_TestCopyFromDynArray_0Length);
-  RegisterTest('TestCopyFromDynArray_PartialOutOfContent', @TTestDynArrays_TestCopyFromDynArray_PartialOutOfContent);
-  RegisterTest('TestCopyFromDynArray_CompletelyOutOfContent', @TTestDynArrays_TestCopyFromDynArray_CompletelyOutOfContent);
-  RegisterTest('TestCopyFromDynArray_EmptySource', @TTestDynArrays_TestCopyFromDynArray_EmptySource);
-  RegisterTest('TestDeleteFromDynArray_EmptyArray', @TTestDynArrays_TestDeleteFromDynArray_EmptyArray);
-  RegisterTest('TestDeleteFromDynArray_IndexOutOfBounds', @TTestDynArrays_TestDeleteFromDynArray_IndexOutOfBounds);
-  RegisterTest('TestDeleteFromDynArray_HappyFlow1', @TTestDynArrays_TestDeleteFromDynArray_HappyFlow1);
-  RegisterTest('TestDeleteFromDynArray_HappyFlow2', @TTestDynArrays_TestDeleteFromDynArray_HappyFlow2);
-  RegisterTest('TestDoubleFree', @TTestDynArrays_TestDoubleFree);
-  RegisterTest('TestAddBufferToDynArrayOfByte', @TTestDynArrays_TestAddBufferToDynArrayOfByte);
+  RegisterTest_TTestDynArrays('TestSimpleAllocation', @TTestDynArrays_TestSimpleAllocation);
+  RegisterTest_TTestDynArrays('TestWritingToArray', @TTestDynArrays_TestWritingToArray);
+  RegisterTest_TTestDynArrays('TestReallocationToLargerArray', @TTestDynArrays_TestReallocationToLargerArray);
+  RegisterTest_TTestDynArrays('TestReallocationToSmallerArray', @TTestDynArrays_TestReallocationToSmallerArray);
+  RegisterTest_TTestDynArrays('TestConcatDynArrays_HappyFlow', @TTestDynArrays_TestConcatDynArrays_HappyFlow);
+  RegisterTest_TTestDynArrays('TestConcatDynArray_WithEmpty', @TTestDynArrays_TestConcatDynArray_WithEmpty);
+  RegisterTest_TTestDynArrays('TestConcatEmptyDynArray_WithValid', @TTestDynArrays_TestConcatEmptyDynArray_WithValid);
+  RegisterTest_TTestDynArrays('TestConcatEmptyDynArray_WithEmpty', @TTestDynArrays_TestConcatEmptyDynArray_WithEmpty);
+  RegisterTest_TTestDynArrays('Test_CallDynLength_WithoutInitDynArray', @TTestDynArrays_Test_CallDynLength_WithoutInitDynArray);
+  RegisterTest_TTestDynArrays('Test_CallSetDynLength_WithoutInitDynArray', @TTestDynArrays_Test_CallSetDynLength_WithoutInitDynArray);
+  RegisterTest_TTestDynArrays('Test_CallConcatDynArrays_WithoutFirstInitDynArray', @TTestDynArrays_Test_CallConcatDynArrays_WithoutFirstInitDynArray);
+  RegisterTest_TTestDynArrays('Test_CallConcatDynArrays_WithoutSecondInitDynArray', @TTestDynArrays_Test_CallConcatDynArrays_WithoutSecondInitDynArray);
+  RegisterTest_TTestDynArrays('TestDeleteFirstBytes_ZeroLength', @TTestDynArrays_TestDeleteFirstBytes_ZeroLength);
+  RegisterTest_TTestDynArrays('TestDeleteFirstBytes_LessThanLength', @TTestDynArrays_TestDeleteFirstBytes_LessThanLength);
+  RegisterTest_TTestDynArrays('TestDeleteFirstBytes_LessThanLength_MoreItems', @TTestDynArrays_TestDeleteFirstBytes_LessThanLength_MoreItems);
+  RegisterTest_TTestDynArrays('TestDeleteFirstBytes_SameAsLength', @TTestDynArrays_TestDeleteFirstBytes_SameAsLength);
+  RegisterTest_TTestDynArrays('TestDeleteFirstBytes_GreaterThanLength', @TTestDynArrays_TestDeleteFirstBytes_GreaterThanLength);
+  RegisterTest_TTestDynArrays('TestDeleteFirstBytes_OneItemArray', @TTestDynArrays_TestDeleteFirstBytes_OneItemArray);
+  RegisterTest_TTestDynArrays('TestDeleteFirstBytes_EmptyArray', @TTestDynArrays_TestDeleteFirstBytes_EmptyArray);
+  RegisterTest_TTestDynArrays('TestCopyFromDynArray_HappyFlow', @TTestDynArrays_TestCopyFromDynArray_HappyFlow);
+  RegisterTest_TTestDynArrays('TestCopyFromDynArray_0Length', @TTestDynArrays_TestCopyFromDynArray_0Length);
+  RegisterTest_TTestDynArrays('TestCopyFromDynArray_PartialOutOfContent', @TTestDynArrays_TestCopyFromDynArray_PartialOutOfContent);
+  RegisterTest_TTestDynArrays('TestCopyFromDynArray_CompletelyOutOfContent', @TTestDynArrays_TestCopyFromDynArray_CompletelyOutOfContent);
+  RegisterTest_TTestDynArrays('TestCopyFromDynArray_EmptySource', @TTestDynArrays_TestCopyFromDynArray_EmptySource);
+  RegisterTest_TTestDynArrays('TestDeleteFromDynArray_EmptyArray', @TTestDynArrays_TestDeleteFromDynArray_EmptyArray);
+  RegisterTest_TTestDynArrays('TestDeleteFromDynArray_IndexOutOfBounds', @TTestDynArrays_TestDeleteFromDynArray_IndexOutOfBounds);
+  RegisterTest_TTestDynArrays('TestDeleteFromDynArray_HappyFlow1', @TTestDynArrays_TestDeleteFromDynArray_HappyFlow1);
+  RegisterTest_TTestDynArrays('TestDeleteFromDynArray_HappyFlow2', @TTestDynArrays_TestDeleteFromDynArray_HappyFlow2);
+  RegisterTest_TTestDynArrays('TestDoubleFree', @TTestDynArrays_TestDoubleFree);
+  RegisterTest_TTestDynArrays('TestAddBufferToDynArrayOfByte', @TTestDynArrays_TestAddBufferToDynArrayOfByte);
 end;
 
 end.

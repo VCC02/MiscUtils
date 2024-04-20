@@ -510,8 +510,13 @@ const
   CBoolStr: array[0..1] of string[6] = ('False', 'True');
   
 procedure BoolToStr(ABool: Boolean; var Res: string);
+var
+  BoolStr: array[0..1] of string[6];  //required on dsPIC
 begin
-  strcpy(Res, CBoolStr[Byte(ABool) and 1]);
+  BoolStr[0] := CBoolStr[0];
+  BoolStr[1] := CBoolStr[1];
+  //strcpy(Res, CBoolStr[Byte(ABool) and 1]);
+  strcpy(Res, BoolStr[Byte(ABool) and 1]);
 end;
 
 

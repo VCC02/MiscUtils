@@ -675,11 +675,13 @@ var
   Arr: TDynArrayOfWord;
   i: LongInt;
 begin
-  if BMXDRMSZ <= 131072 then //At least 2K is required for the tested array only.
-  begin
-    UART_WriteLn_Text('Test skipped because of low RAM.');
-    Exit;
-  end;
+  {$IFDEF P32}
+    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+    begin
+      UART_WriteLn_Text('Test skipped because of low RAM.');
+      Exit;
+    end;
+  {$ENDIF}
 
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -702,11 +704,13 @@ var
   Arr: TDynArrayOfWord;
   i: LongInt;
 begin
-  if BMXDRMSZ <= 131072 then //At least 2K is required for the tested array only.
-  begin
-    UART_WriteLn_Text('Test skipped because of low RAM.');
-    Exit;
-  end;
+  {$IFDEF P32}
+    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+    begin
+      UART_WriteLn_Text('Test skipped because of low RAM.');
+      Exit;
+    end;
+  {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -737,11 +741,13 @@ var
   Arr: TDynArrayOfWord;
   i: LongInt;
 begin
-  if BMXDRMSZ <= 131072 then //At least 2K is required for the tested array only.
-  begin
-    UART_WriteLn_Text('Test skipped because of low RAM.');
-    Exit;
-  end;
+  {$IFDEF P32}
+    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+    begin
+      UART_WriteLn_Text('Test skipped because of low RAM.');
+      Exit;
+    end;
+  {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -764,11 +770,13 @@ var
   Arr: TDynArrayOfWord;
   i: LongInt;
 begin
-  if BMXDRMSZ <= 131072 then //At least 2K is required for the tested array only.
-  begin
-    UART_WriteLn_Text('Test skipped because of low RAM.');
-    Exit;
-  end;
+  {$IFDEF P32}
+    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+    begin
+      UART_WriteLn_Text('Test skipped because of low RAM.');
+      Exit;
+    end;
+  {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -791,11 +799,13 @@ var
   Arr: TDynArrayOfWord;
   i: LongInt;
 begin
-  if BMXDRMSZ <= 131072 then //At least 2K is required for the tested array only.
-  begin
-    UART_WriteLn_Text('Test skipped because of low RAM.');
-    Exit;
-  end;
+  {$IFDEF P32}
+    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+    begin
+      UART_WriteLn_Text('Test skipped because of low RAM.');
+      Exit;
+    end;
+  {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -818,11 +828,13 @@ var
   Arr: TDynArrayOfWord;
   i: LongInt;
 begin
-  if BMXDRMSZ <= 131072 then //At least 2K is required for the tested array only.
-  begin
-    UART_WriteLn_Text('Test skipped because of low RAM.');
-    Exit;
-  end;
+  {$IFDEF P32}
+    if BMXDRMSZ <= 131072 then //At least 128K is required for the tested array only.
+    begin
+      UART_WriteLn_Text('Test skipped because of low RAM.');
+      Exit;
+    end;
+  {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -864,7 +876,7 @@ end;
 
 //==============================================================================
 
-procedure RegisterTest(var ATestName: string; ATestProc: PTestProc);
+procedure RegisterTest_TTestDynArraysOfWordCase(var ATestName: string; ATestProc: PTestProc);
 begin
   if TestDynArraysOfWordCase.TestCount >= CMaxTestCountPerSuite then
   begin
@@ -892,43 +904,43 @@ begin
   TestDynArraysOfWordCase.SetUp := @TTestDynArraysOfWordCase_SetUp;
   TestDynArraysOfWordCase.TearDown := @TTestDynArraysOfWordCase_TearDown;
 
-  RegisterTest('TestSimpleAllocation', @TTestDynArraysOfWordCase_TestSimpleAllocation);
-  RegisterTest('TestWritingToArray', @TTestDynArraysOfWordCase_TestWritingToArray);
-  RegisterTest('TestReallocationToLargerArray', @TTestDynArraysOfWordCase_TestReallocationToLargerArray);
-  RegisterTest('TestReallocationToSmallerArray', @TTestDynArraysOfWordCase_TestReallocationToSmallerArray);
-  RegisterTest('TestConcatDynArrays_HappyFlow', @TTestDynArraysOfWordCase_TestConcatDynArrays_HappyFlow);
-  RegisterTest('TestConcatDynArray_WithEmpty', @TTestDynArraysOfWordCase_TestConcatDynArray_WithEmpty);
-  RegisterTest('TestConcatEmptyDynArray_WithValid', @TTestDynArraysOfWordCase_TestConcatEmptyDynArray_WithValid);
-  RegisterTest('TestConcatEmptyDynArray_WithEmpty', @TTestDynArraysOfWordCase_TestConcatEmptyDynArray_WithEmpty);
-  RegisterTest('Test_CallDynLength_WithoutInitDynArray', @TTestDynArraysOfWordCase_Test_CallDynLength_WithoutInitDynArray);
-  RegisterTest('Test_CallSetDynLength_WithoutInitDynArray', @TTestDynArraysOfWordCase_Test_CallSetDynLength_WithoutInitDynArray);
-  RegisterTest('Test_CallConcatDynArrays_WithoutFirstInitDynArray', @TTestDynArraysOfWordCase_Test_CallConcatDynArrays_WithoutFirstInitDynArray);
-  RegisterTest('Test_CallConcatDynArrays_WithoutSecondInitDynArray', @TTestDynArraysOfWordCase_Test_CallConcatDynArrays_WithoutSecondInitDynArray);
-  RegisterTest('TestDeleteFirstWords_ZeroLength', @TTestDynArraysOfWordCase_TestDeleteFirstWords_ZeroLength);
-  RegisterTest('TestDeleteFirstWords_LessThanLength', @TTestDynArraysOfWordCase_TestDeleteFirstWords_LessThanLength);
-  RegisterTest('TestDeleteFirstWords_LessThanLength_MoreItems', @TTestDynArraysOfWordCase_TestDeleteFirstWords_LessThanLength_MoreItems);
-  RegisterTest('TestDeleteFirstWords_SameAsLength', @TTestDynArraysOfWordCase_TestDeleteFirstWords_SameAsLength);
-  RegisterTest('TestDeleteFirstWords_GreaterThanLength', @TTestDynArraysOfWordCase_TestDeleteFirstWords_GreaterThanLength);
-  RegisterTest('TestCopyFromDynArray_HappyFlow', @TTestDynArraysOfWordCase_TestCopyFromDynArray_HappyFlow);
-  RegisterTest('TestCopyFromDynArray_0Length', @TTestDynArraysOfWordCase_TestCopyFromDynArray_0Length);
-  RegisterTest('TestCopyFromDynArray_PartialOutOfContent', @TTestDynArraysOfWordCase_TestCopyFromDynArray_PartialOutOfContent);
-  RegisterTest('TestCopyFromDynArray_CompletelyOutOfContent', @TTestDynArraysOfWordCase_TestCopyFromDynArray_CompletelyOutOfContent);
-  RegisterTest('TestCopyFromDynArray_EmptySource', @TTestDynArraysOfWordCase_TestCopyFromDynArray_EmptySource);
-  RegisterTest('TestDeleteFromDynArray_EmptyArray', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_EmptyArray);
-  RegisterTest('TestDeleteFromDynArray_IndexOutOfBounds', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_IndexOutOfBounds);
-  RegisterTest('TestDeleteFromDynArray_HappyFlow1', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_HappyFlow1);
-  RegisterTest('TestDeleteFromDynArray_HappyFlow2', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_HappyFlow2);
-  RegisterTest('TestCreateUniqueWord_HappyFlow1', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow1);
-  RegisterTest('TestCreateUniqueWord_HappyFlow2', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow2);
-  RegisterTest('TestCreateUniqueWord_HappyFlow3', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow3);
-  RegisterTest('TestCreateUniqueWord_HappyFlow4', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow4);
-  RegisterTest('TestCreateUniqueWord_HappyFlow5', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow5);
-  RegisterTest('TestCreateUniqueWord_HappyFlow6', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow6);
-  RegisterTest('TestCreateUniqueWord_FullArray1', @TTestDynArraysOfWordCase_TestCreateUniqueWord_FullArray1);
-  RegisterTest('TestCreateUniqueWord_FullArray2', @TTestDynArraysOfWordCase_TestCreateUniqueWord_FullArray2);
-  RegisterTest('TestCreateUniqueWord_FullArray3', @TTestDynArraysOfWordCase_TestCreateUniqueWord_FullArray3);
-  RegisterTest('TestCreateUniqueWord_FullArray4', @TTestDynArraysOfWordCase_TestCreateUniqueWord_FullArray4);
-  RegisterTest('TestDoubleFree', @TTestDynArraysOfWordCase_TestDoubleFree);
+  RegisterTest_TTestDynArraysOfWordCase('TestSimpleAllocation', @TTestDynArraysOfWordCase_TestSimpleAllocation);
+  RegisterTest_TTestDynArraysOfWordCase('TestWritingToArray', @TTestDynArraysOfWordCase_TestWritingToArray);
+  RegisterTest_TTestDynArraysOfWordCase('TestReallocationToLargerArray', @TTestDynArraysOfWordCase_TestReallocationToLargerArray);
+  RegisterTest_TTestDynArraysOfWordCase('TestReallocationToSmallerArray', @TTestDynArraysOfWordCase_TestReallocationToSmallerArray);
+  RegisterTest_TTestDynArraysOfWordCase('TestConcatDynArrays_HappyFlow', @TTestDynArraysOfWordCase_TestConcatDynArrays_HappyFlow);
+  RegisterTest_TTestDynArraysOfWordCase('TestConcatDynArray_WithEmpty', @TTestDynArraysOfWordCase_TestConcatDynArray_WithEmpty);
+  RegisterTest_TTestDynArraysOfWordCase('TestConcatEmptyDynArray_WithValid', @TTestDynArraysOfWordCase_TestConcatEmptyDynArray_WithValid);
+  RegisterTest_TTestDynArraysOfWordCase('TestConcatEmptyDynArray_WithEmpty', @TTestDynArraysOfWordCase_TestConcatEmptyDynArray_WithEmpty);
+  RegisterTest_TTestDynArraysOfWordCase('Test_CallDynLength_WithoutInitDynArray', @TTestDynArraysOfWordCase_Test_CallDynLength_WithoutInitDynArray);
+  RegisterTest_TTestDynArraysOfWordCase('Test_CallSetDynLength_WithoutInitDynArray', @TTestDynArraysOfWordCase_Test_CallSetDynLength_WithoutInitDynArray);
+  RegisterTest_TTestDynArraysOfWordCase('Test_CallConcatDynArrays_WithoutFirstInitDynArray', @TTestDynArraysOfWordCase_Test_CallConcatDynArrays_WithoutFirstInitDynArray);
+  RegisterTest_TTestDynArraysOfWordCase('Test_CallConcatDynArrays_WithoutSecondInitDynArray', @TTestDynArraysOfWordCase_Test_CallConcatDynArrays_WithoutSecondInitDynArray);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFirstWords_ZeroLength', @TTestDynArraysOfWordCase_TestDeleteFirstWords_ZeroLength);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFirstWords_LessThanLength', @TTestDynArraysOfWordCase_TestDeleteFirstWords_LessThanLength);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFirstWords_LessThanLength_MoreItems', @TTestDynArraysOfWordCase_TestDeleteFirstWords_LessThanLength_MoreItems);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFirstWords_SameAsLength', @TTestDynArraysOfWordCase_TestDeleteFirstWords_SameAsLength);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFirstWords_GreaterThanLength', @TTestDynArraysOfWordCase_TestDeleteFirstWords_GreaterThanLength);
+  RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_HappyFlow', @TTestDynArraysOfWordCase_TestCopyFromDynArray_HappyFlow);
+  RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_0Length', @TTestDynArraysOfWordCase_TestCopyFromDynArray_0Length);
+  RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_PartialOutOfContent', @TTestDynArraysOfWordCase_TestCopyFromDynArray_PartialOutOfContent);
+  RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_CompletelyOutOfContent', @TTestDynArraysOfWordCase_TestCopyFromDynArray_CompletelyOutOfContent);
+  RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_EmptySource', @TTestDynArraysOfWordCase_TestCopyFromDynArray_EmptySource);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFromDynArray_EmptyArray', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_EmptyArray);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFromDynArray_IndexOutOfBounds', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_IndexOutOfBounds);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFromDynArray_HappyFlow1', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_HappyFlow1);
+  RegisterTest_TTestDynArraysOfWordCase('TestDeleteFromDynArray_HappyFlow2', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_HappyFlow2);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_HappyFlow1', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow1);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_HappyFlow2', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow2);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_HappyFlow3', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow3);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_HappyFlow4', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow4);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_HappyFlow5', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow5);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_HappyFlow6', @TTestDynArraysOfWordCase_TestCreateUniqueWord_HappyFlow6);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_FullArray1', @TTestDynArraysOfWordCase_TestCreateUniqueWord_FullArray1);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_FullArray2', @TTestDynArraysOfWordCase_TestCreateUniqueWord_FullArray2);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_FullArray3', @TTestDynArraysOfWordCase_TestCreateUniqueWord_FullArray3);
+  RegisterTest_TTestDynArraysOfWordCase('TestCreateUniqueWord_FullArray4', @TTestDynArraysOfWordCase_TestCreateUniqueWord_FullArray4);
+  RegisterTest_TTestDynArraysOfWordCase('TestDoubleFree', @TTestDynArraysOfWordCase_TestDoubleFree);
 end;
 
 end.

@@ -442,7 +442,7 @@ end;
 
 //==============================================================================
 
-procedure RegisterTest(var ATestName: string; ATestProc: PTestProc);
+procedure RegisterTest_TTestDynOfDynOfByteCase(var ATestName: string; ATestProc: PTestProc);
 begin
   if TestDynOfDynOfByteCase.TestCount >= CMaxTestCountPerSuite then
   begin
@@ -470,21 +470,21 @@ begin
   TestDynOfDynOfByteCase.SetUp := @TTestDynOfDynOfByteCase_SetUp;
   TestDynOfDynOfByteCase.TearDown := @TTestDynOfDynOfByteCase_TearDown;
 
-  RegisterTest('TestSimpleAllocation', @TTestDynOfDynOfByteCase_TestSimpleAllocation);
-  RegisterTest('TestWritingToArray', @TTestDynOfDynOfByteCase_TestWritingToArray);
-  RegisterTest('TestReallocationToLargerArray', @TTestDynOfDynOfByteCase_TestReallocationToLargerArray);  /////////////// first test to cause memory corruption (maybe stack)
-  RegisterTest('TestReallocationToSmallerArray', @TTestDynOfDynOfByteCase_TestReallocationToSmallerArray);
-  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow', @TTestDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow);
-  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray', @TTestDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray);
-  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray', @TTestDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray);
-  RegisterTest('TestDoubleFree', @TTestDynOfDynOfByteCase_TestDoubleFree);
-  RegisterTest('TestDeleteItem_FromEmptyArray', @TTestDynOfDynOfByteCase_TestDeleteItem_FromEmptyArray);
-  RegisterTest('TestDeleteItem_FromOneItemArray', @TTestDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray);
-  RegisterTest('TestDeleteFirstItem_FromTwoItemArray', @TTestDynOfDynOfByteCase_TestDeleteFirstItem_FromTwoItemArray);
-  RegisterTest('TestDeleteSecondItem_FromTwoItemArray', @TTestDynOfDynOfByteCase_TestDeleteSecondItem_FromTwoItemArray);
-  RegisterTest('TestDeleteFirstItem_FromThreeItemArray', @TTestDynOfDynOfByteCase_TestDeleteFirstItem_FromThreeItemArray);
-  RegisterTest('TestDeleteSecondItem_FromThreeItemArray', @TTestDynOfDynOfByteCase_TestDeleteSecondItem_FromThreeItemArray);
-  RegisterTest('TestDeleteThirdItem_FromThreeItemArray', @TTestDynOfDynOfByteCase_TestDeleteThirdItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestSimpleAllocation', @TTestDynOfDynOfByteCase_TestSimpleAllocation);
+  RegisterTest_TTestDynOfDynOfByteCase('TestWritingToArray', @TTestDynOfDynOfByteCase_TestWritingToArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestReallocationToLargerArray', @TTestDynOfDynOfByteCase_TestReallocationToLargerArray);  /////////////// first test to cause memory corruption (maybe stack)
+  RegisterTest_TTestDynOfDynOfByteCase('TestReallocationToSmallerArray', @TTestDynOfDynOfByteCase_TestReallocationToSmallerArray);
+  RegisterTest_TTestDynOfDynOfByteCase('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow', @TTestDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow);
+  RegisterTest_TTestDynOfDynOfByteCase('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray', @TTestDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray);
+  RegisterTest_TTestDynOfDynOfByteCase('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray', @TTestDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestDoubleFree', @TTestDynOfDynOfByteCase_TestDoubleFree);
+  RegisterTest_TTestDynOfDynOfByteCase('TestDeleteItem_FromEmptyArray', @TTestDynOfDynOfByteCase_TestDeleteItem_FromEmptyArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestDeleteItem_FromOneItemArray', @TTestDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestDeleteFirstItem_FromTwoItemArray', @TTestDynOfDynOfByteCase_TestDeleteFirstItem_FromTwoItemArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestDeleteSecondItem_FromTwoItemArray', @TTestDynOfDynOfByteCase_TestDeleteSecondItem_FromTwoItemArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestDeleteFirstItem_FromThreeItemArray', @TTestDynOfDynOfByteCase_TestDeleteFirstItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestDeleteSecondItem_FromThreeItemArray', @TTestDynOfDynOfByteCase_TestDeleteSecondItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfByteCase('TestDeleteThirdItem_FromThreeItemArray', @TTestDynOfDynOfByteCase_TestDeleteThirdItem_FromThreeItemArray);
 end;
 
 end.

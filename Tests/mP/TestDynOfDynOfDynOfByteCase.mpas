@@ -568,7 +568,7 @@ end;
 
 //==============================================================================
 
-procedure RegisterTest(var ATestName: string; ATestProc: PTestProc);
+procedure RegisterTest_TTestDynOfDynOfDynOfByteCase(var ATestName: string; ATestProc: PTestProc);
 begin
   if TestDynOfDynOfDynOfByteCase.TestCount >= CMaxTestCountPerSuite then
   begin
@@ -596,23 +596,23 @@ begin
   TestDynOfDynOfDynOfByteCase.SetUp := @TTestDynOfDynOfDynOfByteCase_SetUp;
   TestDynOfDynOfDynOfByteCase.TearDown := @TTestDynOfDynOfDynOfByteCase_TearDown;
 
-  RegisterTest('TestSimpleAllocation', @TTestDynOfDynOfDynOfByteCase_TestSimpleAllocation);
-  RegisterTest('TestWritingToArray', @TTestDynOfDynOfDynOfByteCase_TestWritingToArray);
-  RegisterTest('TestReallocationToLargerArray', @TTestDynOfDynOfDynOfByteCase_TestReallocationToLargerArray);
-  RegisterTest('TestReallocationToSmallerArray', @TTestDynOfDynOfDynOfByteCase_TestReallocationToSmallerArray);
-  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow1', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow1);
-  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow2', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow2);
-  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray);
-  RegisterTest('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray);
-  RegisterTest('TestDoubleFree', @TTestDynOfDynOfDynOfByteCase_TestDoubleFree);
-  RegisterTest('TestDeleteItem_FromEmptyArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromEmptyArray);
-  RegisterTest('TestDeleteItem_FromOneItemArray_NoContent', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray_NoContent);
-  RegisterTest('TestDeleteItem_FromOneItemArray_WithContent', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray_WithContent);
-  RegisterTest('TestDeleteFirstItem_FromTwoItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteFirstItem_FromTwoItemArray);
-  RegisterTest('TestDeleteSecondItem_FromTwoItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteSecondItem_FromTwoItemArray);
-  RegisterTest('TestDeleteFirstItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteFirstItem_FromThreeItemArray);
-  RegisterTest('TestDeleteSecondItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteSecondItem_FromThreeItemArray);
-  RegisterTest('TestDeleteThirdItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteThirdItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestSimpleAllocation', @TTestDynOfDynOfDynOfByteCase_TestSimpleAllocation);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestWritingToArray', @TTestDynOfDynOfDynOfByteCase_TestWritingToArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestReallocationToLargerArray', @TTestDynOfDynOfDynOfByteCase_TestReallocationToLargerArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestReallocationToSmallerArray', @TTestDynOfDynOfDynOfByteCase_TestReallocationToSmallerArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow1', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow1);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow2', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_HappyFlow2);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutFirstInitDynArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray', @TTestDynOfDynOfDynOfByteCase_Test_AddDynArrayOfByteToDynOfDynOfByte_WithoutSecondInitDynArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDoubleFree', @TTestDynOfDynOfDynOfByteCase_TestDoubleFree);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDeleteItem_FromEmptyArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromEmptyArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDeleteItem_FromOneItemArray_NoContent', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray_NoContent);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDeleteItem_FromOneItemArray_WithContent', @TTestDynOfDynOfDynOfByteCase_TestDeleteItem_FromOneItemArray_WithContent);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDeleteFirstItem_FromTwoItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteFirstItem_FromTwoItemArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDeleteSecondItem_FromTwoItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteSecondItem_FromTwoItemArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDeleteFirstItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteFirstItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDeleteSecondItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteSecondItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfDynOfByteCase('TestDeleteThirdItem_FromThreeItemArray', @TTestDynOfDynOfDynOfByteCase_TestDeleteThirdItem_FromThreeItemArray);
 end;
 
 end.

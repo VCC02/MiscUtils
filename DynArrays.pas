@@ -149,7 +149,8 @@ type
     //type
       //PByte = ^Byte;
       {$IFDEF AppArch16}
-        PByte = ^far const code Byte;
+        PByte = ^far const code Byte;   //this is how DynTFT defines PByte
+        //PByte = ^Byte;
       {$ELSE}
         PByte = ^const code Byte;
       {$ENDIF}
@@ -630,7 +631,7 @@ begin
   {$IFDEF IsDesktop}
     MemMove(ADest.Content, @AString[1], TempLen);
   {$ELSE}
-    MemMove(PByte(ADest.Content), PByte(@AString[0]), TempLen);
+    MemMove(DWord(ADest.Content), DWord(@AString[0]), TempLen);
   {$ENDIF}
 end;
 
@@ -654,7 +655,7 @@ begin
   {$IFDEF IsDesktop}
     MemMove(ADest.Content, @AString[1], TempLen shl 1);
   {$ELSE}
-    MemMove(PByte(ADest.Content), PByte(@AString[0]), TempLen shl 1);
+    MemMove(DWord(ADest.Content), DWord(@AString[0]), TempLen shl 1);
   {$ENDIF}
 end;
 
@@ -705,7 +706,7 @@ begin
   {$IFDEF IsDesktop}
     MemMove(ADest.Content, @AString[1], TempLen shl CArchBitShift);
   {$ELSE}
-    MemMove(PByte(ADest.Content), PByte(@AString[0]), TempLen shl CArchBitShift);
+    MemMove(DWord(ADest.Content), DWord(@AString[0]), TempLen shl CArchBitShift);
   {$ENDIF}
 
   if IsPartial > 0 then
@@ -733,7 +734,7 @@ begin
       Exit;
     end;
 
-    MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len);
+    MemMove(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len);
     ADestStr[AArr.Len] := #0;
   {$ENDIF}
 end;
@@ -756,7 +757,7 @@ begin
       Exit;
     end;
 
-    MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len shl 1);
+    MemMove(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len shl 1);
     ADestStr[AArr.Len shl 1] := #0;
   {$ENDIF}
 end;
@@ -793,7 +794,7 @@ begin
       Exit;
     end;
 
-    MemMove(PByte(@ADestStr[0]), PByte(AArr.Content), AArr.Len shl CArchBitShift);
+    MemMove(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len shl CArchBitShift);
     ADestStr[AArr.Len shl CArchBitShift] := #0;
   {$ENDIF}
 end;
@@ -853,7 +854,7 @@ begin
     {$IFDEF IsDesktop}
       MemMove(PPtrUInt(PtrUInt(@ADest.Content^[OldLen])), ABuf, ALen);
     {$ELSE}
-      MemMove(PByte(PtrUInt(@ADest.Content^[OldLen])), ABuf, ALen);
+      MemMove(DWord(PtrUInt(@ADest.Content^[OldLen])), ABuf, ALen);
     {$ENDIF}
 end;
 
@@ -908,7 +909,7 @@ end;
     {$IFDEF IsDesktop}
       MemMove(ADest.Content, @AArray[1], TempLen);
     {$ELSE}
-      MemMove(PByte(ADest.Content), PByte(@AArray[0]), TempLen);
+      MemMove(DWord(ADest.Content), DWord(@AArray[0]), TempLen);
     {$ENDIF}
   end;
 
@@ -989,7 +990,7 @@ begin
 
   {$IFnDEF IsDesktop}
     {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength);
-    if MM_error or (AArr.Content = nil) then
+    if MM_error or (AArr.Content = nil) then    //If compilers report that "MM_error" was not declared, then open MemManager library and uncomment MM_error header.
     begin
       Result := False;
       Exit;

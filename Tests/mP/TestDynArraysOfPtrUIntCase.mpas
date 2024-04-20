@@ -670,7 +670,7 @@ end;
 
 //==============================================================================
 
-procedure RegisterTest(var ATestName: string; ATestProc: PTestProc);
+procedure RegisterTest_TTestDynArraysOfPtrUIntCase(var ATestName: string; ATestProc: PTestProc);
 begin
   if TestDynArraysOfPtrUIntCase.TestCount >= CMaxTestCountPerSuite then
   begin
@@ -698,33 +698,33 @@ begin
   TestDynArraysOfPtrUIntCase.SetUp := @TTestDynArraysOfPtrUIntCase_SetUp;
   TestDynArraysOfPtrUIntCase.TearDown := @TTestDynArraysOfPtrUIntCase_TearDown;
 
-  RegisterTest('TestSimpleAllocation', @TTestDynArraysOfPtrUIntCase_TestSimpleAllocation);
-  RegisterTest('TestWritingToArray', @TTestDynArraysOfPtrUIntCase_TestWritingToArray);
-  RegisterTest('TestReallocationToLargerArray', @TTestDynArraysOfPtrUIntCase_TestReallocationToLargerArray);
-  RegisterTest('TestReallocationToSmallerArray', @TTestDynArraysOfPtrUIntCase_TestReallocationToSmallerArray);
-  RegisterTest('TestConcatDynArrays_HappyFlow', @TTestDynArraysOfPtrUIntCase_TestConcatDynArrays_HappyFlow);
-  RegisterTest('TestConcatDynArray_WithEmpty', @TTestDynArraysOfPtrUIntCase_TestConcatDynArray_WithEmpty);
-  RegisterTest('TestConcatEmptyDynArray_WithValid', @TTestDynArraysOfPtrUIntCase_TestConcatEmptyDynArray_WithValid);
-  RegisterTest('TestConcatEmptyDynArray_WithEmpty', @TTestDynArraysOfPtrUIntCase_TestConcatEmptyDynArray_WithEmpty);
-  RegisterTest('Test_CallDynLength_WithoutInitDynArray', @TTestDynArraysOfPtrUIntCase_Test_CallDynLength_WithoutInitDynArray);
-  RegisterTest('Test_CallSetDynLength_WithoutInitDynArray', @TTestDynArraysOfPtrUIntCase_Test_CallSetDynLength_WithoutInitDynArray);
-  RegisterTest('Test_CallConcatDynArrays_WithoutFirstInitDynArray', @TTestDynArraysOfPtrUIntCase_Test_CallConcatDynArrays_WithoutFirstInitDynArray);
-  RegisterTest('Test_CallConcatDynArrays_WithoutSecondInitDynArray', @TTestDynArraysOfPtrUIntCase_Test_CallConcatDynArrays_WithoutSecondInitDynArray);
-  RegisterTest('TestDeleteFirstPtrUInts_ZeroLength', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_ZeroLength);
-  RegisterTest('TestDeleteFirstPtrUInts_LessThanLength', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_LessThanLength);
-  RegisterTest('TestDeleteFirstPtrUInts_LessThanLength_MoreItems', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_LessThanLength_MoreItems);
-  RegisterTest('TestDeleteFirstPtrUInts_SameAsLength', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_SameAsLength);
-  RegisterTest('TestDeleteFirstPtrUInts_GreaterThanLength', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_GreaterThanLength);
-  RegisterTest('TestCopyFromDynArray_HappyFlow', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_HappyFlow);
-  RegisterTest('TestCopyFromDynArray_0Length', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_0Length);
-  RegisterTest('TestCopyFromDynArray_PartialOutOfContent', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_PartialOutOfContent);
-  RegisterTest('TestCopyFromDynArray_CompletelyOutOfContent', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_CompletelyOutOfContent);
-  RegisterTest('TestCopyFromDynArray_EmptySource', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_EmptySource);
-  RegisterTest('TestDeleteFromDynArray_EmptyArray', @TTestDynArraysOfPtrUIntCase_TestDeleteFromDynArray_EmptyArray);
-  RegisterTest('TestDeleteFromDynArray_IndexOutOfBounds', @TTestDynArraysOfPtrUIntCase_TestDeleteFromDynArray_IndexOutOfBounds);
-  RegisterTest('TestDeleteFromDynArray_HappyFlow1', @TTestDynArraysOfPtrUIntCase_TestDeleteFromDynArray_HappyFlow1);
-  RegisterTest('TestDeleteFromDynArray_HappyFlow2', @TTestDynArraysOfPtrUIntCase_TestDeleteFromDynArray_HappyFlow2);
-  RegisterTest('TestDoubleFree', @TTestDynArraysOfPtrUIntCase_TestDoubleFree);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestSimpleAllocation', @TTestDynArraysOfPtrUIntCase_TestSimpleAllocation);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestWritingToArray', @TTestDynArraysOfPtrUIntCase_TestWritingToArray);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestReallocationToLargerArray', @TTestDynArraysOfPtrUIntCase_TestReallocationToLargerArray);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestReallocationToSmallerArray', @TTestDynArraysOfPtrUIntCase_TestReallocationToSmallerArray);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestConcatDynArrays_HappyFlow', @TTestDynArraysOfPtrUIntCase_TestConcatDynArrays_HappyFlow);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestConcatDynArray_WithEmpty', @TTestDynArraysOfPtrUIntCase_TestConcatDynArray_WithEmpty);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestConcatEmptyDynArray_WithValid', @TTestDynArraysOfPtrUIntCase_TestConcatEmptyDynArray_WithValid);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestConcatEmptyDynArray_WithEmpty', @TTestDynArraysOfPtrUIntCase_TestConcatEmptyDynArray_WithEmpty);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('Test_CallDynLength_WithoutInitDynArray', @TTestDynArraysOfPtrUIntCase_Test_CallDynLength_WithoutInitDynArray);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('Test_CallSetDynLength_WithoutInitDynArray', @TTestDynArraysOfPtrUIntCase_Test_CallSetDynLength_WithoutInitDynArray);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('Test_CallConcatDynArrays_WithoutFirstInitDynArray', @TTestDynArraysOfPtrUIntCase_Test_CallConcatDynArrays_WithoutFirstInitDynArray);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('Test_CallConcatDynArrays_WithoutSecondInitDynArray', @TTestDynArraysOfPtrUIntCase_Test_CallConcatDynArrays_WithoutSecondInitDynArray);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFirstPtrUInts_ZeroLength', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_ZeroLength);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFirstPtrUInts_LessThanLength', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_LessThanLength);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFirstPtrUInts_LessThanLength_MoreItems', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_LessThanLength_MoreItems);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFirstPtrUInts_SameAsLength', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_SameAsLength);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFirstPtrUInts_GreaterThanLength', @TTestDynArraysOfPtrUIntCase_TestDeleteFirstPtrUInts_GreaterThanLength);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestCopyFromDynArray_HappyFlow', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_HappyFlow);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestCopyFromDynArray_0Length', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_0Length);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestCopyFromDynArray_PartialOutOfContent', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_PartialOutOfContent);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestCopyFromDynArray_CompletelyOutOfContent', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_CompletelyOutOfContent);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestCopyFromDynArray_EmptySource', @TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_EmptySource);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFromDynArray_EmptyArray', @TTestDynArraysOfPtrUIntCase_TestDeleteFromDynArray_EmptyArray);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFromDynArray_IndexOutOfBounds', @TTestDynArraysOfPtrUIntCase_TestDeleteFromDynArray_IndexOutOfBounds);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFromDynArray_HappyFlow1', @TTestDynArraysOfPtrUIntCase_TestDeleteFromDynArray_HappyFlow1);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDeleteFromDynArray_HappyFlow2', @TTestDynArraysOfPtrUIntCase_TestDeleteFromDynArray_HappyFlow2);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestDoubleFree', @TTestDynArraysOfPtrUIntCase_TestDoubleFree);
 end;
 
 end.

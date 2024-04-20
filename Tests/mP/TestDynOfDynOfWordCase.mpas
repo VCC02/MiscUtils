@@ -439,7 +439,7 @@ end;
 
 //==============================================================================
 
-procedure RegisterTest(var ATestName: string; ATestProc: PTestProc);
+procedure RegisterTest_TTestDynOfDynOfWordCase(var ATestName: string; ATestProc: PTestProc);
 begin
   if TestDynOfDynOfWordCase.TestCount >= CMaxTestCountPerSuite then
   begin
@@ -467,21 +467,21 @@ begin
   TestDynOfDynOfWordCase.SetUp := @TTestDynOfDynOfWordCase_SetUp;
   TestDynOfDynOfWordCase.TearDown := @TTestDynOfDynOfWordCase_TearDown;
 
-  RegisterTest('TestSimpleAllocation', @TTestDynOfDynOfWordCase_TestSimpleAllocation);
-  RegisterTest('TestWritingToArray', @TTestDynOfDynOfWordCase_TestWritingToArray);
-  RegisterTest('TestReallocationToLargerArray', @TTestDynOfDynOfWordCase_TestReallocationToLargerArray);
-  RegisterTest('TestReallocationToSmallerArray', @TTestDynOfDynOfWordCase_TestReallocationToSmallerArray);
-  RegisterTest('Test_AddDynArrayOfWordToDynOfDynOfWord_HappyFlow', @TTestDynOfDynOfWordCase_Test_AddDynArrayOfWordToDynOfDynOfWord_HappyFlow);
-  RegisterTest('Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutFirstInitDynArray', @TTestDynOfDynOfWordCase_Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutFirstInitDynArray);
-  RegisterTest('Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutSecondInitDynArray', @TTestDynOfDynOfWordCase_Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutSecondInitDynArray);
-  RegisterTest('TestDoubleFree', @TTestDynOfDynOfWordCase_TestDoubleFree);
-  RegisterTest('TestDeleteItem_FromEmptyArray', @TTestDynOfDynOfWordCase_TestDeleteItem_FromEmptyArray);
-  RegisterTest('TestDeleteItem_FromOneItemArray', @TTestDynOfDynOfWordCase_TestDeleteItem_FromOneItemArray);
-  RegisterTest('TestDeleteFirstItem_FromTwoItemArray', @TTestDynOfDynOfWordCase_TestDeleteFirstItem_FromTwoItemArray);
-  RegisterTest('TestDeleteSecondItem_FromTwoItemArray', @TTestDynOfDynOfWordCase_TestDeleteSecondItem_FromTwoItemArray);
-  RegisterTest('TestDeleteFirstItem_FromThreeItemArray', @TTestDynOfDynOfWordCase_TestDeleteFirstItem_FromThreeItemArray);
-  RegisterTest('TestDeleteSecondItem_FromThreeItemArray', @TTestDynOfDynOfWordCase_TestDeleteSecondItem_FromThreeItemArray);
-  RegisterTest('TestDeleteThirdItem_FromThreeItemArray', @TTestDynOfDynOfWordCase_TestDeleteThirdItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestSimpleAllocation', @TTestDynOfDynOfWordCase_TestSimpleAllocation);
+  RegisterTest_TTestDynOfDynOfWordCase('TestWritingToArray', @TTestDynOfDynOfWordCase_TestWritingToArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestReallocationToLargerArray', @TTestDynOfDynOfWordCase_TestReallocationToLargerArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestReallocationToSmallerArray', @TTestDynOfDynOfWordCase_TestReallocationToSmallerArray);
+  RegisterTest_TTestDynOfDynOfWordCase('Test_AddDynArrayOfWordToDynOfDynOfWord_HappyFlow', @TTestDynOfDynOfWordCase_Test_AddDynArrayOfWordToDynOfDynOfWord_HappyFlow);
+  RegisterTest_TTestDynOfDynOfWordCase('Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutFirstInitDynArray', @TTestDynOfDynOfWordCase_Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutFirstInitDynArray);
+  RegisterTest_TTestDynOfDynOfWordCase('Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutSecondInitDynArray', @TTestDynOfDynOfWordCase_Test_AddDynArrayOfWordToDynOfDynOfWord_WithoutSecondInitDynArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestDoubleFree', @TTestDynOfDynOfWordCase_TestDoubleFree);
+  RegisterTest_TTestDynOfDynOfWordCase('TestDeleteItem_FromEmptyArray', @TTestDynOfDynOfWordCase_TestDeleteItem_FromEmptyArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestDeleteItem_FromOneItemArray', @TTestDynOfDynOfWordCase_TestDeleteItem_FromOneItemArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestDeleteFirstItem_FromTwoItemArray', @TTestDynOfDynOfWordCase_TestDeleteFirstItem_FromTwoItemArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestDeleteSecondItem_FromTwoItemArray', @TTestDynOfDynOfWordCase_TestDeleteSecondItem_FromTwoItemArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestDeleteFirstItem_FromThreeItemArray', @TTestDynOfDynOfWordCase_TestDeleteFirstItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestDeleteSecondItem_FromThreeItemArray', @TTestDynOfDynOfWordCase_TestDeleteSecondItem_FromThreeItemArray);
+  RegisterTest_TTestDynOfDynOfWordCase('TestDeleteThirdItem_FromThreeItemArray', @TTestDynOfDynOfWordCase_TestDeleteThirdItem_FromThreeItemArray);
 end;
 
 end.
