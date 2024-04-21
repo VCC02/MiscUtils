@@ -496,6 +496,7 @@ procedure BoolToStr(ABool: Boolean; var Res: string);
 var
   BoolStr: array[0..1] of string[6];  //required on dsPIC
 begin
+  Res[0] := #0;
   BoolStr[0] := CBoolStr[0];
   BoolStr[1] := CBoolStr[1];
   //strcpy(Res, CBoolStr[Byte(ABool) and 1]);
@@ -701,13 +702,13 @@ end;
 
 procedure ToBeBoolean(ExpectedValue: Boolean; var ExtraMessage: string);
 begin
-  ExpectDWord_Validator(FActualValueBoolean, ExpectedValue, ExtraMessage);
+  ExpectBoolean_Validator(FActualValueBoolean, ExpectedValue, ExtraMessage);
 end;
 
 
 procedure ToBeDifferentBoolean(ExpectedValue: Boolean; var ExtraMessage: string);
 begin
-  ExpectDWordDifferent_Validator(FActualValueBoolean, ExpectedValue, ExtraMessage);
+  ExpectBooleanDifferent_Validator(FActualValueBoolean, ExpectedValue, ExtraMessage);
 end;
 
 

@@ -1,0 +1,189 @@
+{
+    Copyright (C) 2024 VCC
+    creation date: 20 Apr 2024
+    initial release date: 21 Apr 2024
+
+    author: VCC
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}
+
+
+program TestDynArraysMikdsPIC;
+
+uses
+  Expectations;
+
+//Board: custom test board with ds33EP512MU810.
+
+const HEAP_START: DWord = $001600;  //make sure this is a valid address and is DWord aligned !
+const HEAP_SIZE: DWord = {$I MaxMM.inc}   //Make sure enough memory is allocated. See the desktop application (simulator) for guidance.
+;
+
+var
+  LED1: sbit at LATB.4;
+  LED2: sbit at LATE.9;
+  LED3: sbit at LATG.15;
+
+  LED1_Dir: sbit at TRISB.4;
+  LED2_Dir: sbit at TRISE.9;
+  LED3_Dir: sbit at TRISG.15;
+
+  U4RX_Dir: sbit at TRISG.12;  //RPI124
+  U4TX_Dir: sbit at TRISE.0;   //RP80
+
+
+procedure SetOSC;
+begin
+  //PLLPRE := 0;
+  CLKDIV.4 := 0;
+  CLKDIV.3 := 0;
+  CLKDIV.2 := 0;
+  CLKDIV.1 := 0;
+  CLKDIV.0 := 0;
+
+  //PLLPOST := 0;
+  CLKDIV.7 := 0;
+  CLKDIV.6 := 0;
+
+  //PLLDIV := 68
+  PLLFBD := 68;
+end;
+
+
+procedure SetUSBOsc;
+begin
+  //use primary oscillator - 8MHz
+  ACLKCON3.ASRCSEL := 1; //1= Primary Oscillator is the clock source for APLL
+  ACLKCON3.FRCSEL := 0; //0= Auxiliary Oscillator or Primary Oscillator is the clock source for APLL (determined by ASRCSEL bit)
+  ACLKCON3.SELACLK := 1; //1= Auxiliary PLL or oscillator provides the source clock for auxiliary clock divider
+
+  //APLLPOST := 6  //110= Divided by 2
+  ACLKCON3.7 := 1;
+  ACLKCON3.6 := 1;
+  ACLKCON3.5 := 0;
+
+  //APLLPRE := 1  = N1 //001= Divided by 2       => FAREF = 4MHz (input to APLL)
+  ACLKCON3.2 := 0;
+  ACLKCON3.1 := 0;
+  ACLKCON3.0 := 1;
+
+  //FAVCO must be 96MHz (output from APLL)
+  //FAVCO = FAIN * M / N1 = 8MHz * M / 2 = 4MHz * M
+  //M = 24  => FAVCO = 4MHz * 24 = 96MHz
+  ACLKDIV3 := 7; //111= 24
+
+  ACLKCON3.ENAPLL := 1; //1= APLL is enabled, the USB clock source is the APLL output
+end;
+
+
+procedure SetPins;
+begin
+  ANSELA := 0x00;
+  ANSELB := 0x00;
+  ANSELC := 0x00;
+  ANSELD := 0x00;
+  ANSELE := 0x00;
+  ANSELG := 0x00;
+
+  U4TX_dir := 0;
+  U4RX_dir := 1;
+
+  LED1_dir := 0;
+  LED2_dir := 0;
+  LED3_dir := 0;
+
+  LED1 := 0;
+  LED2 := 0;
+  
+  Unlock_IOLOCK;
+
+  //UART4 on FT232R
+  RPINR28 := 124; //U4RXR<6:0>    //U4RX    //RPI124           //the higher byte will be set to 0, configuring U4CTSR to connect to GND
+  Hi(RPOR4) := 29; //U4TX  %011101 //RP80R<5:0>   //RP80       //U4TX=29 @ RP80
+
+  Lock_IOLOCK;
+end;
+
+
+var
+  Addr1_Base, Addr2_Base: Word;
+  Addr1: Word at Addr1_Base; volatile; sfr;
+  Addr2: Word at Addr2_Base; volatile; sfr;
+  NewAddress: DWord;
+  DebugText: string[20];
+  
+procedure DisplayTrappedAddress;
+begin
+  LongWordToHex(NewAddress, DebugText);
+  UART_WriteLn_Text('Exception');
+  UART_WriteLn_Text(DebugText);
+end;
+
+
+procedure AddressTrap; org 0x06; //if the addressing mode is wrong, the code jumps here  IVT_ADDR_ADDRESSERROR
+begin
+  INTCON1.3 := 0;
+
+  asm
+    MOV [w15-34], w13       //upper 8 bits of the address
+    MOV w13, Addr1
+
+    MOV [w15-32], w13       //lower 16 bits of the address
+    MOV w13, Addr2
+  end;
+  
+  NewAddress := (Addr1 shl 16) or Addr2;
+  DisplayTrappedAddress;
+end;
+
+
+begin
+  Delay_ms(100);
+  SetOSC;
+  SetUSBOsc;
+
+  SetPins;
+  
+  LED1 := 1;
+  Delay_ms(100);
+  LED2 := 1;
+  Delay_ms(100);
+  LED1 := 0;
+  Delay_ms(100);
+  LED2 := 0;
+
+  UART4_Init(256000);
+  Delay_ms(100);
+  UART_Set_Active(@UART4_Read, @UART4_Write, @UART4_Data_Ready, @UART4_Tx_Idle); // set UART4 active
+  
+  UART_WriteLn_Text('Starting tests...');
+                                                
+               //Comment some of the following test suite calls if not enough memory:
+  TTestDynArrays_RunTests;               //ok
+  TTestDynOfDynOfByteCase_RunTests;      //ok
+  TTestDynOfDynOfDynOfByteCase_RunTests; //ok
+  TTestDynArraysOfPtrUIntCase_RunTests;  //ok
+  TTestDynArraysOfWordCase_RunTests;     //ok
+  TTestDynOfDynOfWordCase_RunTests;      //ok
+
+  UART_WriteLn_Text('Done_All');
+  LED1 := 1;
+  LED2 := 1;
+
+  repeat
+  until False;
+end.

@@ -396,7 +396,7 @@ begin
   Arr.Content^[1] := 40;
   Arr.Content^[2] := 50;
 
-  RemoveStartBytesFromDynArray(2, Arr);
+  Expect(RemoveStartBytesFromDynArray(2, Arr)).ToBe(True, 'rem');
 
   Expect(Arr.Len).ToBe(1);
   Expect(Arr.Content^[0]).ToBe(50);

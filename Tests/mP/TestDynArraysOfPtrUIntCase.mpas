@@ -45,6 +45,18 @@ implementation
 var
   TestDynArraysOfPtrUIntCase: TTestDynArraysOfPtrUIntCase;
 
+{$IFDEF P30}
+  {$DEFINE AppArch16}
+{$ENDIF}
+
+{$IFDEF P33}
+  {$DEFINE AppArch16}
+{$ENDIF}
+
+{$IFDEF P24}
+  {$DEFINE AppArch16}
+{$ENDIF}
+
 
 procedure TTestDynArraysOfPtrUIntCase_RunTests;
 var
@@ -447,6 +459,7 @@ procedure TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_HappyFlow;
 var
   Src, Dest: TDynArrayOfPtrUInt;
   s: string[80];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfPtrUIntToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfPtrUInt(CSrcString, Src)).ToBe(True, '');
@@ -454,21 +467,21 @@ begin
   case SizeOf(PtrUInt) of
     2:  // 2 bytes    //PIC24 / dsPIC
     begin
-      CopyFromDynArrayOfPtrUInt(Dest, Src, 3, 7);
+      CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 7);
       DynArrayOfPtrUIntToString(Dest, s);
       ExpectString(s).ToBe('6789ABCDEFGHIJ', '');
     end;
 
     4:  // 4 bytes
     begin
-      CopyFromDynArrayOfPtrUInt(Dest, Src, 3, 7);
+      CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 7);
       DynArrayOfPtrUIntToString(Dest, s);
       ExpectString(s).ToBe('CDEFGHIJKLMNOPQRSTUVWXYZabcd', '');
     end;
 
     8:  // 8 bytes
     begin
-      CopyFromDynArrayOfPtrUInt(Dest, Src, 3, 4);  //4 instead of 7, because the string is already too long
+      CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 4);  //4 instead of 7, because the string is already too long
       DynArrayOfPtrUIntToString(Dest, s);
       ExpectString(s).ToBe('OPQRSTUVWXYZabcdefghijklmnopqrst', '');
     end;
@@ -483,10 +496,11 @@ procedure TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_0Length;
 var
   Src, Dest: TDynArrayOfPtrUInt;
   s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfPtrUIntToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfPtrUInt(CSrcString, Src)).ToBe(True, '');
-  CopyFromDynArrayOfPtrUInt(Dest, Src, 3, 0);
+  CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 0);
 
   DynArrayOfPtrUIntToString(Dest, s);
   ExpectString(s).ToBe('', '');
@@ -499,6 +513,7 @@ procedure TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_PartialOutOfContent;
 var
   Src, Dest: TDynArrayOfPtrUInt;
   s: string[80];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfPtrUIntToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfPtrUInt(CSrcString, Src)).ToBe(True, '');
@@ -506,7 +521,7 @@ begin
   case SizeOf(PtrUInt) of
     2:  // 2 bytes   //PIC24 / dsPIC
     begin
-      CopyFromDynArrayOfPtrUInt(Dest, Src, 20, 50);
+      CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 20, 50);
       ExpectDWord(Dest.Len).ToBe(11, ''); //  CopyFromDynArrayOfPtrUInt doesn't care about the content.
       DynArrayOfPtrUIntToString(Dest, s);
       ExpectString(s).ToBe('efghijklmnopqrstuvwxyz', '');
@@ -514,7 +529,7 @@ begin
 
     4:  // 4 bytes
     begin
-      CopyFromDynArrayOfPtrUInt(Dest, Src, 7, 20);
+      CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 7, 20);
       ExpectDWord(Dest.Len).ToBe(9, ''); //  CopyFromDynArrayOfPtrUInt doesn't care about the content.
       DynArrayOfPtrUIntToString(Dest, s);
       ExpectString(s).ToBe('STUVWXYZabcdefghijklmnopqrstuvwxyz', '');
@@ -522,7 +537,7 @@ begin
 
     8:  // 8 bytes
     begin
-      CopyFromDynArrayOfPtrUInt(Dest, Src, 3, 20);  //4 instead of 7, because the string is already too long
+      CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 20);  //4 instead of 7, because the string is already too long
       ExpectDWord(Dest.Len).ToBe(5, ''); //  CopyFromDynArrayOfPtrUInt doesn't care about the content.
       DynArrayOfPtrUIntToString(Dest, s);
       ExpectString(s).ToBe('OPQRSTUV WXYZabcd efghijkl mnopqrst uvwxyz', '');
@@ -538,10 +553,11 @@ procedure TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_CompletelyOutOfConten
 var
   Src, Dest: TDynArrayOfPtrUInt;
   s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfPtrUIntToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfPtrUInt(CSrcString, Src)).ToBe(True, '');
-  CopyFromDynArrayOfPtrUInt(Dest, Src, 50, 20);
+  CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 50, 20);
 
   DynArrayOfPtrUIntToString(Dest, s);
   ExpectString(s).ToBe('', '');
@@ -554,9 +570,10 @@ procedure TTestDynArraysOfPtrUIntCase_TestCopyFromDynArray_EmptySource;
 var
   Src, Dest: TDynArrayOfPtrUInt;
   s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfPtrUIntToEmpty(Src);
-  CopyFromDynArrayOfPtrUInt(Dest, Src, 0, 20);
+  CopyFromDynArrayOfPtrUInt(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 0, 20);
 
   DynArrayOfPtrUIntToString(Dest, s);
   ExpectString(s).ToBe('', '');

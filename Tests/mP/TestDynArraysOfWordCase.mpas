@@ -45,6 +45,18 @@ implementation
 var
   TestDynArraysOfWordCase: TTestDynArraysOfWordCase;
 
+{$IFDEF P30}
+  {$DEFINE AppArch16}
+{$ENDIF}
+
+{$IFDEF P33}
+  {$DEFINE AppArch16}
+{$ENDIF}
+
+{$IFDEF P24}
+  {$DEFINE AppArch16}
+{$ENDIF}
+
 
 procedure TTestDynArraysOfWordCase_RunTests;
 var
@@ -440,10 +452,11 @@ procedure TTestDynArraysOfWordCase_TestCopyFromDynArray_HappyFlow;
 var
   Src, Dest: TDynArrayOfWord;
   s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfWordToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfWord('0123456789ABCDEFGHIJKL', Src)).ToBe(True, '');
-  CopyFromDynArrayOfWord(Dest, Src, 3, 7);
+  CopyFromDynArrayOfWord(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 7);
 
   DynArrayOfWordToString(Dest, s);
   ExpectString(s).ToBe('6789ABCDEFGHIJ', '');
@@ -456,10 +469,11 @@ procedure TTestDynArraysOfWordCase_TestCopyFromDynArray_0Length;
 var
   Src, Dest: TDynArrayOfWord;
   s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfWordToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfWord('0123456789ABCDEF', Src)).ToBe(True, '');
-  CopyFromDynArrayOfWord(Dest, Src, 3, 0);
+  CopyFromDynArrayOfWord(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 0);
 
   DynArrayOfWordToString(Dest, s);
   ExpectString(s).ToBe('', '');
@@ -472,10 +486,11 @@ procedure TTestDynArraysOfWordCase_TestCopyFromDynArray_PartialOutOfContent;
 var
   Src, Dest: TDynArrayOfWord;
   s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfWordToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfWord('0123456789ABCDEF', Src)).ToBe(True, '');
-  CopyFromDynArrayOfWord(Dest, Src, 5, 20);
+  CopyFromDynArrayOfWord(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 5, 20);
   ExpectDWord(Dest.Len).ToBe(3, ''); //  CopyFromDynArrayOfWord doesn't care about the content.
 
   DynArrayOfWordToString(Dest, s);
@@ -489,10 +504,11 @@ procedure TTestDynArraysOfWordCase_TestCopyFromDynArray_CompletelyOutOfContent;
 var
   Src, Dest: TDynArrayOfWord;
   s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfWordToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfWord('0123456789ABCDEF', Src)).ToBe(True, '');
-  CopyFromDynArrayOfWord(Dest, Src, 50, 20);
+  CopyFromDynArrayOfWord(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 50, 20);
 
   DynArrayOfWordToString(Dest, s);
   ExpectString(s).ToBe('', '');
@@ -505,9 +521,10 @@ procedure TTestDynArraysOfWordCase_TestCopyFromDynArray_EmptySource;
 var
   Src, Dest: TDynArrayOfWord;
   s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayOfWordToEmpty(Src);
-  CopyFromDynArrayOfWord(Dest, Src, 0, 20);
+  CopyFromDynArrayOfWord(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 0, 20);
 
   DynArrayOfWordToString(Dest, s);
   ExpectString(s).ToBe('', '');
@@ -684,6 +701,11 @@ begin
       end;
     {$ENDIF}
   {$ENDIF}
+  
+  {$IFDEF dsPIC}
+    UART_WriteLn_Text('Test skipped because of low RAM.');
+    Exit;
+  {$ENDIF}
 
   InitDynArrayOfWordToEmpty(Arr);
 
@@ -714,6 +736,11 @@ begin
         Exit;
       end;
     {$ENDIF}
+  {$ENDIF}
+  
+  {$IFDEF dsPIC}
+    UART_WriteLn_Text('Test skipped because of low RAM.');
+    Exit;
   {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
@@ -755,6 +782,11 @@ begin
     {$ENDIF}
   {$ENDIF}
   
+  {$IFDEF dsPIC}
+    UART_WriteLn_Text('Test skipped because of low RAM.');
+    Exit;
+  {$ENDIF}
+  
   InitDynArrayOfWordToEmpty(Arr);
 
   ExpectBoolean(SetDynOfWordLength(Arr, 65535)).ToBe(True, '');
@@ -784,6 +816,11 @@ begin
         Exit;
       end;
     {$ENDIF}
+  {$ENDIF}
+  
+  {$IFDEF dsPIC}
+    UART_WriteLn_Text('Test skipped because of low RAM.');
+    Exit;
   {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);
@@ -817,6 +854,11 @@ begin
     {$ENDIF}
   {$ENDIF}
   
+  {$IFDEF dsPIC}
+    UART_WriteLn_Text('Test skipped because of low RAM.');
+    Exit;
+  {$ENDIF}
+  
   InitDynArrayOfWordToEmpty(Arr);
 
   ExpectDWord(SetDynOfWordLength(Arr, 65540)).ToBe(True, '');  //The array has more numbers than the max value CreateUniqueWord can create.
@@ -846,6 +888,11 @@ begin
         Exit;
       end;
     {$ENDIF}
+  {$ENDIF}
+  
+  {$IFDEF dsPIC}
+    UART_WriteLn_Text('Test skipped because of low RAM.');
+    Exit;
   {$ENDIF}
   
   InitDynArrayOfWordToEmpty(Arr);

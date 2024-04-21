@@ -45,6 +45,18 @@ implementation
 var
   TestDynArrays: TTestDynArrays;
   
+{$IFDEF P30}
+  {$DEFINE AppArch16}
+{$ENDIF}
+
+{$IFDEF P33}
+  {$DEFINE AppArch16}
+{$ENDIF}
+
+{$IFDEF P24}
+  {$DEFINE AppArch16}
+{$ENDIF}
+  
   
 procedure TTestDynArrays_RunTests;
 var
@@ -340,12 +352,12 @@ var
   Arr: TDynArrayOfByte;
 begin
   InitDynArrayToEmpty(Arr);
-  SetDynLength(Arr, 3);
+  ExpectBoolean(SetDynLength(Arr, 3)).ToBe(True, 'set');
   Arr.Content^[0] := 30;
   Arr.Content^[1] := 40;
   Arr.Content^[2] := 50;
 
-  RemoveStartBytesFromDynArray(0, Arr);
+  ExpectBoolean(RemoveStartBytesFromDynArray(0, Arr)).ToBe(True, 'rem');
 
   ExpectDWord(Arr.Len).ToBe(3, '');
   ExpectDWord(Arr.Content^[0]).ToBe(30, '');
@@ -361,15 +373,15 @@ var
   Arr: TDynArrayOfByte;
 begin
   InitDynArrayToEmpty(Arr);
-  SetDynLength(Arr, 3);
+  ExpectBoolean(SetDynLength(Arr, 3)).ToBe(True, 'set');
   Arr.Content^[0] := 30;
   Arr.Content^[1] := 40;
   Arr.Content^[2] := 50;
 
-  RemoveStartBytesFromDynArray(2, Arr);
+  ExpectBoolean(RemoveStartBytesFromDynArray(2, Arr)).ToBe(True, 'rem');
 
-  ExpectDWord(Arr.Len).ToBe(1, '');
-  ExpectDWord(Arr.Content^[0]).ToBe(50, '');
+  ExpectDWord(Arr.Len).ToBe(1, 'Len');
+  ExpectDWord(Arr.Content^[0]).ToBe(50, '[0]');
 
   FreeDynArray(Arr);
 end;
@@ -380,7 +392,7 @@ var
   Arr: TDynArrayOfByte;
 begin
   InitDynArrayToEmpty(Arr);
-  SetDynLength(Arr, 8);
+  ExpectBoolean(SetDynLength(Arr, 8)).ToBe(True, 'set');
   Arr.Content^[0] := 30;
   Arr.Content^[1] := 40;
   Arr.Content^[2] := 50;
@@ -390,9 +402,9 @@ begin
   Arr.Content^[6] := 90;
   Arr.Content^[7] := 100;
 
-  RemoveStartBytesFromDynArray(2, Arr);
+  ExpectBoolean(RemoveStartBytesFromDynArray(2, Arr)).ToBe(True, 'rem');
 
-  ExpectDWord(Arr.Len).ToBe(6, '');
+  ExpectDWord(Arr.Len).ToBe(6, 'Len');
   ExpectDWord(Arr.Content^[0]).ToBe(50, '');
   ExpectDWord(Arr.Content^[1]).ToBe(60, '');
   ExpectDWord(Arr.Content^[2]).ToBe(70, '');
@@ -409,12 +421,12 @@ var
   Arr: TDynArrayOfByte;
 begin
   InitDynArrayToEmpty(Arr);
-  SetDynLength(Arr, 3);
+  ExpectBoolean(SetDynLength(Arr, 3)).ToBe(True, 'set');
   Arr.Content^[0] := 30;
   Arr.Content^[1] := 40;
   Arr.Content^[2] := 50;
 
-  RemoveStartBytesFromDynArray(3, Arr);
+  ExpectBoolean(RemoveStartBytesFromDynArray(3, Arr)).ToBe(True, 'rem');
 
   ExpectDWord(Arr.Len).ToBe(0, '');
 
@@ -427,8 +439,8 @@ var
   Arr: TDynArrayOfByte;
 begin
   InitDynArrayToEmpty(Arr);
-  SetDynLength(Arr, 3);
-  RemoveStartBytesFromDynArray(7, Arr);
+  ExpectBoolean(SetDynLength(Arr, 3)).ToBe(True, 'set');
+  ExpectBoolean(RemoveStartBytesFromDynArray(7, Arr)).ToBe(True, 'rem');
 
   ExpectDWord(Arr.Len).ToBe(0, '');
 
@@ -441,8 +453,8 @@ var
   Arr: TDynArrayOfByte;
 begin
   InitDynArrayToEmpty(Arr);
-  SetDynLength(Arr, 1);
-  RemoveStartBytesFromDynArray(1, Arr);
+  ExpectBoolean(SetDynLength(Arr, 1)).ToBe(True, 'set');
+  ExpectBoolean(RemoveStartBytesFromDynArray(1, Arr)).ToBe(True, 'rem');
 
   ExpectDWord(Arr.Len).ToBe(0, '');
 
@@ -455,7 +467,7 @@ var
   Arr: TDynArrayOfByte;
 begin
   InitDynArrayToEmpty(Arr);
-  RemoveStartBytesFromDynArray(1, Arr);
+  ExpectBoolean(RemoveStartBytesFromDynArray(1, Arr)).ToBe(True, 'rem');
 
   ExpectDWord(Arr.Len).ToBe(0, '');
 
@@ -467,10 +479,11 @@ procedure TTestDynArrays_TestCopyFromDynArray_HappyFlow;
 var
   Src, Dest: TDynArrayOfByte;
   TempStr: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True, '');
-  CopyFromDynArray(Dest, Src, 3, 7);
+  CopyFromDynArray(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 7);
   
   DynArrayOfByteToString(Dest, TempStr);
   ExpectString(TempStr).ToBe('3456789', '');
@@ -483,10 +496,11 @@ procedure TTestDynArrays_TestCopyFromDynArray_0Length;
 var
   Src, Dest: TDynArrayOfByte;
   TempStr: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True, '');
-  CopyFromDynArray(Dest, Src, 3, 0);
+  CopyFromDynArray(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 3, 0);
 
   DynArrayOfByteToString(Dest, TempStr);
   ExpectString(TempStr).ToBe('', '');
@@ -499,10 +513,11 @@ procedure TTestDynArrays_TestCopyFromDynArray_PartialOutOfContent;
 var
   Src, Dest: TDynArrayOfByte;
   TempStr: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True, '');
-  CopyFromDynArray(Dest, Src, 10, 20);
+  CopyFromDynArray(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 10, 20);
 
   DynArrayOfByteToString(Dest, TempStr);
   ExpectString(TempStr).ToBe('ABCDEF', '');
@@ -515,10 +530,11 @@ procedure TTestDynArrays_TestCopyFromDynArray_CompletelyOutOfContent;
 var
   Src, Dest: TDynArrayOfByte;
   TempStr: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayToEmpty(Src);
   ExpectBoolean(StringToDynArrayOfByte('0123456789ABCDEF', Src)).ToBe(True, '');
-  CopyFromDynArray(Dest, Src, 50, 20);
+  CopyFromDynArray(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 50, 20);
 
   DynArrayOfByteToString(Dest, TempStr);
   ExpectString(TempStr).ToBe('', '');
@@ -531,9 +547,10 @@ procedure TTestDynArrays_TestCopyFromDynArray_EmptySource;
 var
   Src, Dest: TDynArrayOfByte;
   TempStr: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   InitDynArrayToEmpty(Src);
-  CopyFromDynArray(Dest, Src, 0, 20);
+  CopyFromDynArray(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 0, 20);
 
   DynArrayOfByteToString(Dest, TempStr);
   ExpectString(TempStr).ToBe('', '');

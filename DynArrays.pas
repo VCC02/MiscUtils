@@ -348,7 +348,7 @@ procedure FreeDynArray(var AArr: TDynArrayOfByte);
 function ConcatDynArrays(var AArr1, AArr2: TDynArrayOfByte): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddByteToDynArray(AByte: Byte; var AArr: TDynArrayOfByte): Boolean;
 function RemoveStartBytesFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfByte): Boolean;
-function CopyFromDynArray(var ADestArr, ASrcArr: TDynArrayOfByte; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+function CopyFromDynArray(var ADestArr, ASrcArr: TDynArrayOfByte; {$IFDEF AppArch16} ADummy, {$ENDIF} AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 function DeleteItemFromDynArray(var AArr: TDynArrayOfByte; ADelIndex: TDynArrayLength): Boolean;
 
 
@@ -368,7 +368,7 @@ procedure FreeDynArrayOfWord(var AArr: TDynArrayOfWord);
 function ConcatDynArraysOfWord(var AArr1, AArr2: TDynArrayOfWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddWordToDynArraysOfWord(var AArr: TDynArrayOfWord; ANewWord: Word): Boolean;
 function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfWord): Boolean;
-function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; {$IFDEF AppArch16} ADummy, {$ENDIF} AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 function IndexOfWordInArrayOfWord(var AArr: TDynArrayOfWord; AWordToFind: Word): TDynArrayLengthSig; //returns -1 if not found
 function DeleteItemFromDynArrayOfWord(var AArr: TDynArrayOfWord; ADelIndex: TDynArrayLength): Boolean;
 function CreateUniqueWordWithStart(var AArr: TDynArrayOfWord; AStartAt: Word): Word;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
@@ -390,9 +390,12 @@ function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayLe
 procedure FreeDynArrayOfDWord(var AArr: TDynArrayOfDWord);
 function ConcatDynArraysOfDWord(var AArr1, AArr2: TDynArrayOfDWord): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddDWordToDynArraysOfDWord(var AArr: TDynArrayOfDWord; ANewDWord: DWord): Boolean;
+function RemoveStartDWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfDWord): Boolean;
+function CopyFromDynArrayOfDWord(var ADestArr, ASrcArr: TDynArrayOfDWord; {$IFDEF AppArch16} ADummy, {$ENDIF} AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 function IndexOfDWordInArrayOfDWord(var AArr: TDynArrayOfDWord; ADWordToFind: DWord): TDynArrayLengthSig; //returns -1 if not found
 function DeleteItemFromDynArrayOfDWord(var AArr: TDynArrayOfDWord; ADelIndex: TDynArrayLength): Boolean;
-function CreateUniqueDWord(var AArr: TDynArrayOfDWord): DWord;  //Returns $FFFFFFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFFFFFF is reserved as an error message.
+function CreateUniqueDWordWithStart(var AArr: TDynArrayOfDWord; AStartAt: DWord): DWord;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
+function CreateUniqueDWord(var AArr: TDynArrayOfDWord): DWord;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
 
 
 procedure InitDynArrayOfPtrUIntToEmpty(var AArr: TDynArrayOfPtrUInt); //do not call this on an array, which is already allocated, because it results in memory leaks
@@ -402,7 +405,7 @@ procedure FreeDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt);
 function ConcatDynArraysOfPtrUInt(var AArr1, AArr2: TDynArrayOfPtrUInt): Boolean; //Concats AArr1 with AArr2. Places new array in AArr1.
 function AddPtrUIntToDynArraysOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ANewPtrUInt: PtrUInt): Boolean;
 function RemoveStartPtrUIntsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfPtrUInt): Boolean;
-function CopyFromDynArrayOfPtrUInt(var ADestArr, ASrcArr: TDynArrayOfPtrUInt; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+function CopyFromDynArrayOfPtrUInt(var ADestArr, ASrcArr: TDynArrayOfPtrUInt; {$IFDEF AppArch16} ADummy, {$ENDIF} AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 function DeleteItemFromDynArrayOfPtrUInt(var AArr: TDynArrayOfPtrUInt; ADelIndex: TDynArrayLengthSig): Boolean;
 
 
@@ -428,9 +431,11 @@ function DeleteItemFromDynArrayOfPDynArrayOfTDynArrayOfByte(var AArr: TDynArrayO
 
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 function StringToDynArrayOfWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfWord): Boolean;   //assumes ADest is initialized
+function StringToDynArrayOfDWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfDWord): Boolean;   //assumes ADest is initialized
 function StringToDynArrayOfPtrUInt({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfPtrUInt): Boolean;   //assumes ADest is initialized
 procedure DynArrayOfByteToString(var AArr: TDynArrayOfByte; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
 procedure DynArrayOfWordToString(var AArr: TDynArrayOfWord; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
+procedure DynArrayOfDWordToString(var AArr: TDynArrayOfDWord; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
 procedure DynArrayOfPtrUIntToString(var AArr: TDynArrayOfPtrUInt; var ADestStr: string); {$IFDEF IsDesktop} overload; {$ENDIF}
 
 function AddStringToDynOfDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AStr: string; var ADest: TDynArrayOfTDynArrayOfByte): Boolean;
@@ -441,6 +446,7 @@ function AddBufferToDynArrayOfByte(ABuf: {$IFDEF IsDesktop} Pointer; {$ELSE} ^DW
 {$IFDEF IsDesktop}
   function DynArrayOfByteToString(var AArr: TDynArrayOfByte): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynArrayOfWordToString(var AArr: TDynArrayOfWord): string; {$IFDEF IsDesktop} overload; {$ENDIF}
+  function DynArrayOfDWordToString(var AArr: TDynArrayOfDWord): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynArrayOfPtrUIntToString(var AArr: TDynArrayOfPtrUInt): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   function DynOfDynArrayOfByteToString(var AArr: TDynArrayOfTDynArrayOfByte; ASeparator: string = #13#10): string;
   function ArrayOfByteToDynArrayOfByte(var AArray: array of Byte; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
@@ -665,6 +671,50 @@ begin
 end;
 
 
+function StringToDynArrayOfDWord({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfDWord): Boolean;   //assumes ADest is initialized
+const
+  CZeroLen = 1 shl 2;
+var
+  TempLen, ZeroPaddingSize: TDynArrayLength;
+  IsPartial: Byte;
+  i: Byte;
+  ZeroString: string {$IFnDEF IsDesktop}[CZeroLen]{$ENDIF};
+begin
+  TempLen := TDynArrayLength(Length(AString));
+
+  IsPartial := {$IFnDEF IsDesktop} OrdBool {$ELSE} Ord {$ENDIF}((TempLen and 3) <> 0);
+  TempLen := (TempLen shr 2) + IsPartial;  //add one more item if odd or "misaligned"
+
+  Result := SetDynOfDWordLength(ADest, TempLen);
+
+  if not Result then
+    Exit;
+
+  {$IFDEF IsDesktop}
+    SetLength(ZeroString, CZeroLen);
+  {$ENDIF}
+
+  {$IFDEF IsDesktop}
+    for i := 1 to CZeroLen do
+  {$ELSE}
+    for i := 0 to CZeroLen - 1 do
+  {$ENDIF}
+      ZeroString[i] := #0;
+
+  {$IFDEF IsDesktop}
+    MemMove(ADest.Content, @AString[1], TempLen shl 2);
+  {$ELSE}
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(ADest.Content), DWord(@AString[0]), TempLen shl 2);
+  {$ENDIF}
+
+  if IsPartial > 0 then
+  begin
+    ZeroPaddingSize := (TempLen shl 2) - Length(AString);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(PPtrUInt(PtrUint(@ADest.Content^[TempLen - 1]) + ZeroPaddingSize), @ZeroString[{$IFDEF IsDesktop}1{$ELSE}0{$ENDIF}], ZeroPaddingSize);
+  end;
+end;
+
+
 {$IFnDEF IsDesktop}
   function OrdBool(B: Boolean): Byte;
   begin
@@ -764,6 +814,29 @@ begin
 
     {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len shl 1);
     ADestStr[AArr.Len shl 1] := #0;
+  {$ENDIF}
+end;
+
+
+procedure DynArrayOfDWordToString(var AArr: TDynArrayOfDWord; var ADestStr: string);  {$IFDEF IsDesktop} overload; {$ENDIF}
+begin
+  {$IFDEF IsDesktop}
+    CheckInitializedDynArrayOfDWord(AArr);
+    SetLength(ADestStr, AArr.Len shl 2);
+
+    if AArr.Len = 0 then
+      Exit;
+
+    MemMove(@ADestStr[1], AArr.Content, AArr.Len shl 2);
+  {$ELSE}
+    if AArr.Len = 0 then
+    begin
+      ADestStr[0] := #0;
+      Exit;
+    end;
+
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(DWord(@ADestStr[0]), DWord(AArr.Content), AArr.Len shl 2);
+    ADestStr[AArr.Len shl 2] := #0;
   {$ENDIF}
 end;
 
@@ -879,6 +952,13 @@ end;
   end;
 
 
+  function DynArrayOfDWordToString(var AArr: TDynArrayOfDWord): string; {$IFDEF IsDesktop} overload; {$ENDIF}
+  begin
+    Result := 'no string content';
+    DynArrayOfDWordToString(AArr, Result);
+  end;
+
+
   function DynArrayOfPtrUIntToString(var AArr: TDynArrayOfPtrUInt): string; {$IFDEF IsDesktop} overload; {$ENDIF}
   begin
     Result := 'no string content';
@@ -949,12 +1029,20 @@ end;
       if ADest > ASrc then   //this ensures that the item is being read before being overwritten
       begin
         for i := ACountM1 downto 0 do
-          PZeroArr(ADest)^[i] := PZeroArr(ASrc)^[i];
+          {$IFDEF AppArch16}
+            PZeroArr(DWord(ADest))^[i] := PZeroArr(DWord(ASrc))^[i];
+          {$ELSE}
+            PZeroArr(ADest)^[i] := PZeroArr(ASrc)^[i];
+          {$ENDIF}
       end
       else
       begin
         for i := 0 to ACountM1 do
-          PZeroArr(ADest)^[i] := PZeroArr(ASrc)^[i];
+          {$IFDEF AppArch16}
+            PZeroArr(DWord(ADest))^[i] := PZeroArr(DWord(ASrc))^[i];
+          {$ELSE}
+            PZeroArr(ADest)^[i] := PZeroArr(ASrc)^[i];
+          {$ENDIF}
       end;
     end;
   {$ENDIF}
@@ -1136,6 +1224,7 @@ function RemoveStartBytesFromDynArray(ACount: TDynArrayLength; var AArr: TDynArr
 var
   PartialArr: TDynArrayOfByte;
   NewLen: TDynArrayLength;
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   Result := True;
 
@@ -1150,7 +1239,8 @@ begin
 
   InitDynArrayToEmpty(PartialArr);
   NewLen := AArr.Len - ACount;
-  if not CopyFromDynArray(PartialArr, AArr, ACount, NewLen) then
+  
+  if not CopyFromDynArray(PartialArr, AArr, {$IFDEF AppArch16} Dummy, {$ENDIF} ACount, NewLen) then
   begin
     Result := False;
     Exit;
@@ -1163,7 +1253,7 @@ begin
 end;
 
 
-function CopyFromDynArray(var ADestArr, ASrcArr: TDynArrayOfByte; AIndex, ACount: TDynArrayLength): Boolean;
+function CopyFromDynArray(var ADestArr, ASrcArr: TDynArrayOfByte; {$IFDEF AppArch16} ADummy, {$ENDIF} AIndex, ACount: TDynArrayLength): Boolean;
 var
   OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
@@ -1188,7 +1278,11 @@ begin
   if ACount > ASrcArr.Len - AIndex then
     ACount := ASrcArr.Len - AIndex;
 
-  SetDynLength(ADestArr, ACount);
+  if not SetDynLength(ADestArr, ACount) then
+  begin
+    Result := False;
+    Exit;
+  end;
 
   {$IFnDEF IsDesktop}
     OldPointer := DWord(ASrcArr.Content) + AIndex;
@@ -1694,6 +1788,7 @@ function RemoveStartWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArr
 var
   PartialArr: TDynArrayOfWord;
   NewLen: TDynArrayLength;
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   Result := True;
 
@@ -1708,7 +1803,7 @@ begin
 
   InitDynArrayOfWordToEmpty(PartialArr);
   NewLen := AArr.Len - ACount;
-  if not CopyFromDynArrayOfWord(PartialArr, AArr, ACount, NewLen) then
+  if not CopyFromDynArrayOfWord(PartialArr, AArr, {$IFDEF AppArch16} Dummy, {$ENDIF} ACount, NewLen) then
   begin
     Result := False;
     Exit;
@@ -1721,7 +1816,7 @@ begin
 end;
 
 
-function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+function CopyFromDynArrayOfWord(var ADestArr, ASrcArr: TDynArrayOfWord; {$IFDEF AppArch16} ADummy, {$ENDIF} AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 var
   OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
@@ -1740,7 +1835,11 @@ begin
   if ACount > ASrcArr.Len - AIndex then
     ACount := ASrcArr.Len - AIndex;
 
-  SetDynOfWordLength(ADestArr, ACount);
+  if not SetDynOfWordLength(ADestArr, ACount) then
+  begin
+    Result := False;
+    Exit;
+  end;
 
   {$IFnDEF IsDesktop}
     OldPointer := DWord(ASrcArr.Content) + AIndex shl 1;
@@ -2311,6 +2410,72 @@ begin
 end;
 
 
+function RemoveStartDWordsFromDynArray(ACount: TDynArrayLength; var AArr: TDynArrayOfDWord): Boolean;
+var
+  PartialArr: TDynArrayOfDWord;
+  NewLen: TDynArrayLength;
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
+begin
+  Result := True;
+
+  if ACount >= AArr.Len then
+  begin
+    FreeDynArrayOfDWord(AArr);
+    Exit;
+  end;
+
+  if ACount = 0 then
+    Exit;
+
+  InitDynArrayOfDWordToEmpty(PartialArr);
+  NewLen := AArr.Len - ACount;
+  if not CopyFromDynArrayOfDWord(PartialArr, AArr, {$IFDEF AppArch16} Dummy, {$ENDIF} ACount, NewLen) then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, PartialArr.Content, NewLen shl 2);
+  FreeDynArrayOfDWord(PartialArr);
+
+  Result := SetDynOfDWordLength(AArr, NewLen);
+end;
+
+
+function CopyFromDynArrayOfDWord(var ADestArr, ASrcArr: TDynArrayOfDWord; {$IFDEF AppArch16} ADummy, {$ENDIF} AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+var
+  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+begin
+  Result := True;
+  InitDynArrayOfDWordToEmpty(ADestArr);
+
+  if ACount = 0 then
+    Exit;
+
+  if AIndex > ASrcArr.Len then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  if ACount > ASrcArr.Len - AIndex then
+    ACount := ASrcArr.Len - AIndex;
+
+  if not SetDynOfDWordLength(ADestArr, ACount) then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  {$IFnDEF IsDesktop}
+    OldPointer := DWord(ASrcArr.Content) + AIndex shl 2;
+  {$ELSE}
+    OldPointer := Pointer(PtrUInt(ASrcArr.Content) + PtrUInt(AIndex shl 2));
+  {$ENDIF}
+  {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(ADestArr.Content, OldPointer, ACount shl 2);
+end;
+
+
 function IndexOfDWordInArrayOfDWord(var AArr: TDynArrayOfDWord; ADWordToFind: DWord): TDynArrayLengthSig; //returns -1 if not found
 var
   i, Dest: TDynArrayLengthSig;
@@ -2360,29 +2525,78 @@ begin
 end;
 
 
-function CreateUniqueDWord(var AArr: TDynArrayOfDWord): DWord;  //Returns $FFFFFFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFFFFFF is reserved as an error message.
-var           //TempNumber is used below as DWord (for controlled overflow), but for length comparison, it should be QWord (or Int64)
-  TempNumber: TDynArrayLength;  //using a DWord, instead of a Word, because the array length might already be greater than $FFFFFFFF.
-  //TempNumber: Word;
+//function CreateUniqueDWord(var AArr: TDynArrayOfDWord): DWord;  //Returns $FFFFFFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFFFFFF is reserved as an error message.
+//var           //TempNumber is used below as DWord (for controlled overflow), but for length comparison, it should be QWord (or Int64)
+//  TempNumber: TDynArrayLength;  //using a DWord, instead of a Word, because the array length might already be greater than $FFFFFFFF.
+//  //TempNumber: Word;
+//begin
+//  {$IFDEF IsDesktop}
+//    CheckInitializedDynArrayOfDWord(AArr);
+//  {$ENDIF}
+//
+//  TempNumber := AArr.Len;   //Start with AArr.Len
+//  if (AArr.Len >= $FFFFFFFF) or (TempNumber = $FFFFFFFF) then
+//  begin
+//    Result := $FFFFFFFF;
+//    Exit;
+//  end;
+//
+//  Result := 0; //init here. When it becomes $FFFFFFFF (err) and TempNumber is also $FFFFFFFF, then exit.
+//  repeat
+//    if IndexOfDWordInArrayOfDWord(AArr, TempNumber) = -1 then //Found
+//    begin
+//      if not AddDWordToDynArraysOfDWord(AArr, TempNumber) then
+//      begin
+//        Result := $FFFFFFFF; //Error: Out of memory.
+//        Exit;
+//      end;
+//
+//      Result := TempNumber;
+//      Exit;
+//    end;
+//
+//    Inc(TempNumber);
+//    if TempNumber = $FFFFFFFF then
+//    begin
+//      if Result = $FFFFFFFF then
+//        Exit;
+//
+//      Inc(TempNumber);  //Jump past $FFFFFFFF, so it should become 0, to verify the other part of the array.
+//      Result := $FFFFFFFF;  //Mark as wrapped around.
+//    end
+//    else
+//      if Result = $FFFFFFFF then //already wrapped around
+//        if TempNumber = AArr.Len then //back to first attempted value
+//          Exit;
+//  until False;
+//end;
+
+function CreateUniqueDWordWithStart(var AArr: TDynArrayOfDWord; AStartAt: DWord): DWord;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
+var
+  TempNumber: TDynArrayLength;  //using a DWord, instead of a Word, because the array length might already be greater than 65535.
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfDWord(AArr);
   {$ENDIF}
 
-  TempNumber := AArr.Len;   //Start with AArr.Len
-  if (AArr.Len >= $FFFFFFFF) or (TempNumber = $FFFFFFFF) then
+  if AStartAt = $FFFF then
+    TempNumber := AArr.Len   //Start with AArr.Len
+  else
+    TempNumber := AStartAt;
+
+  if (AArr.Len >= 65535) or (TempNumber = $FFFF) then
   begin
-    Result := $FFFFFFFF;
+    Result := $FFFF;
     Exit;
   end;
 
-  Result := 0; //init here. When it becomes $FFFFFFFF (err) and TempNumber is also $FFFFFFFF, then exit.
+  Result := 0; //init here. When it becomes $FFFF (err) and TempNumber is also $FFFF, then exit.
   repeat
     if IndexOfDWordInArrayOfDWord(AArr, TempNumber) = -1 then //Found
     begin
       if not AddDWordToDynArraysOfDWord(AArr, TempNumber) then
       begin
-        Result := $FFFFFFFF; //Error: Out of memory.
+        Result := $FFFF; //Error: Out of memory.
         Exit;
       end;
 
@@ -2391,19 +2605,28 @@ begin
     end;
 
     Inc(TempNumber);
-    if TempNumber = $FFFFFFFF then
+    if TempNumber = $FFFF then
     begin
-      if Result = $FFFFFFFF then
+      if Result = $FFFF then
         Exit;
 
-      Inc(TempNumber);  //Jump past $FFFFFFFF, so it should become 0, to verify the other part of the array.
-      Result := $FFFFFFFF;  //Mark as wrapped around.
+      Inc(TempNumber);  //Jump past $FFFF, so it should become 0, to verify the other part of the array.
+      if TempNumber > $FFFF then
+        TempNumber := 0;
+
+      Result := $FFFF;  //Mark as wrapped around.
     end
     else
-      if Result = $FFFFFFFF then //already wrapped around
+      if Result = $FFFF then //already wrapped around
         if TempNumber = AArr.Len then //back to first attempted value
           Exit;
   until False;
+end;
+
+
+function CreateUniqueDWord(var AArr: TDynArrayOfDWord): DWord;  //Returns $FFFF if can't find a new number to add or the array is already full (with or without duplicates). This means $FFFF is reserved as an error message.
+begin
+  Result := CreateUniqueDWordWithStart(AArr, $FFFF);
 end;
 
 
@@ -2574,6 +2797,7 @@ function RemoveStartPtrUIntsFromDynArray(ACount: TDynArrayLength; var AArr: TDyn
 var
   PartialArr: TDynArrayOfPtrUInt;
   NewLen: TDynArrayLength;
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
 begin
   Result := True;
 
@@ -2588,7 +2812,7 @@ begin
 
   InitDynArrayOfPtrUIntToEmpty(PartialArr);
   NewLen := AArr.Len - ACount;
-  if not CopyFromDynArrayOfPtrUInt(PartialArr, AArr, ACount, NewLen) then
+  if not CopyFromDynArrayOfPtrUInt(PartialArr, AArr, {$IFDEF AppArch16} Dummy, {$ENDIF} ACount, NewLen) then
   begin
     Result := False;
     Exit;
@@ -2601,7 +2825,7 @@ begin
 end;
 
 
-function CopyFromDynArrayOfPtrUInt(var ADestArr, ASrcArr: TDynArrayOfPtrUInt; AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
+function CopyFromDynArrayOfPtrUInt(var ADestArr, ASrcArr: TDynArrayOfPtrUInt; {$IFDEF AppArch16} ADummy, {$ENDIF} AIndex, ACount: TDynArrayLength): Boolean;  //ADestArr should be empty, because it is initialized here
 var
   OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
@@ -2620,7 +2844,11 @@ begin
   if ACount > ASrcArr.Len - AIndex then
     ACount := ASrcArr.Len - AIndex;
 
-  SetDynOfPtrUIntLength(ADestArr, ACount);
+  if not SetDynOfPtrUIntLength(ADestArr, ACount) then
+  begin
+    Result := False;
+    Exit;
+  end;
 
   {$IFnDEF IsDesktop}
     OldPointer := DWord(ASrcArr.Content) + AIndex shl CArchBitShift;
