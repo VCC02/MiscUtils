@@ -134,6 +134,7 @@ begin
   TTestDynArraysOfPtrUIntCase_RunTests;
   TTestDynArraysOfWordCase_RunTests;
   TTestDynOfDynOfWordCase_RunTests;
+  TTestDynArraysOfDWordCase_RunTests;
   
   UART_WriteLn_Text('Done_All');
   LED1 := 1;

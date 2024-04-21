@@ -26,7 +26,8 @@ File6=TestDynOfDynOfDynOfByteCase.mpas
 File7=TestDynArraysOfPtrUIntCase.mpas
 File8=TestDynArraysOfWordCase.mpas
 File9=TestDynOfDynOfWordCase.mpas
-Count=10
+File10=TestDynArraysOfDWordCase.mpas
+Count=11
 [BINARIES]
 Count=0
 [IMAGES]

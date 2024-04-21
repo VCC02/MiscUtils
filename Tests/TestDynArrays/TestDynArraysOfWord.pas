@@ -63,6 +63,7 @@ type
     procedure TestCopyFromDynArray_HappyFlow;
     procedure TestCopyFromDynArray_0Length;
     procedure TestCopyFromDynArray_PartialOutOfContent;
+    procedure TestCopyFromDynArray_PartialOutOfContent2;
     procedure TestCopyFromDynArray_CompletelyOutOfContent;
     procedure TestCopyFromDynArray_EmptySource;
 
@@ -511,6 +512,21 @@ begin
   Expect(Dest.Len).ToBe(3); //  CopyFromDynArrayOfWord doesn't care about the content.
 
   Expect(DynArrayOfWordToString(Dest)).ToBe('ABCDEF');
+  FreeDynArrayOfWord(Src);
+  FreeDynArrayOfWord(Dest);
+end;
+
+
+procedure TTestDynArraysOfWordCase.TestCopyFromDynArray_PartialOutOfContent2;
+var
+  Src, Dest: TDynArrayOfWord;
+begin
+  InitDynArrayOfWordToEmpty(Src);
+  Expect(StringToDynArrayOfWord('0123456789ABCDEFG', Src)).ToBe(True);    //odd number of characters
+  CopyFromDynArrayOfWord(Dest, Src, 5, 20);
+  Expect(Dest.Len).ToBe(4); //  CopyFromDynArrayOfWord doesn't care about the content.
+
+  Expect(DynArrayOfWordToString(Dest)).ToBe('ABCDEFG' + #0);
   FreeDynArrayOfWord(Src);
   FreeDynArrayOfWord(Dest);
 end;

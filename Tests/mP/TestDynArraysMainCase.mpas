@@ -43,7 +43,7 @@ implementation
 
 
 var
-  TestDynArrays: TTestDynArrays;
+  TestDynArrays: TTestDynArrays;  //If compilers report not enough RAM, then please comment some of the test suites from main file.
   
 {$IFDEF P30}
   {$DEFINE AppArch16}

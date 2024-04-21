@@ -26,7 +26,8 @@ File6=TestDynOfDynOfDynOfByteCase.mpas
 File7=TestDynArraysOfPtrUIntCase.mpas
 File8=TestDynArraysOfWordCase.mpas
 File9=TestDynOfDynOfWordCase.mpas
-Count=10
+File10=TestDynArraysOfDWordCase.mpas
+Count=11
 [BINARIES]
 Count=0
 [IMAGES]
@@ -41,7 +42,8 @@ File4=TestDynArraysOfPtrUIntCase.mpas
 File5=TestDynArraysOfWordCase.mpas
 File6=TestDynOfDynOfWordCase.mpas
 File7=..\..\DynArrays.pas
-Count=8
+File8=TestDynArraysOfDWordCase.mpas
+Count=9
 [EEPROM]
 Count=0
 [ACTIVE_COMMENTS_FILES]

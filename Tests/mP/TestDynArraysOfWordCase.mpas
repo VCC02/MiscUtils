@@ -500,6 +500,26 @@ begin
 end;
 
 
+procedure TTestDynArraysOfWordCase_TestCopyFromDynArray_PartialOutOfContent2;
+const
+  CExpectedData: array[8] of Byte = (65, 66, 67, 68, 69, 70, 71, 0); //'ABCDEFG' + #0    - #0 is not a null terminator here. It is a padding byte.
+var
+  Src, Dest: TDynArrayOfWord;
+  s: string[20];
+  {$IFDEF AppArch16} Dummy: TDynArrayLength; {$ENDIF}
+begin
+  InitDynArrayOfWordToEmpty(Src);
+  ExpectBoolean(StringToDynArrayOfWord('0123456789ABCDEFG', Src)).ToBe(True, '');    //odd number of characters
+  CopyFromDynArrayOfWord(Dest, Src, {$IFDEF AppArch16} Dummy, {$ENDIF} 5, 20);
+  ExpectDWord(Dest.Len).ToBe(4, ''); //  CopyFromDynArrayOfWord doesn't care about the content.
+
+  DynArrayOfWordToString(Dest, s);
+  ExpectData(DWord(@s[0]), 8).ToBe(@CExpectedData[0], ''); //ExpectString(s).ToBe('ABCDEFG' + #0, '');
+  FreeDynArrayOfWord(Src);
+  FreeDynArrayOfWord(Dest);
+end;
+
+
 procedure TTestDynArraysOfWordCase_TestCopyFromDynArray_CompletelyOutOfContent;
 var
   Src, Dest: TDynArrayOfWord;
@@ -983,6 +1003,7 @@ begin
   RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_HappyFlow', @TTestDynArraysOfWordCase_TestCopyFromDynArray_HappyFlow);
   RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_0Length', @TTestDynArraysOfWordCase_TestCopyFromDynArray_0Length);
   RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_PartialOutOfContent', @TTestDynArraysOfWordCase_TestCopyFromDynArray_PartialOutOfContent);
+  RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_PartialOutOfContent2', @TTestDynArraysOfWordCase_TestCopyFromDynArray_PartialOutOfContent2);
   RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_CompletelyOutOfContent', @TTestDynArraysOfWordCase_TestCopyFromDynArray_CompletelyOutOfContent);
   RegisterTest_TTestDynArraysOfWordCase('TestCopyFromDynArray_EmptySource', @TTestDynArraysOfWordCase_TestCopyFromDynArray_EmptySource);
   RegisterTest_TTestDynArraysOfWordCase('TestDeleteFromDynArray_EmptyArray', @TTestDynArraysOfWordCase_TestDeleteFromDynArray_EmptyArray);

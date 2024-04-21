@@ -63,6 +63,7 @@ type
     procedure TestCopyFromDynArray_HappyFlow;
     procedure TestCopyFromDynArray_0Length;
     procedure TestCopyFromDynArray_PartialOutOfContent;
+    procedure TestCopyFromDynArray_PartialOutOfContent2;
     procedure TestCopyFromDynArray_CompletelyOutOfContent;
     procedure TestCopyFromDynArray_EmptySource;
 
@@ -505,12 +506,35 @@ procedure TTestDynArraysOfDWordCase.TestCopyFromDynArray_PartialOutOfContent;
 var
   Src, Dest: TDynArrayOfDWord;
 begin
+  //  0123 4567 89AB CDEF GHIJ KLMN OPQR STUV WXYZ abcd efgh ijkl mno
   InitDynArrayOfDWordToEmpty(Src);
-  Expect(StringToDynArrayOfDWord('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmno', Src)).ToBe(True);    //truncated at "lm"
+  Expect(StringToDynArrayOfDWord('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmno', Src)).ToBe(True);
+  Expect(Src.Len).ToBe(13, 'src len');
+  Expect(Src.Content^[12]).ToBe(Ord('m') shl 0 + Ord('n') shl 8 + Ord('o') shl 16 + 0 shl 24, 'src content');  //6F6E6D (onm)
+
   CopyFromDynArrayOfDWord(Dest, Src, 5, 20);
   Expect(Dest.Len).ToBe(8); //  CopyFromDynArrayOfDWord doesn't care about the content.
 
-  Expect(DynArrayOfDWordToString(Dest)).ToBe('KLMNOPQRSTUVWXYZabcdefghijklm');     //expected to end in "mno", but it is truncated already
+  Expect(DynArrayOfDWordToString(Dest)).ToBe('KLMNOPQRSTUVWXYZabcdefghijklmno' + #0);
+  FreeDynArrayOfDWord(Src);
+  FreeDynArrayOfDWord(Dest);
+end;
+
+
+procedure TTestDynArraysOfDWordCase.TestCopyFromDynArray_PartialOutOfContent2;
+var
+  Src, Dest: TDynArrayOfDWord;
+begin
+  //  0123 4567 89AB CDEF GHIJ KLMN OPQR STUV WXYZ abcd efgh ijkl m
+  InitDynArrayOfDWordToEmpty(Src);
+  Expect(StringToDynArrayOfDWord('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklm', Src)).ToBe(True);
+  Expect(Src.Len).ToBe(13, 'src len');
+  Expect(Src.Content^[12]).ToBe(Ord('m') shl 0 + 0 shl 8 + 0 shl 16 + 0 shl 24, 'src content');  //00006D (onm)
+
+  CopyFromDynArrayOfDWord(Dest, Src, 5, 20);
+  Expect(Dest.Len).ToBe(8); //  CopyFromDynArrayOfDWord doesn't care about the content.
+
+  Expect(DynArrayOfDWordToString(Dest)).ToBe('KLMNOPQRSTUVWXYZabcdefghijklm' + #0#0#0);
   FreeDynArrayOfDWord(Src);
   FreeDynArrayOfDWord(Dest);
 end;

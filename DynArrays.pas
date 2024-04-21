@@ -629,6 +629,19 @@ implementation
 {$ENDIF}
 
 
+{$IFnDEF IsDesktop}
+  function OrdBool(B: Boolean): Byte;
+  begin
+    Result := Byte(B) and 1;
+  end;
+{$ENDIF}
+
+{$IFnDEF IsDesktop}
+  type
+    PPtrUInt = ^PtrUInt;
+{$ENDIF}
+
+
 function StringToDynArrayOfByte({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfByte): Boolean;   //assumes ADest is initialized
 var
   TempLen: TDynArrayLength;
@@ -710,22 +723,9 @@ begin
   if IsPartial > 0 then
   begin
     ZeroPaddingSize := (TempLen shl 2) - Length(AString);
-    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(PPtrUInt(PtrUint(@ADest.Content^[TempLen - 1]) + ZeroPaddingSize), @ZeroString[{$IFDEF IsDesktop}1{$ELSE}0{$ENDIF}], ZeroPaddingSize);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(PPtrUInt(PtrUint(@ADest.Content^[TempLen - 1]) + DWord(4) - ZeroPaddingSize), @ZeroString[{$IFDEF IsDesktop}1{$ELSE}0{$ENDIF}], ZeroPaddingSize);
   end;
 end;
-
-
-{$IFnDEF IsDesktop}
-  function OrdBool(B: Boolean): Byte;
-  begin
-    Result := Byte(B) and 1;
-  end;
-{$ENDIF}
-
-{$IFnDEF IsDesktop}
-  type
-    PPtrUInt = ^PtrUInt;
-{$ENDIF}
 
 
 function StringToDynArrayOfPtrUInt({$IFnDEF IsDesktop} var {$ENDIF} AString: string; var ADest: TDynArrayOfPtrUInt): Boolean;   //assumes ADest is initialized
@@ -767,7 +767,7 @@ begin
   if IsPartial > 0 then
   begin
     ZeroPaddingSize := (TempLen shl CArchBitShift) - Length(AString);
-    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(PPtrUInt(PtrUint(@ADest.Content^[TempLen - 1]) + ZeroPaddingSize), @ZeroString[{$IFDEF IsDesktop}1{$ELSE}0{$ENDIF}], ZeroPaddingSize);
+    {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(PPtrUInt(PtrUint(@ADest.Content^[TempLen - 1]) + DWord(CZeroLen) - ZeroPaddingSize), @ZeroString[{$IFDEF IsDesktop}1{$ELSE}0{$ENDIF}], ZeroPaddingSize);
   end;
 end;
 

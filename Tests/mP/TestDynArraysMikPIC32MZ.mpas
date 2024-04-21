@@ -135,12 +135,14 @@ begin
   UART_Set_Active(@UART2_Read, @UART2_Write, @UART2_Data_Ready, @UART2_Tx_Idle); // set UART2 active
   UART_WriteLn_Text('Starting tests...');
 
+                              //Comment some of the following test suite calls if not enough memory:
   TTestDynArrays_RunTests;
   TTestDynOfDynOfByteCase_RunTests;
   TTestDynOfDynOfDynOfByteCase_RunTests;
   TTestDynArraysOfPtrUIntCase_RunTests;
   TTestDynArraysOfWordCase_RunTests;
   TTestDynOfDynOfWordCase_RunTests;
+  TTestDynArraysOfDWordCase_RunTests;
   
   UART_WriteLn_Text('Done_All');
   LED1 := 1;

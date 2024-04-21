@@ -179,6 +179,7 @@ begin
   TTestDynArraysOfPtrUIntCase_RunTests;  //ok
   TTestDynArraysOfWordCase_RunTests;     //ok
   TTestDynOfDynOfWordCase_RunTests;      //ok
+  TTestDynArraysOfDWordCase_RunTests;    //ok
 
   UART_WriteLn_Text('Done_All');
   LED1 := 1;
