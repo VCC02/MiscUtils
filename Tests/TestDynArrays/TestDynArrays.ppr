@@ -10,7 +10,7 @@ uses
   Interfaces, Forms, GuiTestRunner, TestDynArraysMainCase, DynArrays,
   Expectations, DynTFTTypes, TestDynOfDynOfByteCase,
   TestDynOfDynOfDynOfByteCase, TestDynArraysOfWord, TestDynOfDynOfWordCase,
-  TestDynArraysOfPtrUIntCase, TestDynArraysOfDWord, DynArrayFIFO;
+  TestDynArraysOfPtrUIntCase, TestDynArraysOfDWord;
 
 {$R *.res}
 

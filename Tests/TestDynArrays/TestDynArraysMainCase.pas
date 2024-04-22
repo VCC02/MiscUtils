@@ -688,6 +688,7 @@ begin
   Expect(Arr.Len).ToBe(CInitLen + Length(Buf));
 
   Expect(@Arr.Content^, Arr.Len).ToBe(@[1, 2, 3, 30, 40, 50, 60]);
+  FreeDynArray(Arr);
 end;
 
 
