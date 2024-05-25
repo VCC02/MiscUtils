@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2024 VCC
     creation date: Jul 2022
     initial release date: 26 Jul 2022
 
@@ -75,7 +75,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure SaveFileToMem(AName: string; AContent: Pointer; ASize: Int64);
-    procedure LoadFileFromMem(AName: string; var AContent: Pointer; AvailableIndex: Integer = -1); //size should be queried in advance, using GetFileSize. If the destination is a TMemoryStream, it should preallocate memory before calling LoadFileFromMem.
+    procedure LoadFileFromMem(AName: string; AContent: Pointer; AvailableIndex: Integer = -1); //size should be queried in advance, using GetFileSize. If the destination is a TMemoryStream, it should preallocate memory before calling LoadFileFromMem.
     procedure LoadFileFromMemToStream(AName: string; AMemStream: TMemoryStream);  //SetSize is called internally if the new size does not match.
     function GetFileSize(AName: string): Int64;
     procedure ListMemFiles(var AList: TMemFileArr); overload;
@@ -277,7 +277,7 @@ begin
 end;
 
 
-procedure TInMemFileSystem.LoadFileFromMem(AName: string; var AContent: Pointer; AvailableIndex: Integer = -1);
+procedure TInMemFileSystem.LoadFileFromMem(AName: string; AContent: Pointer; AvailableIndex: Integer = -1);
 var
   FileIndex: Integer;
 begin
