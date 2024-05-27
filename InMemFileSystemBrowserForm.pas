@@ -75,6 +75,8 @@ type
     procedure PreviewSelectedFile(AIndex: Integer); overload;
     procedure PreviewSelectedFile; overload;
     procedure ResizeFrameSectionsBySplitterResults(NewLeft: Integer);
+
+    procedure scrboxPreviewMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
   public
 
   end;
@@ -226,6 +228,7 @@ var
   tp: TPoint;
 begin
   tmrStartup.Enabled := False;
+  scrboxPreview.OnMouseWheel := scrboxPreviewMouseWheel;
 
   if vstFiles.RootNodeCount > 0 then
   begin
@@ -307,6 +310,26 @@ procedure TfrmInMemFileSystemBrowser.btnCancelClick(Sender: TObject);
 begin
   Tag := 0;
   Close;
+end;
+
+
+procedure TfrmInMemFileSystemBrowser.scrboxPreviewMouseWheel(
+  Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint;
+  var Handled: Boolean);
+var
+  Factor: Integer;
+begin
+  if ssCtrl in Shift then
+    Factor := 1
+  else
+    Factor := 3;
+
+  if ssShift in Shift then
+    scrboxPreview.HorzScrollBar.Position := scrboxPreview.HorzScrollBar.Position - WheelDelta div Factor
+  else
+    scrboxPreview.VertScrollBar.Position := scrboxPreview.VertScrollBar.Position - WheelDelta div Factor;
+
+  Handled := True;
 end;
 
 end.

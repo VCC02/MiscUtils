@@ -113,8 +113,14 @@ object frmInMemFileSystemBrowser: TfrmInMemFileSystemBrowser
       Height = 216
       Top = 24
       Width = 406
+      HorzScrollBar.Increment = 39
       HorzScrollBar.Page = 396
+      HorzScrollBar.Smooth = True
+      HorzScrollBar.Tracking = True
+      VertScrollBar.Increment = 20
       VertScrollBar.Page = 208
+      VertScrollBar.Smooth = True
+      VertScrollBar.Tracking = True
       Anchors = [akTop, akLeft, akRight, akBottom]
       ClientHeight = 212
       ClientWidth = 402
