@@ -1,3 +1,4 @@
 RoundAlloc
 .SkipLoggingException
 PIC32MX
+RedefineMemMove

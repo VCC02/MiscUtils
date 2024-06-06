@@ -52,6 +52,17 @@ var
   Btn_dir: sbit at TRISB.4;
   LED1_dir: sbit at TRISA.4;
   LED2_dir: sbit at TRISB.14;
+  
+  //JTAG pins are defined as outputs to test the physical pins with LEDs
+  TMS: sbit at PORTB.5;
+  TDI: sbit at PORTB.7;
+  TDO: sbit at LATB.9;
+  TCK: sbit at PORTB.7;
+  
+  TMS_dir: sbit at TRISB.5;
+  TDI_dir: sbit at TRISB.7;
+  TDO_dir: sbit at TRISB.9;
+  TCK_dir: sbit at TRISB.8;
 
   CauseStr, AddressStr: string[30];
   
@@ -100,6 +111,11 @@ begin
   LED1 := 0;
   LED2 := 0;
   
+  TMS_dir := 1;
+  TDI_dir := 1;
+  TDO_dir := 0;
+  TCK_dir := 1;
+  
   Unlock_IOLOCK;
   U2RXR := 2; //RPB1
   U1RXR := 3; //RPB13
@@ -126,6 +142,10 @@ begin
   
   UART2_Init(256000);
   UART_Set_Active(@UART2_Read, @UART2_Write, @UART2_Data_Ready, @UART2_Tx_Idle); // set UART2 active
+  
+  //UART1_Init(256000);
+  //UART_Set_Active(@UART1_Read, @UART1_Write, @UART1_Data_Ready, @UART1_Tx_Idle); // set UART1 active
+  
   UART_WriteLn_Text('Starting tests...');
 
   TTestDynArrays_RunTests;
