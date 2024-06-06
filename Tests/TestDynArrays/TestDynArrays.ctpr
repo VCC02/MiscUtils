@@ -73,6 +73,14 @@
         <Filename Value="TestDynOfDynOfWordCase.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit>
+      <Unit>
+        <Filename Value="TestDynArraysOfPtrUIntCase.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynArraysOfDWord.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -88,7 +96,6 @@
     </SearchPaths>
     <Linking>
       <Debugging>
-        <GenerateDebugInfo Value="False"/>
         <UseHeaptrc Value="True"/>
       </Debugging>
       <Options>
@@ -99,7 +106,10 @@
     </Linking>
     <Other>
       <CustomOptions Value="-dMMFreeBlocks
--dUsingDynTFT"/>
+-d_UsingDynTFT
+-dMaxMMAtProjectLevel
+-dRoundAlloc
+-dConvExMsg"/>
     </Other>
   </CompilerOptions>
   <Debugging>
