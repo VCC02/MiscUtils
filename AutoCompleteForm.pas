@@ -30,7 +30,7 @@ interface
 
 uses
   LCLIntf, LCLType, Classes, SysUtils, Forms, Controls, Graphics, Dialogs,
-  ComCtrls, StdCtrls, ExtCtrls, VirtualTrees;
+  ComCtrls, StdCtrls, ExtCtrls, Menus, VirtualTrees;
 
 type
 
@@ -53,6 +53,8 @@ type
       Shift: TShiftState);
     procedure vstIdentifiersKeyUp(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure vstIdentifiersMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
     procedure vstIdentifiersPaintText(Sender: TBaseVirtualTree;
       const TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
       TextType: TVSTTextType);
@@ -71,6 +73,9 @@ type
     tmrDeactivate: TTimer;
     tmrStartup: TTimer;
 
+    pmVST: TPopupMenu;
+    MenuItem_CopySelectedItemToClipboard: TMenuItem;
+
     FHold: Boolean;
     FInitialWidth: Integer;
     FInitialHeight: Integer;
@@ -84,6 +89,8 @@ type
     procedure pnlDragCornerMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
 
+    procedure MenuItem_CopySelectedItemToClipboardClick(Sender: TObject);
+
     procedure FormDeactivate(Sender: TObject);
     procedure tmrDeactivateTimer(Sender: TObject);
     procedure tmrStartupTimer(Sender: TObject);
@@ -93,6 +100,8 @@ type
 
     procedure LoadSettings;
     procedure SaveSettings;
+
+    procedure SetIdentifiersHint;
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -119,7 +128,7 @@ implementation
 
 
 uses
-  IniFiles;
+  IniFiles, Clipbrd;
 
 
 function ExtractSearchWord(AStr: string; ACurrentCaretPos: Integer): string;
@@ -248,6 +257,12 @@ begin
   FSelected := '';
   FHold := False;
 
+  pmVST := TPopupMenu.Create(Self);
+  MenuItem_CopySelectedItemToClipboard := TMenuItem.Create(Self);
+  MenuItem_CopySelectedItemToClipboard.Caption := 'Copy selected item to clipboard';
+  MenuItem_CopySelectedItemToClipboard.OnClick := MenuItem_CopySelectedItemToClipboardClick;
+  pmVST.Items.Add(MenuItem_CopySelectedItemToClipboard);
+
   CreateRemainingUIComponents;
   tmrStartup.Enabled := True;
 end;
@@ -277,7 +292,7 @@ begin
     Height := Ini.ReadInteger('AutoComplete', 'Height', Height);
 
     vstIdentifiers.ShowHint := True;
-    vstIdentifiers.Hint := 'Width: ' + IntToStr(Width) + '  Height: ' + IntToStr(Height);
+    SetIdentifiersHint;
   finally
     Ini.Free;
   end;
@@ -328,6 +343,21 @@ begin
   LoadSettings;
   pnlDragCorner.Left := ClientWidth - pnlDragCorner.Width;
   pnlDragCorner.Top := ClientHeight - pnlDragCorner.Height;
+end;
+
+
+procedure TfrmAutoComplete.MenuItem_CopySelectedItemToClipboardClick(Sender: TObject);
+var
+  Node: PVirtualNode;
+begin
+  Node := vstIdentifiers.GetFirstSelected;
+  if Node = nil then
+    Exit;
+
+  if Integer(Node^.Index) < FListOfVars.Count then
+    Clipboard.AsText := FListOfVars.Strings[Node^.Index] + '  ' + FListOfVarsDesc.Strings[Node^.Index]
+  else
+    Clipboard.AsText := FListOfFuncs.Strings[Node^.Index - FListOfVars.Count] + '  ' + FListOfFuncsDesc.Strings[Node^.Index - FListOfVars.Count];
 end;
 
 
@@ -450,6 +480,7 @@ begin
   vstIdentifiers.Header.DefaultHeight := 17;
   vstIdentifiers.Indent := 4;
   vstIdentifiers.ParentFont := False;
+  vstIdentifiers.PopupMenu := pmVST;
   vstIdentifiers.TabOrder := 0;
   vstIdentifiers.TreeOptions.PaintOptions := [toShowButtons, toShowDropmark, toShowRoot, toThemeAware, toUseBlendedImages];
   vstIdentifiers.TreeOptions.SelectionOptions := [toFullRowSelect];
@@ -460,6 +491,7 @@ begin
   vstIdentifiers.OnPaintText := vstIdentifiersPaintText;
   vstIdentifiers.OnKeyDown := vstIdentifiersKeyDown;
   vstIdentifiers.OnKeyUp := vstIdentifiersKeyUp;
+  vstIdentifiers.OnMouseUp := vstIdentifiersMouseUp;
 
   NewColum := vstIdentifiers.Header.Columns.Add;
   NewColum.MinWidth := 50;
@@ -474,9 +506,9 @@ begin
   NewColum.Text := 'Definition';
 
   NewColum := vstIdentifiers.Header.Columns.Add;
-  NewColum.MinWidth := 4500;
+  NewColum.MinWidth := 8500;
   NewColum.Position := 2;
-  NewColum.Width := 6500;
+  NewColum.Width := 10500;
   NewColum.Text := 'Description';
 
   pnlDragCorner := TPanel.Create(Self);
@@ -518,6 +550,23 @@ begin
 end;
 
 
+procedure TfrmAutoComplete.SetIdentifiersHint;
+var
+  Node: PVirtualNode;
+begin
+  vstIdentifiers.Hint := 'Width: ' + IntToStr(Width) + '  Height: ' + IntToStr(Height);
+
+  Node := vstIdentifiers.GetFirstSelected;
+  if Node = nil then
+    Exit;
+
+  if Integer(Node^.Index) < FListOfVars.Count then
+    vstIdentifiers.Hint := vstIdentifiers.Hint + #13#10#13#10 + FListOfVars.Strings[Node^.Index] + #13#10 + FListOfVarsDesc.Strings[Node^.Index]
+  else
+    vstIdentifiers.Hint := vstIdentifiers.Hint + #13#10#13#10 + FListOfFuncs.Strings[Node^.Index - FListOfVars.Count] + #13#10 + FListOfFuncsDesc.Strings[Node^.Index - FListOfVars.Count];
+end;
+
+
 procedure TfrmAutoComplete.vstIdentifiersDrawText(Sender: TBaseVirtualTree;
   TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   const AText: String; const CellRect: TRect; var DefaultDraw: Boolean);
@@ -556,6 +605,16 @@ begin
   else
     if not (Key in [VK_UP, VK_DOWN, VK_NEXT, VK_PRIOR]) then
       FEdit.SetFocus;
+
+  if Key in [VK_HOME, VK_END, VK_PRIOR, VK_NEXT, VK_LEFT, VK_UP, VK_RIGHT, VK_DOWN] then
+    SetIdentifiersHint;
+end;
+
+
+procedure TfrmAutoComplete.vstIdentifiersMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  SetIdentifiersHint;
 end;
 
 
