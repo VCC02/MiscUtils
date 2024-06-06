@@ -9,11 +9,11 @@
         <Filename Value="TestDynArrays.ppr"/>
         <FRMtype Value="0"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="-1"/>
-        <CursorPos X="-1" Y="-1"/>
-        <UsageCount Value="23"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <CursorPos X="53" Y="6"/>
+        <UsageCount Value="194"/>
+        <Loaded Value="True"/>
       </Unit>
       <Unit>
         <Filename Value="TestDynArraysMainCase.pas"/>
@@ -21,110 +21,194 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="179"/>
-        <CursorPos X="27" Y="188"/>
-        <UsageCount Value="23"/>
+        <TopLine Value="667"/>
+        <CursorPos X="19" Y="691"/>
+        <UsageCount Value="194"/>
         <Loaded Value="True"/>
       </Unit>
       <Unit>
         <Filename Value="..\..\DynArrays.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="-1"/>
-        <CursorPos X="-1" Y="-1"/>
-        <UsageCount Value="20"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="911"/>
+        <CursorPos X="35" Y="915"/>
+        <UsageCount Value="191"/>
+        <Loaded Value="True"/>
       </Unit>
       <Unit>
         <Filename Value="..\..\Expectations.pas"/>
         <IsPartOfProject Value="True"/>
+        <EditorIndex Value="12"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="303"/>
+        <CursorPos X="22" Y="313"/>
+        <UsageCount Value="191"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynOfDynOfByteCase.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="401"/>
+        <CursorPos X="5" Y="421"/>
+        <UsageCount Value="189"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="D:\DynTFT\DynTFTTypes.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="13"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="30"/>
+        <CursorPos Y="40"/>
+        <UsageCount Value="162"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="D:\DynTFT\MemManager.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="11"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="61"/>
+        <CursorPos X="25" Y="76"/>
+        <UsageCount Value="162"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynOfDynOfDynOfByteCase.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="159"/>
+        <CursorPos X="32" Y="174"/>
+        <UsageCount Value="140"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynArraysOfWord.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="851"/>
+        <CursorPos X="15" Y="872"/>
+        <UsageCount Value="107"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynOfDynOfWordCase.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="219"/>
+        <CursorPos Y="235"/>
+        <UsageCount Value="101"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynArraysOfPtrUIntCase.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="8"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="663"/>
+        <CursorPos X="5" Y="680"/>
+        <UsageCount Value="56"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynArraysOfDWord.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="513"/>
+        <CursorPos X="77" Y="505"/>
+        <UsageCount Value="30"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="TestDynArraysOfPtrUInt.pas"/>
         <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="-1"/>
-        <CursorPos X="-1" Y="-1"/>
-        <UsageCount Value="20"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="16"/>
+        <CursorPos X="30" Y="25"/>
+        <UsageCount Value="24"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\inc\systemh.inc"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="409"/>
+        <CursorPos X="3" Y="426"/>
+        <UsageCount Value="5"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\codetyphon\typhon\components\lz_FpcUnitRunner\source\guitestrunner.pas"/>
+        <FRMtype Value="0"/>
+        <UnitName Value="GuiTestRunner"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="430"/>
+        <CursorPos Y="448"/>
+        <UsageCount Value="3"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\objpas\sysutils\sysutilh.inc"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <UsageCount Value="4"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\win\sysutils.pp"/>
+        <FRMtype Value="0"/>
+        <UnitName Value="SysUtils"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="97"/>
+        <CursorPos X="4" Y="116"/>
+        <UsageCount Value="4"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\PollingFIFO.pas"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="10"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="167"/>
+        <CursorPos X="5" Y="192"/>
+        <UsageCount Value="41"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\win32\system.pp"/>
+        <FRMtype Value="0"/>
+        <UnitName Value="System"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="621"/>
+        <CursorPos X="3" Y="647"/>
+        <UsageCount Value="5"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\codetyphon\fpcsrc\rtl\objpas\math.pp"/>
+        <FRMtype Value="0"/>
+        <UnitName Value="Math"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="186"/>
+        <CursorPos X="10" Y="199"/>
+        <UsageCount Value="8"/>
       </Unit>
     </Units>
-    <JumpHistory HistoryIndex="19">
+    <JumpHistory HistoryIndex="29">
       <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="121" TopLine="101"/>
+        <Filename Value="..\..\DynArrays.pas"/>
+        <Caret Line="702" TopLine="690"/>
       </Position>
       <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="101" Column="44" TopLine="86"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="161" Column="31" TopLine="141"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="103" Column="39" TopLine="68"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="168" TopLine="131"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="22" Column="15" TopLine="4"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="196" Column="59" TopLine="164"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="29" Column="59" TopLine="5"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="204" Column="15" TopLine="186"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="30" Column="12" TopLine="12"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="225" Column="20" TopLine="203"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="220" TopLine="182"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="34" Column="27" TopLine="18"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="235" TopLine="217"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="26" Column="15" TopLine="8"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="249" TopLine="220"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="27" Column="15" TopLine="9"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="263" TopLine="246"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="33" Column="35" TopLine="10"/>
-      </Position>
-      <Position>
-        <Filename Value="TestDynArraysMainCase.pas"/>
-        <Caret Line="274" Column="14" TopLine="247"/>
+        <Filename Value="..\..\DynArrays.pas"/>
+        <Caret Line="698" TopLine="690"/>
       </Position>
     </JumpHistory>
     <RunParams>
@@ -132,4 +216,99 @@
       <Modes ActiveMode=""/>
     </RunParams>
   </ProjectSession>
+  <Debugging>
+    <BreakPoints>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynArraysMainCase.pas"/>
+        <Line Value="215"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynOfDynOfByteCase.pas"/>
+        <Line Value="255"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynOfDynOfDynOfByteCase.pas"/>
+        <Line Value="289"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynOfDynOfDynOfByteCase.pas"/>
+        <Line Value="438"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynArraysOfWord.pas"/>
+        <Line Value="511"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynArraysMainCase.pas"/>
+        <Line Value="614"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynArraysMainCase.pas"/>
+        <Line Value="542"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynOfDynOfWordCase.pas"/>
+        <Line Value="230"/>
+      </Item>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="TestDynArraysMainCase.pas"/>
+        <Line Value="399"/>
+      </Item>
+    </BreakPoints>
+    <Watches>
+      <Item>
+        <Expression Value="PartialArr.Content^"/>
+      </Item>
+      <Item>
+        <Expression Value="@ADest.Content^[0] + ALen"/>
+      </Item>
+      <Item>
+        <Expression Value="ADest.Content"/>
+      </Item>
+      <Item>
+        <Expression Value="@ADest.Content^[0]"/>
+      </Item>
+      <Item>
+        <Expression Value="ABuf"/>
+        <DisplayStyle Value="wdfMemDump"/>
+      </Item>
+      <Item>
+        <Expression Value="ADest.Content^"/>
+        <DisplayStyle Value="wdfMemDump"/>
+      </Item>
+      <Item>
+        <Expression Value="Arr.Content^[20]^.Content^"/>
+      </Item>
+      <Item>
+        <Expression Value="AArr.Content^"/>
+      </Item>
+    </Watches>
+  </Debugging>
 </CONFIG>
