@@ -8,7 +8,7 @@ object frmInMemFileSystemBrowser: TfrmInMemFileSystemBrowser
   ClientWidth = 737
   Constraints.MinHeight = 240
   Constraints.MinWidth = 737
-  LCLVersion = '8.2'
+  LCLVersion = '8.4'
   OnCreate = FormCreate
   OnResize = FormResize
   object pnlFileList: TPanel

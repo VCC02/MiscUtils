@@ -12,7 +12,7 @@ object frmAutoComplete: TfrmAutoComplete
   OnCreate = FormCreate
   OnHide = FormHide
   Position = poDesktopCenter
-  LCLVersion = '7.5'
+  LCLVersion = '8.4'
   object lblSizeInfo: TLabel
     Left = 94
     Height = 15
