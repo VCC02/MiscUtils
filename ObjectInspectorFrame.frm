@@ -106,4 +106,11 @@ object frObjectInspector: TfrObjectInspector
       OnClick = MenuItem_ShowHideSearchBoxClick
     end
   end
+  object tmrScrollToNode: TTimer
+    Enabled = False
+    Interval = 1
+    OnTimer = tmrScrollToNodeTimer
+    Left = 72
+    Top = 56
+  end
 end

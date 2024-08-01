@@ -136,6 +136,7 @@ type
   TOnOIDragOver = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean) of object;
   TOnOIDragDrop = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode) of object;
 
+  TOnOIFirstVisibleNode = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer) of object;
 
   { TfrObjectInspector }
 
@@ -146,6 +147,7 @@ type
     MenuItem_ShowHideSearchBox: TMenuItem;
     pnlvstOI: TPanel;
     pmOI: TPopupMenu;
+    tmrScrollToNode: TTimer;
     tmrSearch: TTimer;
     tmrSetEditBox: TTimer;
     tmrColCmbDropped: TTimer;
@@ -154,6 +156,7 @@ type
     procedure MenuItem_ShowHideSearchBoxClick(Sender: TObject);
     procedure tmrColCmbDroppedTimer(Sender: TObject);
     procedure tmrEditingPropertyTimer(Sender: TObject);
+    procedure tmrScrollToNodeTimer(Sender: TObject);
     procedure tmrSearchTimer(Sender: TObject);
     procedure tmrSetEditBoxTimer(Sender: TObject);
   private
@@ -182,6 +185,8 @@ type
     FColorFormat: TOIColorFormat;
     FPropertyItemHeight: Integer;
     FVstVertScrollBarVisible: Boolean; //flag set by vst event
+
+    FScrollToNode_NodeLevel, FScrollToNode_CategoryIndex, FScrollToNode_PropertyIndex, FScrollToNode_PropertyItemIndex: Integer;
 
     FOnOIGetCategoryCount: TOnOIGetCategoryCount;
     FOnOIGetCategory: TOnOIGetCategory;
@@ -227,6 +232,8 @@ type
     FOnOIDragAllowed: TOnOIDragAllowed;
     FOnOIDragOver: TOnOIDragOver;
     FOnOIDragDrop: TOnOIDragDrop;
+
+    FOnOIFirstVisibleNode: TOnOIFirstVisibleNode;
 
     procedure SetDataTypeVisible(Value: Boolean);
     procedure SetExtraInfoVisible(Value: Boolean);
@@ -298,6 +305,8 @@ type
     procedure DoOnOIDragAllowed(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var Allowed: Boolean);
     procedure DoOnOIDragOver(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
     procedure DoOnOIDragDrop(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
+
+    procedure DoOnOIFirstVisibleNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer);
 
     procedure edtColorPropertyExit(Sender: TObject);
     procedure edtColorPropertyKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -407,6 +416,7 @@ type
     procedure FocusOI;
     procedure CancelCurrentEditing; //usually the text editor   - this is called by ReloadContent and ReloadPropertyItems
     procedure SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True; ACenterIntoView: Boolean = False);
+    procedure ScrollToNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
     procedure ClearNodeSelection;
 
     property ListItemsVisible: Boolean read FListItemsVisible write FListItemsVisible; //to be set before calling ReloadContent
@@ -463,6 +473,8 @@ type
     property OnOIDragAllowed: TOnOIDragAllowed write FOnOIDragAllowed;
     property OnOIDragOver: TOnOIDragOver write FOnOIDragOver;
     property OnOIDragDrop: TOnOIDragDrop write FOnOIDragDrop;
+
+    property OnOIFirstVisibleNode: TOnOIFirstVisibleNode write FOnOIFirstVisibleNode;
   end;
 
 
@@ -782,6 +794,8 @@ begin
   FOnOIDragOver := nil;
   FOnOIDragDrop := nil;
 
+  FOnOIFirstVisibleNode := nil;
+
   FListItemsVisible := True;
   FDataTypeVisible := True;
   FExtraInfoVisible := True;
@@ -793,6 +807,11 @@ begin
   FcolcmbPropertyIsDropped := False;
   FPropertyItemHeight := 24;
   FVstVertScrollBarVisible := True;
+
+  FScrollToNode_NodeLevel := -3;
+  FScrollToNode_CategoryIndex := -3;
+  FScrollToNode_PropertyIndex := -3;
+  FScrollToNode_PropertyItemIndex := -3;
 end;
 
 
@@ -811,6 +830,27 @@ begin
 
   if FPropHitInfo.HitColumn = 1 then
     vstOI.EditNode(FPropHitInfo.HitNode, FPropHitInfo.HitColumn);
+end;
+
+
+procedure TfrObjectInspector.tmrScrollToNodeTimer(Sender: TObject);
+var
+  NodeToBeSelected, LastNode: PVirtualNode;
+begin
+  tmrScrollToNode.Enabled := False;
+
+  NodeToBeSelected := GetNodeByLevel(FScrollToNode_NodeLevel, FScrollToNode_CategoryIndex, FScrollToNode_PropertyIndex, FScrollToNode_PropertyItemIndex);
+
+  if NodeToBeSelected <> nil then
+  begin
+    vstOI.ScrollIntoView(NodeToBeSelected, False); //if there are collapsed nodes, this call should expand them
+
+    LastNode := vstOI.GetLast;
+    if LastNode <> nil then
+      vstOI.ScrollIntoView(LastNode, False); //this should cause the target node to be displayed as the first node from the next call
+
+    vstOI.ScrollIntoView(NodeToBeSelected, False);
+  end;
 end;
 
 
@@ -1471,6 +1511,15 @@ begin
 end;
 
 
+procedure TfrObjectInspector.DoOnOIFirstVisibleNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer);
+begin
+  if not Assigned(FOnOIFirstVisibleNode) then
+    Exit;  //Do not raise exception for this event. It is not mandatory.
+
+  FOnOIFirstVisibleNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex);
+end;
+
+
 procedure TfrObjectInspector.CancelCurrentEditing;
 begin
   vstOI.CancelEditNode; //destroy the text editor, to avoid updating to a new value
@@ -1718,6 +1767,17 @@ begin
     if AScrollIntoView then
       vstOI.ScrollIntoView(NodeToBeSelected, ACenterIntoView);
   end;
+end;
+
+
+procedure TfrObjectInspector.ScrollToNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
+begin
+  FScrollToNode_NodeLevel := ANodeLevel;
+  FScrollToNode_CategoryIndex := ACategoryIndex;
+  FScrollToNode_PropertyIndex := APropertyIndex;
+  FScrollToNode_PropertyItemIndex := APropertyItemIndex;
+
+  tmrScrollToNode.Enabled := True;
 end;
 
 
@@ -2972,6 +3032,9 @@ end;
 
 
 procedure TfrObjectInspector.vstOIScroll(Sender: TBaseVirtualTree; DeltaX, DeltaY: Integer);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+  FirstVisibleNode: PVirtualNode;
 begin
   FreeEditorComponents;
 
@@ -2981,6 +3044,12 @@ begin
 
     if Assigned(FTextEditorEditBox) then
       SetTextEditorEditPosAndSize;
+
+    FirstVisibleNode := (Sender as TVirtualStringTree).GetNodeAt(17, 7);
+    if not GetNodeIndexInfo(FirstVisibleNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+      Exit;
+
+    DoOnOIFirstVisibleNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex);
   except
   end;
 end;
