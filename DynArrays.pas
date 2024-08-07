@@ -188,6 +188,8 @@ type
   {$IFDEF AppArch16}
     PtrUInt = Word;
   {$ENDIF}
+
+  PPtrUInt = ^PtrUInt;
 {$ELSE}
   {$IFDEF IsMCU}
     {$IFDEF AppArch32}
