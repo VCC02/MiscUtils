@@ -486,7 +486,9 @@ implementation
 
 {$IFDEF IsDesktop}
   uses
-    SysUtils;
+    SysUtils
+    {$IFnDEF FPC}, Windows {$ENDIF}
+    ;
 
   //These checks are not available in mP, but are useful as a debugging means on Desktop.
   procedure CheckInitializedDynArray(var AArr: TDynArrayOfByte);
@@ -3116,7 +3118,11 @@ end;
     {$ENDIF}
 
       initialization
-        InitCriticalSection(MMCritSec);
+        {$IFDEF FPC}
+          InitCriticalSection(MMCritSec);
+        {$ELSE}
+          InitializeCriticalSection(MMCritSec);
+        {$ENDIF}
 
         {$IFDEF LogMem}
           OnAfterGetMem := nil;
@@ -3124,7 +3130,11 @@ end;
         {$ENDIF}
 
       finalization
-        DoneCriticalSection(MMCritSec);
+        {$IFDEF FPC}
+          DoneCriticalSection(MMCritSec);
+        {$ELSE}
+          DeleteCriticalSection(MMCritSec);
+        {$ENDIF}
 
         {$IFDEF LogMem}
           OnAfterGetMem := nil;
