@@ -24,8 +24,10 @@
 
 unit MemArchive;
 
-{$mode ObjFPC}{$H+}
-{$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$IFDEF FPC}
+  {$mode ObjFPC}{$H+}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 interface
 
 uses
@@ -64,6 +66,12 @@ type
   TOnCompress = procedure(APlainStream, AArchiveStream: TMemoryStream; ACompressionLevel: Integer) of object;  //compresses APlainStream, results AArchiveStream
   TOnDecompress = function(AArchiveStream, APlainStream: TMemoryStream): Boolean of object;                    //decompresses AArchiveStream, results APlainStream
   TOnEncryptionCleanup = procedure of object;
+
+  {$IFnDEF FPC}
+    {$IFDEF VER180}
+      QWord = Int64;
+    {$ENDIF}
+  {$ENDIF}
 
   TMemArchive = class(TObject)
   private
@@ -115,7 +123,9 @@ type
     function CloseArchive: string;
 
     procedure AddFromStream(AFileName: string; AContent: TMemoryStream; UseBuffer: Boolean = True);
+    procedure AddFromString(AFileName: string; AContent: string);
     procedure ExtractToStream(AFileName: string; AContent: TMemoryStream);
+    procedure ExtractToString(AFileName: string; var AContent: string);
     function FindFirst(AFileMask: string; var SearchState: Int64): Boolean;
     procedure GetListOfFiles(AListOfFiles: TStringList);
 
@@ -361,7 +371,7 @@ begin
   CompressedSize := FArchiveStream.Size;
   PaddingSize := CompressedSize - (CompressedSize shr 5) shl 5;      //modulo without division
   if PaddingSize > 0 then
-    PaddingSize := 32 - PaddingSize;              //padding to 32 bits
+    PaddingSize := 32 - PaddingSize;              //padding to 32 bytes
 
   FArchiveStream.Position := 0;
   FArchiveStream.Write(PaddingSize, SizeOf(PaddingSize));
@@ -539,15 +549,15 @@ begin
     AddPadding;
 
     {Result := } SetHashOfDecryptedArchive;
-  end;
 
-  if Password > '' then
-  begin
-    try
-      EncryptArchive;
-    finally
-      PurgeKey;
-      DoOnEncryptionCleanup;
+    if Password > '' then
+    begin
+      try
+        EncryptArchive;
+      finally
+        PurgeKey;
+        DoOnEncryptionCleanup;
+      end;
     end;
   end;
 
@@ -588,6 +598,21 @@ begin
 end;
 
 
+procedure TMemArchive.AddFromString(AFileName: string; AContent: string);
+var
+  ContentStream: TMemoryStream;
+begin
+  ContentStream := TMemoryStream.Create;
+  try
+    ContentStream.Write(AContent[1], Length(AContent));
+    AddFromStream(AFileName, ContentStream, False);
+    FillChar(ContentStream.Memory^, ContentStream.Size, 0);
+  finally
+    ContentStream.Free;
+  end;
+end;
+
+
 procedure TMemArchive.ExtractToStream(AFileName: string; AContent: TMemoryStream);
 var
   AFilePos: Int64;
@@ -608,6 +633,23 @@ begin
   end
   else
     AContent.Clear;
+end;
+
+
+procedure TMemArchive.ExtractToString(AFileName: string; var AContent: string);
+var
+  ContentStream: TMemoryStream;
+begin
+  ContentStream := TMemoryStream.Create;
+  try
+    ExtractToStream(AFileName, ContentStream);
+
+    SetLength(AContent, ContentStream.Size);
+    ContentStream.Position := 0;
+    ContentStream.Read(AContent[1], ContentStream.Size);
+  finally
+    ContentStream.Free;
+  end;
 end;
 
 
