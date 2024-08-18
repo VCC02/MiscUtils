@@ -112,6 +112,7 @@ var
 
 procedure ShowAutoComplete(AEdit: TCustomEdit; AListOfVars, AListOfFuncs, AListOfVarsDesc, AListOfFuncsDesc: TStrings);  //should be called once / CloseAutoComplete call
 function CloseAutoComplete: string;
+procedure UpdateAutoComplete(AEdit: TCustomEdit);
 function AutoCompleteVisible: Boolean;
 
 
@@ -224,7 +225,11 @@ begin
   if frmAutoComplete.Top < 0 then
     frmAutoComplete.Top := 0;
 
-  AEdit.SetFocus;
+  try  //using try..except, because the editbox might be a dangling pointer if it is destroyed
+    if AEdit.Visible then
+      AEdit.SetFocus;
+  except
+  end;
 end;
 
 
@@ -237,6 +242,14 @@ begin
     Result := frmAutoComplete.FSelected;
     frmAutoComplete.Close;
   end;
+end;
+
+
+procedure UpdateAutoComplete(AEdit: TCustomEdit); //similar to ShowAutoComplete, without setting focus
+begin
+  frmAutoComplete.FSearchWord := ExtractSearchWord(AEdit.Text, AEdit.CaretPos.X);
+  frmAutoComplete.FEdit := AEdit;
+  frmAutoComplete.SearchText;
 end;
 
 
