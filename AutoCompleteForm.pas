@@ -460,12 +460,61 @@ begin
 end;
 
 
+function NegPos(ASub, s: string): Integer;
+var
+  i: Integer;
+begin
+  Result := 0;
+  if (ASub = '') or (s = '') then
+    Exit;
+
+  if Length(ASub) > Length(s) then
+    Exit;
+
+  for i := Length(s) - Length(ASub) + 1 downto 1 do
+    if s[i] = ASub[1] then
+      if CompareMem(@s[i], @ASub[1], Length(ASub)) then
+      begin
+        Result := i;
+        Exit;
+      end;
+end;
+
+
+function CropToTheLeft(s: string): string;      //  crop to the left, until the beginning of the string or up to a ' '.
+var
+  LastBlankPos: Integer;
+begin
+  LastBlankPos := NegPos(' ', s);
+  if LastBlankPos = Length(s) then // ' ' is the last character (useless)
+    Result := s
+  else
+    Result := Copy(s, LastBlankPos + 1, MaxInt);
+end;
+
+
 procedure TfrmAutoComplete.FormClose(Sender: TObject;
   var CloseAction: TCloseAction);
+var
+  LastPart: string;
 begin
-  try                         //////////////////////////////////////////////// ToDo: add only the missing part, at Caret position
+  try
     if FSelected <> '' then
-      FEdit.Text := FEdit.Text + FSelected;
+    begin
+      if FEdit.Text = '' then
+        FEdit.Text := FEdit.Text + FSelected
+      else
+      begin
+        LastPart := CropToTheLeft(FEdit.Text);
+        if Pos(LastPart, FSelected) = 1 then
+          FEdit.Text := FEdit.Text + Copy(FSelected, Length(LastPart) + 1, MaxInt)
+        else
+        begin
+          FEdit.Text := Copy(FEdit.Text, 1, Pos(LastPart, FEdit.Text) - 1);
+          FEdit.Text := FEdit.Text + FSelected;       //the LastPart is deleted from FEdit.Text, then completly replaced by FSelected
+        end;
+      end;
+    end;
   except
     //the editbox might not be available
   end;
