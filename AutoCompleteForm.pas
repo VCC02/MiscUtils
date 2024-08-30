@@ -129,7 +129,7 @@ implementation
 
 
 uses
-  IniFiles, Clipbrd;
+  IniFiles, Clipbrd, Math;
 
 
 function ExtractSearchWord(AStr: string; ACurrentCaretPos: Integer): string;
@@ -374,6 +374,51 @@ begin
 end;
 
 
+function NegPos(ASub, s: string): Integer;
+var
+  i: Integer;
+begin
+  Result := 0;
+  if (ASub = '') or (s = '') then
+    Exit;
+
+  if Length(ASub) > Length(s) then
+    Exit;
+
+  for i := Length(s) - Length(ASub) + 1 downto 1 do
+    if s[i] = ASub[1] then
+      if CompareMem(@s[i], @ASub[1], Length(ASub)) then
+      begin
+        Result := i;
+        Exit;
+      end;
+end;
+
+
+function CropToTheLeft(s: string): string;      //  crop to the left, until the beginning of the string or up to a ' '.
+var
+  LastBlankPos: Integer;
+begin
+  LastBlankPos := Max(NegPos(' ', s), NegPos('=', s));
+  if LastBlankPos = Length(s) then // ' ' is the last character (useless)
+    Result := s
+  else
+    Result := Copy(s, LastBlankPos + 1, MaxInt);
+end;
+
+
+function CropToTheLeft_AllSymbols(s: string): string;      //  crop to the left, until the beginning of the string or up to a ' ', '=', or '$'.
+var
+  LastBlankPos: Integer;
+begin
+  LastBlankPos := Max(Max(NegPos(' ', s), NegPos('=', s)), NegPos('$', s));
+  if LastBlankPos = Length(s) then // ' ' is the last character (useless)
+    Result := '' //s
+  else
+    Result := Copy(s, LastBlankPos + 1, MaxInt);
+end;
+
+
 procedure TfrmAutoComplete.SearchText;
 var
   Node, FirstVisible: PVirtualNode;
@@ -385,7 +430,8 @@ begin
     Exit;
 
   FirstVisible := nil;
-  FSearchWord := Trim(FSearchWord);
+  FSearchWord := Trim(CropToTheLeft_AllSymbols(FSearchWord));
+
   UpperCaseSearchWord := UpperCase(FSearchWord);
   repeat
     TempIsVisible := (FSearchWord = '') or
@@ -460,39 +506,6 @@ begin
 end;
 
 
-function NegPos(ASub, s: string): Integer;
-var
-  i: Integer;
-begin
-  Result := 0;
-  if (ASub = '') or (s = '') then
-    Exit;
-
-  if Length(ASub) > Length(s) then
-    Exit;
-
-  for i := Length(s) - Length(ASub) + 1 downto 1 do
-    if s[i] = ASub[1] then
-      if CompareMem(@s[i], @ASub[1], Length(ASub)) then
-      begin
-        Result := i;
-        Exit;
-      end;
-end;
-
-
-function CropToTheLeft(s: string): string;      //  crop to the left, until the beginning of the string or up to a ' '.
-var
-  LastBlankPos: Integer;
-begin
-  LastBlankPos := NegPos(' ', s);
-  if LastBlankPos = Length(s) then // ' ' is the last character (useless)
-    Result := s
-  else
-    Result := Copy(s, LastBlankPos + 1, MaxInt);
-end;
-
-
 procedure TfrmAutoComplete.FormClose(Sender: TObject;
   var CloseAction: TCloseAction);
 var
@@ -514,6 +527,9 @@ begin
           FEdit.Text := FEdit.Text + FSelected;       //the LastPart is deleted from FEdit.Text, then completly replaced by FSelected
         end;
       end;
+
+      FEdit.SelStart := Length(FEdit.Text);
+      FEdit.SelLength := 1;
     end;
   except
     //the editbox might not be available
@@ -533,6 +549,7 @@ begin
   vstIdentifiers.Height := Height {- 20};
   vstIdentifiers.Width := Width;
   vstIdentifiers.Anchors := [akTop, akLeft, akRight, akBottom];
+  vstIdentifiers.Caption := 'VST with list of variables and functions'; //used by UI tests, to identify the component
   vstIdentifiers.Colors.UnfocusedColor := clMedGray;
   vstIdentifiers.DefaultNodeHeight := 16;
   vstIdentifiers.DefaultText := 'Node';
