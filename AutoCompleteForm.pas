@@ -515,17 +515,21 @@ begin
     if FSelected <> '' then
     begin
       if FEdit.Text = '' then
-        FEdit.Text := FEdit.Text + FSelected
+        FEdit.Text := FSelected
       else
       begin
-        LastPart := CropToTheLeft(FEdit.Text);
+        LastPart := CropToTheLeft(FEdit.Text);   //everything after ' ', '$' or '='
+
         if Pos(LastPart, FSelected) = 1 then
           FEdit.Text := FEdit.Text + Copy(FSelected, Length(LastPart) + 1, MaxInt)
         else
-        begin
-          FEdit.Text := Copy(FEdit.Text, 1, Pos(LastPart, FEdit.Text) - 1);
-          FEdit.Text := FEdit.Text + FSelected;       //the LastPart is deleted from FEdit.Text, then completly replaced by FSelected
-        end;
+          if (Pos('$', LastPart) = 0) or (Pos(LastPart, Copy(FSelected, 1, Pos('=', FSelected))) = 1) then
+          begin
+            FEdit.Text := Copy(FEdit.Text, 1, Pos(LastPart, FEdit.Text) - 1);
+            FEdit.Text := FEdit.Text + FSelected;       //the LastPart is deleted from FEdit.Text, then completly replaced by FSelected
+          end
+          else
+            FEdit.Text := FEdit.Text + FSelected;     //e.g. FEdit.Text = '$Desktop_Width$=1920',  FSelected = '$Screen_Width$=1920'
       end;
 
       FEdit.SelStart := Length(FEdit.Text);
