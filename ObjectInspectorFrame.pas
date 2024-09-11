@@ -140,6 +140,7 @@ type
   TOnOIDragDrop = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode) of object;
 
   TOnOIFirstVisibleNode = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer) of object;
+  TOnOIInitNode = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var ACheckType: TCheckType; var ACheckState: TCheckState; var ANodeHeight: Word) of object;
 
   { TfrObjectInspector }
 
@@ -238,6 +239,7 @@ type
     FOnOIDragDrop: TOnOIDragDrop;
 
     FOnOIFirstVisibleNode: TOnOIFirstVisibleNode;
+    FOnOIInitNode: TOnOIInitNode;
 
     procedure SetDataTypeVisible(Value: Boolean);
     procedure SetExtraInfoVisible(Value: Boolean);
@@ -314,6 +316,7 @@ type
     procedure DoOnOIDragDrop(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex: Integer; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
 
     procedure DoOnOIFirstVisibleNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer);
+    procedure DoOnOIInitNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var ACheckType: TCheckType; var ACheckState: TCheckState; var ANodeHeight: Word);
 
     procedure edtColorPropertyExit(Sender: TObject);
     procedure edtColorPropertyKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -385,6 +388,7 @@ type
     procedure vstOIDragAllowed(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; var Allowed: Boolean);
     procedure vstOIDragOver(Sender: TBaseVirtualTree; Source: TObject; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
     procedure vstOIDragDrop(Sender: TBaseVirtualTree; Source: TObject; DataObject: IDataObject; Formats: TFormatArray; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
+    procedure vstOIInitNode(Sender: TBaseVirtualTree; ParentNode, Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
 
     procedure CreateRemainingUIComponents;
     procedure FreeEditorComponents;
@@ -485,6 +489,7 @@ type
     property OnOIDragDrop: TOnOIDragDrop write FOnOIDragDrop;
 
     property OnOIFirstVisibleNode: TOnOIFirstVisibleNode write FOnOIFirstVisibleNode;
+    property OnOIInitNode: TOnOIInitNode write FOnOIInitNode;
   end;
 
 
@@ -663,7 +668,7 @@ begin
   vstOI.Height := Height;
   vstOI.Constraints.MinWidth := 100;
   vstOI.Constraints.MinHeight := vstOI.Height;
-  vstOI.DefaultNodeHeight := 22; //the default value, 18, should be enough, but the TEdit has a bigger default height
+  vstOI.DefaultNodeHeight := 22; //the default value, 18, should be enough, but the TEdit has a greater default height
   vstOI.Anchors := [akBottom, akLeft, akRight, akTop];
   vstOI.Hint := '';
   vstOI.Header.AutoSizeIndex := 0;
@@ -687,7 +692,7 @@ begin
   vstOI.TabOrder := 0;
   vstOI.TextMargin := 2;
   vstOI.TreeOptions.AutoOptions := [toAutoScrollOnExpand, toAutoTristateTracking, toDisableAutoscrollOnFocus, toDisableAutoscrollOnEdit];
-  vstOI.TreeOptions.MiscOptions := [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning];
+  vstOI.TreeOptions.MiscOptions := [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toInitOnSave, toToggleOnDblClick, toWheelPanning, toCheckSupport];
   vstOI.TreeOptions.PaintOptions := [toShowButtons, toShowDropmark, toShowRoot, toShowTreeLines, toShowVertGridLines, toThemeAware, toUseBlendedImages, toFullVertGridLines];
   vstOI.TreeOptions.SelectionOptions := [toExtendedFocus, toFullRowSelect, toRightClickSelect];
   vstOI.OnCompareNodes := vstOICompareNodes;
@@ -711,6 +716,7 @@ begin
   vstOI.OnDragAllowed := vstOIDragAllowed;
   vstOI.OnDragOver := vstOIDragOver;
   vstOI.OnDragDrop := vstOIDragDrop;
+  vstOI.OnInitNode := vstOIInitNode;
 
   //vstOI.PopupMenu;
   vstOI.Colors.GridLineColor := clGray;
@@ -807,6 +813,7 @@ begin
   FOnOIDragDrop := nil;
 
   FOnOIFirstVisibleNode := nil;
+  FOnOIInitNode := nil;
 
   FListItemsVisible := True;
   FDataTypeVisible := True;
@@ -1539,6 +1546,15 @@ begin
     Exit;  //Do not raise exception for this event. It is not mandatory.
 
   FOnOIFirstVisibleNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex);
+end;
+
+
+procedure TfrObjectInspector.DoOnOIInitNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var ACheckType: TCheckType; var ACheckState: TCheckState; var ANodeHeight: Word);
+begin
+  if not Assigned(FOnOIInitNode) then
+    Exit;  //Do not raise exception for this event. It is not mandatory.
+
+  FOnOIInitNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, ACheckType, ACheckState, ANodeHeight);
 end;
 
 
@@ -3175,6 +3191,21 @@ begin
   DoOnOIDragDrop(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex,
                  SrcNodeLevel, SrcCategoryIndex, SrcPropertyIndex, SrcPropertyItemIndex,
                  Shift, Pt, Effect, Mode);
+end;
+
+
+procedure TfrObjectInspector.vstOIInitNode(Sender: TBaseVirtualTree;
+  ParentNode, Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  Node^.CheckType := ctNone; //Defaults to none. If the user code has a different value, then the handler should update it.
+  Node^.CheckState := csUncheckedNormal;
+
+  if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOIInitNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Node^.CheckType, Node^.CheckState, Node^.NodeHeight);
 end;
 
 
