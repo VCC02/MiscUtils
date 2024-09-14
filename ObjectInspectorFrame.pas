@@ -1573,6 +1573,7 @@ var
 begin
   CancelCurrentEditing;
   FreeEditorComponents;
+  FEditingNode := nil;
 
   vstOI.BeginUpdate;
   try
@@ -3202,7 +3203,7 @@ begin
   Node^.CheckType := ctNone; //Defaults to none. If the user code has a different value, then the handler should update it.
   Node^.CheckState := csUncheckedNormal;
 
-  if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+  if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
     Exit;
 
   DoOnOIInitNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Node^.CheckType, Node^.CheckState, Node^.NodeHeight);
