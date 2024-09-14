@@ -1,0 +1,163 @@
+{
+    Copyright (C) 2024 VCC
+    creation date: 07 September 2024
+    initial release date: 14 September 2024
+
+    author: VCC
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}
+
+//Status: in work
+
+{$DEFINE IsMCU}
+unit RTCCP24EP;
+
+//interface
+
+procedure InitRTCC;
+procedure UnlockRTCC;
+procedure LockRTCC;
+
+procedure EnableRTCC;
+procedure DisableRTCC;
+
+procedure UpdateRTCC(Year, Month, Date, WeekDay, Hour, Minute, Second: Word);   //Year is expected to has a 2000+ value (e.g. 2024)
+procedure GetRTCC(var Year, Month, Date, WeekDay, Hour, Minute, Second: Word);
+
+
+implementation
+
+
+procedure InitRTCC;
+begin
+  RCFGCAL.RTCOE := 0;
+  PADCFG1.RTSECSEL := 0;
+  ALCFGRPT.ALRMEN := 0;
+  UpdateRTCC(2024, 9, 7, 6, 17, 23, 40);    //  2024.09.07_17:23:40
+end;
+
+
+procedure UnlockRTCC;
+begin
+  NVMKEY := $0055;
+  NVMKEY := $00AA;
+  RTCWREN_bit := 1;
+end;
+
+
+procedure LockRTCC;
+begin
+  NVMKEY := $0055;
+  NVMKEY := $00AA;
+  RTCWREN_bit := 0;
+end;
+
+
+procedure EnableRTCC;
+begin
+  UnlockRTCC;
+  RTCEN_bit := 1;
+end;
+
+
+procedure DisableRTCC;
+begin
+  UnlockRTCC;
+  RTCEN_bit := 0;
+end;
+
+
+procedure UpdateRTCC(Year, Month, Date, WeekDay, Hour, Minute, Second: Word);
+var
+  YearTens, YearOnes: Word;
+  MonthTens, MonthOnes: Word;
+  DateTens, DateOnes: Word;
+  HourTens, HourOnes: Word;
+  MinuteTens, MinuteOnes: Word;
+  SecondTens, SecondOnes: Word;
+begin
+  DisableRTCC;
+
+  Year := Year - 2000;
+  YearTens := Year div 10;
+  YearOnes := Year mod 10;
+  MonthTens := Month div 10;
+  MonthOnes := Month mod 10;
+  DateTens := Date div 10;
+  DateOnes := Date mod 10;
+  HourTens := Hour div 10;
+  HourOnes := Hour mod 10;
+  MinuteTens := Minute div 10;
+  MinuteOnes := Minute mod 10;
+  SecondTens := Second div 10;
+  SecondOnes := Second mod 10;
+
+  RCFGCAL.0 := 1; //RTCPTR := 11;
+  RCFGCAL.1 := 1; //RTCPTR := 11;
+  
+  RTCVAL := (YearTens shl 4) or YearOnes;   //RTCPTR = 11
+  RTCVAL := (MonthTens shl 12) or (MonthOnes shl 8) or (DateTens shl 4) or DateOnes;  //RTCPTR = 10
+  RTCVAL := (WeekDay shl 8) or (HourTens shl 4) or HourOnes;  //RTCPTR = 01
+  RTCVAL := (MinuteTens shl 12) or (MinuteOnes shl 8) or (SecondTens shl 4) or SecondOnes;  //RTCPTR = 00
+  
+  EnableRTCC;
+end;
+
+
+procedure GetRTCC(var Year, Month, Date, WeekDay, Hour, Minute, Second: Word);
+var
+  YearTens, YearOnes: Word;
+  MonthTens, MonthOnes: Word;
+  DateTens, DateOnes: Word;
+  HourTens, HourOnes: Word;
+  MinuteTens, MinuteOnes: Word;
+  SecondTens, SecondOnes: Word;
+  RTCVALTemp: Word;
+begin
+  RCFGCAL.0 := 1; //RTCPTR := 11;
+  RCFGCAL.1 := 1; //RTCPTR := 11;
+  
+  RTCVALTemp := RTCVAL; // RTCPTR = 11
+  YearTens := (RTCVAL shr 4) and $F;
+  YearOnes := RTCVAL and $F;
+  
+  RTCVALTemp := RTCVAL; // RTCPTR = 10
+  MonthTens := (RTCVALTemp shr 12) and 1;
+  MonthOnes := (RTCVALTemp shr 8) and $F;
+  DateTens := (RTCVALTemp shr 8) and 3;
+  DateOnes := RTCVALTemp and $F;
+  
+  RTCVALTemp := RTCVAL; // RTCPTR = 10
+  WeekDay := (RTCVALTemp shr 8) and 7;   //WeekDay output here, without any other calculations
+  HourTens := (RTCVALTemp shr 8) and 3;
+  HourOnes := RTCVALTemp and $F;
+  
+  RTCVALTemp := RTCVAL; // RTCPTR = 00
+  MinuteTens := (RTCVALTemp shr 12) and 7;
+  MinuteOnes := (RTCVALTemp shr 8) and $F;
+  SecondTens := (RTCVALTemp shr 8) and 7;
+  SecondOnes := RTCVALTemp and $F;
+  
+  Year := 2000 + YearTens * 10 + YearOnes;
+  Month := MonthTens * 10 + MonthOnes;
+  Date := DateTens * 10 + DateOnes;
+  Hour := HourTens * 10 + HourOnes;
+  Minute := MinuteTens * 10 + MinuteOnes;
+  Second := SecondTens * 10 + SecondOnes;
+end;
+
+end.
