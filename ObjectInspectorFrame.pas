@@ -83,8 +83,8 @@ type
   TOnOIGetListPropertyItemName = function(ACategoryIndex, APropertyIndex, AItemIndex: Integer): string of object;
   TOnOIGetListPropertyItemValue = function(ACategoryIndex, APropertyIndex, AItemIndex: Integer; var AEditorType: TOIEditorType): string of object;
 
-  TOnUIGetDataTypeName = function(ACategoryIndex, APropertyIndex, AItemIndex: Integer): string of object;
-  TOnUIGetExtraInfo = function(ACategoryIndex, APropertyIndex, AItemIndex: Integer): string of object;
+  TOnOIGetDataTypeName = function(ACategoryIndex, APropertyIndex, AItemIndex: Integer): string of object;
+  TOnOIGetExtraInfo = function(ACategoryIndex, APropertyIndex, AItemIndex: Integer): string of object;
 
   TOnOIGetImageIndexEx = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer; Kind: TVTImageKind;
     Column: TColumnIndex; var Ghosted: Boolean; var ImageIndex: Integer; var ImageList: TCustomImageList) of object;
@@ -201,8 +201,8 @@ type
     FOnOIGetListPropertyItemCount: TOnOIGetListPropertyItemCount;
     FOnOIGetListPropertyItemName: TOnOIGetListPropertyItemName;
     FOnOIGetListPropertyItemValue: TOnOIGetListPropertyItemValue;
-    FOnUIGetDataTypeName: TOnUIGetDataTypeName;
-    FOnUIGetExtraInfo: TOnUIGetExtraInfo;
+    FOnOIGetDataTypeName: TOnOIGetDataTypeName;
+    FOnOIGetExtraInfo: TOnOIGetExtraInfo;
 
     FOnOIGetImageIndexEx: TOnOIGetImageIndexEx;
     FOnOIEditedText: TOnOIEditedText;
@@ -246,6 +246,8 @@ type
     procedure SetPropertyItemHeight(Value: Integer);
     function GetColumnWidth(Index: Integer): Integer;
     procedure SetColumnWidth(Index, Value: Integer);
+    function GetOICaption: string;
+    procedure SetOICaption(Value: string);
 
     function DoOnOIGetCategoryCount: Integer;
     function DoOnOIGetCategory(AIndex: Integer): string;
@@ -441,6 +443,7 @@ type
     property ColorFormat: TOIColorFormat read FColorFormat write FColorFormat;  //affects ColorBox editors when getting selected color
     property PropertyItemHeight: Integer read FPropertyItemHeight write SetPropertyItemHeight;
     property ColumnWidths[Index: Integer]: Integer read GetColumnWidth write SetColumnWidth;
+    property OICaption: string read GetOICaption write SetOICaption; //Used for testing, to help identify the control. This sets the VST caption.
 
     property OnOIGetCategoryCount: TOnOIGetCategoryCount write FOnOIGetCategoryCount;
     property OnOIGetCategory: TOnOIGetCategory write FOnOIGetCategory;
@@ -451,8 +454,8 @@ type
     property OnOIGetListPropertyItemCount: TOnOIGetListPropertyItemCount write FOnOIGetListPropertyItemCount;
     property OnOIGetListPropertyItemName: TOnOIGetListPropertyItemName write FOnOIGetListPropertyItemName;
     property OnOIGetListPropertyItemValue: TOnOIGetListPropertyItemValue write FOnOIGetListPropertyItemValue;
-    property OnUIGetDataTypeName: TOnUIGetDataTypeName write FOnUIGetDataTypeName;
-    property OnUIGetExtraInfo: TOnUIGetExtraInfo write FOnUIGetExtraInfo;
+    property OnOIGetDataTypeName: TOnOIGetDataTypeName write FOnOIGetDataTypeName;
+    property OnOIGetExtraInfo: TOnOIGetExtraInfo write FOnOIGetExtraInfo;
 
     property OnOIGetImageIndexEx: TOnOIGetImageIndexEx write FOnOIGetImageIndexEx;
     property OnOIEditedText: TOnOIEditedText write FOnOIEditedText;
@@ -776,8 +779,8 @@ begin
   FOnOIGetListPropertyItemCount := nil;
   FOnOIGetListPropertyItemName := nil;
   FOnOIGetListPropertyItemValue := nil;
-  FOnUIGetDataTypeName := nil;
-  FOnUIGetExtraInfo := nil;
+  FOnOIGetDataTypeName := nil;
+  FOnOIGetExtraInfo := nil;
 
   FOnOIGetImageIndexEx := nil;
   FOnOIEditedText := nil;
@@ -1186,6 +1189,18 @@ begin
 end;
 
 
+function TfrObjectInspector.GetOICaption: string;
+begin
+  Result := vstOI.Caption;
+end;
+
+
+procedure TfrObjectInspector.SetOICaption(Value: string);
+begin
+  vstOI.Caption := Value;
+end;
+
+
 function TfrObjectInspector.DoOnOIGetCategoryCount: Integer;
 begin
   if not Assigned(FOnOIGetCategoryCount) then
@@ -1270,19 +1285,19 @@ end;
 
 function TfrObjectInspector.DoOnUIGetDataTypeName(ACategoryIndex, APropertyIndex, AItemIndex: Integer): string;
 begin
-  if not Assigned(FOnUIGetDataTypeName) then
-    raise Exception.Create('OnUIGetDataTypeName not assigned.')
+  if not Assigned(FOnOIGetDataTypeName) then
+    raise Exception.Create('OnOIGetDataTypeName not assigned.')
   else
-    Result := FOnUIGetDataTypeName(ACategoryIndex, APropertyIndex, AItemIndex);
+    Result := FOnOIGetDataTypeName(ACategoryIndex, APropertyIndex, AItemIndex);
 end;
 
 
 function TfrObjectInspector.DoOnUIGetExtraInfo(ACategoryIndex, APropertyIndex, AItemIndex: Integer): string;
 begin
-  if not Assigned(FOnUIGetExtraInfo) then
-    raise Exception.Create('OnUIGetExtraInfo not assigned.')
+  if not Assigned(FOnOIGetExtraInfo) then
+    raise Exception.Create('OnOIGetExtraInfo not assigned.')
   else
-    Result := FOnUIGetExtraInfo(ACategoryIndex, APropertyIndex, AItemIndex);
+    Result := FOnOIGetExtraInfo(ACategoryIndex, APropertyIndex, AItemIndex);
 end;
 
 
