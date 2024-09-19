@@ -141,6 +141,8 @@ type
 
   TOnOIFirstVisibleNode = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer) of object;
   TOnOIInitNode = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var ACheckType: TCheckType; var ACheckState: TCheckState; var ANodeHeight: Word) of object;
+  TOnOIChecked = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; ACheckState: TCheckState) of object;
+  TOnOIChecking = procedure(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; ACheckState: TCheckState; var ANewState: TCheckState; var AAllowed: Boolean) of object;
 
   { TfrObjectInspector }
 
@@ -240,6 +242,8 @@ type
 
     FOnOIFirstVisibleNode: TOnOIFirstVisibleNode;
     FOnOIInitNode: TOnOIInitNode;
+    FOnOIChecked: TOnOIChecked;
+    FOnOIChecking: TOnOIChecking;
 
     procedure SetDataTypeVisible(Value: Boolean);
     procedure SetExtraInfoVisible(Value: Boolean);
@@ -319,6 +323,8 @@ type
 
     procedure DoOnOIFirstVisibleNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer);
     procedure DoOnOIInitNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; var ACheckType: TCheckType; var ACheckState: TCheckState; var ANodeHeight: Word);
+    procedure DoOnOIChecked(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; ACheckState: TCheckState);
+    procedure DoOnOIChecking(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; ACheckState: TCheckState; var ANewState: TCheckState; var AAllowed: Boolean);
 
     procedure edtColorPropertyExit(Sender: TObject);
     procedure edtColorPropertyKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -391,6 +397,8 @@ type
     procedure vstOIDragOver(Sender: TBaseVirtualTree; Source: TObject; Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode; var Effect: DWORD; var Accept: Boolean);
     procedure vstOIDragDrop(Sender: TBaseVirtualTree; Source: TObject; DataObject: IDataObject; Formats: TFormatArray; Shift: TShiftState; const Pt: TPoint; var Effect: DWORD; Mode: TDropMode);
     procedure vstOIInitNode(Sender: TBaseVirtualTree; ParentNode, Node: PVirtualNode; var InitialStates: TVirtualNodeInitStates);
+    procedure vstOIChecked(Sender: TBaseVirtualTree; Node: PVirtualNode);
+    procedure vstOIChecking(Sender: TBaseVirtualTree; Node: PVirtualNode; var NewState: TCheckState; var Allowed: Boolean);
 
     procedure CreateRemainingUIComponents;
     procedure FreeEditorComponents;
@@ -432,6 +440,7 @@ type
     procedure CancelCurrentEditing; //usually the text editor   - this is called by ReloadContent and ReloadPropertyItems
     procedure SelectNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; AScrollIntoView: Boolean = True; ACenterIntoView: Boolean = False);
     procedure ScrollToNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
+    procedure SetNodeCheckState(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; ACheckState: TCheckState);
     procedure ClearNodeSelection;
 
     property ListItemsVisible: Boolean read FListItemsVisible write FListItemsVisible; //to be set before calling ReloadContent
@@ -493,6 +502,8 @@ type
 
     property OnOIFirstVisibleNode: TOnOIFirstVisibleNode write FOnOIFirstVisibleNode;
     property OnOIInitNode: TOnOIInitNode write FOnOIInitNode;
+    property OnOIChecked: TOnOIChecked write FOnOIChecked;
+    property OnOIChecking: TOnOIChecking write FOnOIChecking;
   end;
 
 
@@ -720,6 +731,8 @@ begin
   vstOI.OnDragOver := vstOIDragOver;
   vstOI.OnDragDrop := vstOIDragDrop;
   vstOI.OnInitNode := vstOIInitNode;
+  vstOI.OnChecked := vstOIChecked;
+  vstOI.OnChecking := vstOIChecking;
 
   //vstOI.PopupMenu;
   vstOI.Colors.GridLineColor := clGray;
@@ -817,6 +830,8 @@ begin
 
   FOnOIFirstVisibleNode := nil;
   FOnOIInitNode := nil;
+  FOnOIChecked := nil;
+  FOnOIChecking := nil;
 
   FListItemsVisible := True;
   FDataTypeVisible := True;
@@ -1573,6 +1588,24 @@ begin
 end;
 
 
+procedure TfrObjectInspector.DoOnOIChecked(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; ACheckState: TCheckState);
+begin
+  if not Assigned(FOnOIChecked) then
+    Exit;
+
+  FOnOIChecked(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, ACheckState);
+end;
+
+
+procedure TfrObjectInspector.DoOnOIChecking(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer; ACheckState: TCheckState; var ANewState: TCheckState; var AAllowed: Boolean);
+begin
+  if not Assigned(FOnOIChecking) then
+    Exit;
+
+  FOnOIChecking(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, ACheckState, ANewState, AAllowed);
+end;
+
+
 procedure TfrObjectInspector.CancelCurrentEditing;
 begin
   vstOI.CancelEditNode; //destroy the text editor, to avoid updating to a new value
@@ -1832,6 +1865,18 @@ begin
   FScrollToNode_PropertyItemIndex := APropertyItemIndex;
 
   tmrScrollToNode.Enabled := True;
+end;
+
+
+procedure TfrObjectInspector.SetNodeCheckState(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; ACheckState: TCheckState);
+var
+  NodeToBeChecked: PVirtualNode;
+begin
+  NodeToBeChecked := GetNodeByLevel(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex);
+  if NodeToBeChecked = nil then
+    Exit;
+
+  vstOI.CheckState[NodeToBeChecked] := ACheckState;
 end;
 
 
@@ -3222,6 +3267,29 @@ begin
     Exit;
 
   DoOnOIInitNode(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Node^.CheckType, Node^.CheckState, Node^.NodeHeight);
+end;
+
+
+procedure TfrObjectInspector.vstOIChecked(Sender: TBaseVirtualTree; Node: PVirtualNode);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOIChecked(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Node^.CheckState);
+end;
+
+
+procedure TfrObjectInspector.vstOIChecking(Sender: TBaseVirtualTree; Node: PVirtualNode;
+  var NewState: TCheckState; var Allowed: Boolean);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  if not GetNodeIndexInfo(Node, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOIChecking(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Node^.CheckState, NewState, Allowed);
 end;
 
 
