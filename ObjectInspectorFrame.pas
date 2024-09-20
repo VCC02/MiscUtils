@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2022 VCC
+    Copyright (C) 2024 VCC
     creation date: Jan 2023
     initial release date: 02 Feb 2023
 
@@ -684,6 +684,7 @@ begin
   vstOI.Constraints.MinHeight := vstOI.Height;
   vstOI.DefaultNodeHeight := 22; //the default value, 18, should be enough, but the TEdit has a greater default height
   vstOI.Anchors := [akBottom, akLeft, akRight, akTop];
+  vstOI.CheckImageKind := ckXP;
   vstOI.Hint := '';
   vstOI.Header.AutoSizeIndex := 0;
   vstOI.Header.DefaultHeight := 17;
