@@ -68,6 +68,7 @@ type
     Level: Integer; //like node level
     EditorType: TOIEditorType;        //Not used for categories, because they are not editable.
     ItemVisible: Boolean;
+    IsSelected: Boolean; //Updated on OIPaintText event. It is usually out of date for other events.
   end;
   PNodeDataPropertyRec = ^TNodeDataPropertyRec;
 
@@ -3018,6 +3019,7 @@ begin
     Exit;
 
   NodeData := Sender.GetNodeData(Node);
+  NodeData^.IsSelected := vsSelected in Node^.States;
   DoOnOIPaintText(NodeData^, CategoryIndex, PropertyIndex, PropertyItemIndex, TargetCanvas, Column, TextType);
 end;
 
