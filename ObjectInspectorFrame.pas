@@ -2881,7 +2881,8 @@ begin
 
       if FBtnItemsProperty.Tag = 1 then
         if Assigned(FCmbMiscEnumProperty) then
-          FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf({CEmptySpaceForIcon +} NewItems);
+          //FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf({CEmptySpaceForIcon +} NewItems);
+          FCmbMiscEnumProperty.ItemIndex := ComboBoxExIndexOf(FCmbMiscEnumProperty, Trim(NewItems));
     end;
 
   finally
