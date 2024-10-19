@@ -32,7 +32,7 @@ interface
 
 uses
   LCLIntf, LCLType, Classes, SysUtils, Forms, Controls, ExtCtrls, Graphics, ImgList,
-  ColorBox, StdCtrls, Dialogs, ComCtrls, Menus, Buttons, VirtualTrees, ActiveX;
+  ColorBox, StdCtrls, Dialogs, ComCtrls, Menus, Buttons, VirtualTrees, ActiveX, ComboEx;
 
 
 const
@@ -97,7 +97,7 @@ type
   TOnOIGetColorConst = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AColorItemIndex: Integer; var AColorName: string; var AColorValue: Int64) of object; //AColorValue is In64, instead of TColor, because on 64-bit, TObject is 64-bit
 
   TOnOIGetEnumConstsCount = function(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer): Integer of object;
-  TOnOIGetEnumConst = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AEnumItemIndex: Integer; var AEnumItemName: string) of object;
+  TOnOIGetEnumConst = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AEnumItemIndex: Integer; var AEnumItemName: string; var AEnumImgItemIndex: Integer; var AImgLst: TImageList) of object;
 
   TOnOIPaintText = procedure(ANodeData: TNodeDataPropertyRec; ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer;
     const TargetCanvas: TCanvas; Column: TColumnIndex; var TextType: TVSTTextType) of object;
@@ -173,7 +173,7 @@ type
     FEdtColorProperty: TEdit;
     FColcmbProperty: TColorBox;
     FCmbBooleanProperty: TComboBox;
-    FCmbMiscEnumProperty: TComboBox;
+    FCmbMiscEnumProperty: TComboBoxEx;
     FBtnItemsProperty: TButton;
     FupdownTextEditor: TUpDown;
     FBtnArrowProperty: TBitBtn;
@@ -278,7 +278,7 @@ type
     procedure DoOnOIGetColorConst(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AColorItemIndex: Integer; var AColorName: string; var AColorValue: Int64);
 
     function DoOnOIGetEnumConstsCount(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer): Integer;
-    procedure DoOnOIGetEnumConst(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AEnumItemIndex: Integer; var AEnumItemName: string);
+    procedure DoOnOIGetEnumConst(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AEnumItemIndex: Integer; var AEnumItemName: string; var AEnumImgItemIndex: Integer; var AImgLst: TImageList);
 
     procedure DoOnOIPaintText(ANodeData: TNodeDataPropertyRec; ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer;
       const TargetCanvas: TCanvas; Column: TColumnIndex; var TextType: TVSTTextType);
@@ -1380,12 +1380,12 @@ begin
 end;
 
 
-procedure TfrObjectInspector.DoOnOIGetEnumConst(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AEnumItemIndex: Integer; var AEnumItemName: string);
+procedure TfrObjectInspector.DoOnOIGetEnumConst(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AEnumItemIndex: Integer; var AEnumItemName: string; var AEnumImgItemIndex: Integer; var AImgLst: TImageList);
 begin
   if not Assigned(FOnOIGetEnumConst) then
     raise Exception.Create('OnOIGetEnumConst not assigned.')
   else
-    FOnOIGetEnumConst(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AEnumItemIndex, AEnumItemName);
+    FOnOIGetEnumConst(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, AEnumItemIndex, AEnumItemName, AEnumImgItemIndex, AImgLst);
 end;
 
 
@@ -2362,27 +2362,42 @@ begin
 end;
 
 
+function ComboBoxExIndexOf(AComboBoxEx: TComboBoxEx; AString: string): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+  for i := 0 to AComboBoxEx.ItemsEx.Count - 1 do
+    if AComboBoxEx.ItemsEx.Items[i].Caption = AString then
+    begin
+      Result := i;
+      Exit;
+    end;
+end;
+
+
 procedure TfrObjectInspector.CreateEnumComboBox(Node: PVirtualNode; VertScrollBarWidth: Integer; ACreateBrowseButton: Boolean = False);
 var
-  CategoryIndex, PropertyIndex, PropertyItemIndex, NodeLevel: Integer;
+  CategoryIndex, PropertyIndex, PropertyItemIndex, NodeLevel, ImgIndex: Integer;
   i: Integer;
   EnumItemName: string;
+  CmbImgLst: TImageList;
 begin
   vstOI.Header.Options := vstOI.Header.Options - [hoColumnResize];
 
-  FCmbMiscEnumProperty := TComboBox.Create(Self);
+  FCmbMiscEnumProperty := TComboBoxEx.Create(Self);
   try
     FCmbMiscEnumProperty.Visible := False;   //sometimes, this causes AV
   except
   end;
   FCmbMiscEnumProperty.Parent := Self;
-  FCmbMiscEnumProperty.Style := csOwnerDrawFixed; //for misc "enum" properties
+  FCmbMiscEnumProperty.Style := csExDropDown;//csOwnerDrawFixed; //for misc "enum" properties
   FCmbMiscEnumProperty.ParentFont := False;
   FCmbMiscEnumProperty.Font.Style := [];
   FCmbMiscEnumProperty.Left := GetLocalComboEditorLeft;
   FCmbMiscEnumProperty.Top := vstOI.GetDisplayRect(Node, 1, False).Top + vstOI.Top {+ vstOI.Header.Height} + 2;
   FCmbMiscEnumProperty.Width := GetLocalComboEditorWidth(VertScrollBarWidth);
-  FCmbMiscEnumProperty.ItemHeight := vstOI.DefaultNodeHeight - 5;
+  FCmbMiscEnumProperty.ItemHeight := vstOI.DefaultNodeHeight - 4; //5;
 
   FEditingNode := Node;
   FCmbMiscEnumProperty.OnSelect := cmbMiscEnumPropertySelect;
@@ -2399,14 +2414,20 @@ begin
   if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
     Exit; //prevent AV
 
+  CmbImgLst := nil; // FCmbMiscEnumProperty.Images; //probably, nil
   for i := 0 to DoOnOIGetEnumConstsCount(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) - 1 do
   begin
-    DoOnOIGetEnumConst(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, i, EnumItemName);
-    FCmbMiscEnumProperty.Items.Add(CEmptySpaceForIcon + EnumItemName);
+    ImgIndex := i;
+    DoOnOIGetEnumConst(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, i, EnumItemName, ImgIndex, CmbImgLst);
+    //FCmbMiscEnumProperty.Items.Add(CEmptySpaceForIcon + EnumItemName);
+    FCmbMiscEnumProperty.ItemsEx.AddItem(EnumItemName, ImgIndex);
   end;
 
+  FCmbMiscEnumProperty.Images := CmbImgLst;
+
   FEditingText := GetPropertyValueForEditor(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, etEnumCombo);
-  FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf(CEmptySpaceForIcon + FEditingText);
+  //FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf({CEmptySpaceForIcon +} FEditingText);
+  FCmbMiscEnumProperty.ItemIndex := ComboBoxExIndexOf(FCmbMiscEnumProperty, FEditingText);
 
   AssignPopupMenuAndTooltipToEditor(FCmbMiscEnumProperty);
   FCmbMiscEnumProperty.Visible := True;
@@ -2669,6 +2690,13 @@ begin
   if Assigned(FBtnItemsProperty) and FBtnItemsProperty.Focused and (FBtnItemsProperty.Tag = 1) then
     Exit;  //do not destroy the enum if the focus is on button
 
+  if FCmbMiscEnumProperty.DroppedDown then
+  begin
+    FCmbMiscEnumProperty.DroppedDown := False;
+    FCmbMiscEnumProperty.Clear;
+    Application.ProcessMessages;
+  end;
+
   FreeAndNil(FCmbMiscEnumProperty);
   vstOI.Header.Options := vstOI.Header.Options + [hoColumnResize];
 
@@ -2685,7 +2713,8 @@ begin
   if FCmbMiscEnumProperty = nil then
     Exit;
 
-  FEditingText := Trim(FCmbMiscEnumProperty.Items[FCmbMiscEnumProperty.ItemIndex]);
+  //FEditingText := Trim(FCmbMiscEnumProperty.Items[FCmbMiscEnumProperty.ItemIndex]);
+  FEditingText := Trim(FCmbMiscEnumProperty.ItemsEx[FCmbMiscEnumProperty.ItemIndex].Caption);
   vstOIEdited(vstOI, FEditingNode, 1);
 end;
 
@@ -2852,7 +2881,7 @@ begin
 
       if FBtnItemsProperty.Tag = 1 then
         if Assigned(FCmbMiscEnumProperty) then
-          FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf(CEmptySpaceForIcon + NewItems);
+          FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf({CEmptySpaceForIcon +} NewItems);
     end;
 
   finally
@@ -3119,7 +3148,16 @@ begin
     FreeAndNil(FCmbBooleanProperty);
 
   if FCmbMiscEnumProperty <> nil then
+  begin
+    if FCmbMiscEnumProperty.DroppedDown then
+    begin
+      FCmbMiscEnumProperty.DroppedDown := False;
+      FCmbMiscEnumProperty.Clear;
+    end;
+
+    Application.ProcessMessages;
     FreeAndNil(FCmbMiscEnumProperty);
+  end;
 
   if FBtnItemsProperty <> nil then
     FreeAndNil(FBtnItemsProperty);
