@@ -342,9 +342,18 @@ end;
 
 
 procedure TfrmAutoComplete.tmrDeactivateTimer(Sender: TObject);
+var
+  FEditFocused: Boolean;
 begin
   tmrDeactivate.Enabled := False;
-  if not FEdit.Focused then
+
+  try
+    FEditFocused := FEdit.Focused;
+  except
+    FEditFocused := False; //if FEdit is not available
+  end;
+
+  if not FEditFocused then
     Close;
 end;
 
@@ -687,7 +696,14 @@ begin
     Close
   else
     if not (Key in [VK_UP, VK_DOWN, VK_NEXT, VK_PRIOR]) then
-      FEdit.SetFocus;
+    begin
+      try
+        if Assigned(FEdit) then
+          FEdit.SetFocus;
+      except
+        //the editbox might not be available
+      end;
+    end;
 
   if Key in [VK_HOME, VK_END, VK_PRIOR, VK_NEXT, VK_LEFT, VK_UP, VK_RIGHT, VK_DOWN] then
     SetIdentifiersHint;
