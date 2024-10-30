@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="12"/>
+    <BuildModes Active="Default"/>
+    <Units Count="14">
+      <Unit0>
+        <Filename Value="DynTFTTextInputSim.ppr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <CursorPos X="11" Y="16"/>
+        <UsageCount Value="27"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="DynTFTTextInputSimMainForm.pas"/>
+        <FRMtype Value="200"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmDynTFTTextInputSimMain"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="77"/>
+        <CursorPos X="25" Y="79"/>
+        <UsageCount Value="27"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="..\..\..\DynTFT\DynTFTBaseDrawing.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <UsageCount Value="24"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="..\..\..\DynTFT\DynTFTControls.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <UsageCount Value="24"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="..\..\..\DynTFT\DynTFTUtils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="77"/>
+        <CursorPos X="48" Y="81"/>
+        <UsageCount Value="24"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="DynTFTTextInputSimScreenForm.pas"/>
+        <FRMtype Value="200"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="frmDynTFTTextInputSimScreen"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="25"/>
+        <CursorPos Y="30"/>
+        <UsageCount Value="27"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\GUI\DynTFTTextInputGUI.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="22"/>
+        <CursorPos X="23" Y="36"/>
+        <UsageCount Value="24"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\GUI\DynTFTTextInputGUIObjects.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <UsageCount Value="24"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="194"/>
+        <CursorPos X="8" Y="200"/>
+        <UsageCount Value="24"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\..\..\DynTFT\DynTFTConsts.pas"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="121"/>
+        <CursorPos X="42" Y="129"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\..\..\ColorThemeFromLib.inc"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <CursorPos X="23" Y="3"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="..\ColorThemeFromLib.inc"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <CursorPos Y="3"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="..\GUI\DynTFTHandlersAdditionalCode.inc"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="154"/>
+        <CursorPos X="9" Y="160"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="..\..\..\DynTFT\MemManager.pas"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="18"/>
+        <CursorPos X="25" Y="31"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit13>
+    </Units>
+    <JumpHistory Count="19" HistoryIndex="18">
+      <Position1>
+        <Filename Value="DynTFTTextInputSimMainForm.pas"/>
+        <Caret Line="8" Column="23"/>
+      </Position1>
+      <Position2>
+        <Filename Value="DynTFTTextInputSimMainForm.pas"/>
+        <Caret Line="253" Column="29" TopLine="250"/>
+      </Position2>
+      <Position3>
+        <Filename Value="DynTFTTextInputSimMainForm.pas"/>
+        <Caret Line="89" Column="25" TopLine="77"/>
+      </Position3>
+      <Position4>
+        <Filename Value="..\GUI\DynTFTTextInputGUI.pas"/>
+        <Caret Line="42" Column="63" TopLine="37"/>
+      </Position4>
+      <Position5>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="55" Column="29" TopLine="49"/>
+      </Position5>
+      <Position6>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="106" Column="28" TopLine="91"/>
+      </Position6>
+      <Position7>
+        <Filename Value="..\GUI\DynTFTTextInputGUI.pas"/>
+        <Caret Line="36" Column="25" TopLine="22"/>
+      </Position7>
+      <Position8>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="35" Column="53" TopLine="28"/>
+      </Position8>
+      <Position9>
+        <Filename Value="..\GUI\DynTFTHandlersAdditionalCode.inc"/>
+        <Caret Line="160" Column="44" TopLine="154"/>
+      </Position9>
+      <Position10>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="125" Column="16" TopLine="112"/>
+      </Position10>
+      <Position11>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="141" Column="28" TopLine="128"/>
+      </Position11>
+      <Position12>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="201" Column="26" TopLine="188"/>
+      </Position12>
+      <Position13>
+        <Filename Value="..\..\..\DynTFT\DynTFTConsts.pas"/>
+        <Caret Line="38" Column="43" TopLine="37"/>
+      </Position13>
+      <Position14>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="201" Column="26" TopLine="188"/>
+      </Position14>
+      <Position15>
+        <Filename Value="..\..\..\DynTFT\DynTFTConsts.pas"/>
+        <Caret Line="124" Column="33" TopLine="117"/>
+      </Position15>
+      <Position16>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="201" Column="26" TopLine="188"/>
+      </Position16>
+      <Position17>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="200" Column="35" TopLine="194"/>
+      </Position17>
+      <Position18>
+        <Filename Value="DynTFTTextInputSimScreenForm.pas"/>
+        <Caret Line="26" Column="48" TopLine="16"/>
+      </Position18>
+      <Position19>
+        <Filename Value="..\GUI\DynTFTTextInputHandlers.pas"/>
+        <Caret Line="200" Column="8" TopLine="194"/>
+      </Position19>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode="default"/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>

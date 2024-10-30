@@ -1,0 +1,23 @@
+program DynTFTTextInputSim;
+
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
+uses
+{$IFnDEF FPC}
+{$ELSE}
+  Interfaces,
+{$ENDIF}
+  Forms,
+  DynTFTTextInputSimMainForm in 'DynTFTTextInputSimMainForm.pas' {frmDynTFTTextInputSimMain},
+  DynTFTTextInputSimScreenForm in 'DynTFTTextInputSimScreenForm.pas' {frmDynTFTTextInputSimScreen};
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.CreateForm(TfrmDynTFTTextInputSimMain, frmDynTFTTextInputSimMain);
+  Application.CreateForm(TfrmDynTFTTextInputSimScreen, frmDynTFTTextInputSimScreen);
+  Application.Run;
+end.
