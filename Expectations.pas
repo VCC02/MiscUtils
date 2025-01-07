@@ -156,6 +156,7 @@ function LoopedExpect(ActualValue: TStringCallbackFunc; Timeout: Integer = 1000)
 function LoopedExpect(ActualValue: TIntegerCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
 function LoopedExpect(ActualValue: TBooleanCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
 
+
 implementation
 
 

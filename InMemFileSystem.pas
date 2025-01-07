@@ -65,6 +65,9 @@ type
     FFileNameHashSeparator: string;
     FOnComputeInMemFileHash: TOnComputeInMemFileHash;
 
+    function GetTotalFileSize: Int64;
+    function GetTotalFileCount: Integer;
+
     function GetFileIndexByName(AFileName: string): Integer;
     procedure UpdateFileContentByIndexToInMemDisk(AIndex: Integer; NewContent: Pointer; ASize: Int64);
     procedure AddFileByName(AFileName: string; AContent: Pointer; ASize: Int64);
@@ -95,6 +98,9 @@ type
     procedure Clear;
 
     property FileNameHashSeparator: string read FFileNameHashSeparator write FFileNameHashSeparator;
+    property TotalFileSize: Int64 read GetTotalFileSize;
+    property TotalFileCount: Integer read GetTotalFileCount;
+
     property OnComputeInMemFileHash: TOnComputeInMemFileHash read FOnComputeInMemFileHash write FOnComputeInMemFileHash;
   end;
 
@@ -627,6 +633,32 @@ begin
       FreeMem(FListOfFiles[i].Content, FListOfFiles[i].Size);
 
     SetLength(FListOfFiles, 0);
+  finally
+    LeaveCriticalSection(FSystemCriticalSection);
+  end;
+end;
+
+
+function TInMemFileSystem.GetTotalFileSize: Int64;
+var
+  i: Integer;
+begin
+  EnterCriticalSection(FSystemCriticalSection);
+  try
+    Result := 0;
+    for i := 0 to Length(FListOfFiles) - 1 do
+      Inc(Result, FListOfFiles[i].Size);
+  finally
+    LeaveCriticalSection(FSystemCriticalSection);
+  end;
+end;
+
+
+function TInMemFileSystem.GetTotalFileCount: Integer;
+begin
+  EnterCriticalSection(FSystemCriticalSection);
+  try
+    Result := Length(FListOfFiles);
   finally
     LeaveCriticalSection(FSystemCriticalSection);
   end;
