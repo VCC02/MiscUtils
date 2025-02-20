@@ -30,7 +30,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
-  Buttons, VirtualTrees, fpcunit, ImgList;
+  Buttons, VirtualTrees, fpcunit, ImgList, ComCtrls;
 
 type
   TTestStatus = (tsInit, tsFailed, tsPassed, tsRunning, tsPaused);
@@ -50,6 +50,7 @@ type
     memLog: TMemo;
     memTestResult: TMemo;
     pnlToolbar: TPanel;
+    prbTestProgress: TProgressBar;
     spdbtnStop: TSpeedButton;
     spdbtnRunAll: TSpeedButton;
     spdbtnPause: TSpeedButton;
@@ -179,6 +180,7 @@ begin
   NodeData^.Status := tsRunning;
   vstTests.Expanded[ANode] := True;
   vstTests.InvalidateNode(ANode);
+  vstTests.ScrollIntoView(ANode, True);
 
   if FPaused then
   begin
@@ -230,8 +232,9 @@ end;
 
 function TfrmPitstopTestRunner.RunCategory(ACatNode: PVirtualNode): Boolean;
 var
-  Node: PVirtualNode;
+  Node, CntNode: PVirtualNode;
   NodeData: PTestNodeRec;
+  CategoryProgress: Integer;
 begin
   NodeData := vstTests.GetNodeData(ACatNode);
   NodeData^.Status := tsRunning;
@@ -246,9 +249,20 @@ begin
       Exit;
     end;
 
+    prbTestProgress.Max := 0;
+    CntNode := Node;
+    repeat
+      prbTestProgress.Max := prbTestProgress.Max + 1;
+      CntNode := CntNode^.NextSibling;
+    until CntNode = nil;
+
+    CategoryProgress := 0;
     repeat
       vstTests.Expanded[Node] := True;
       vstTests.Repaint;
+
+      prbTestProgress.Position := CategoryProgress;
+      Inc(CategoryProgress);  //after setting the progress bar
       Result := RunCategory(Node);
 
       if FStopping then
@@ -265,6 +279,7 @@ begin
       NodeData^.Status := tsFailed;
 
     vstTests.InvalidateNode(ACatNode);
+    prbTestProgress.Position := prbTestProgress.Max;
   end;
 end;
 

@@ -576,6 +576,14 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
       }
       OnClick = spdbtnStopClick
     end
+    object prbTestProgress: TProgressBar
+      Left = 200
+      Height = 20
+      Top = 8
+      Width = 120
+      Smooth = True
+      TabOrder = 0
+    end
   end
   object memTestResult: TMemo
     Left = 0
