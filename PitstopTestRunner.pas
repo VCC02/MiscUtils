@@ -51,6 +51,7 @@ type
     memTestResult: TMemo;
     pnlToolbar: TPanel;
     prbTestProgress: TProgressBar;
+    spdbtnRunAllSelectedTests: TSpeedButton;
     spdbtnStop: TSpeedButton;
     spdbtnRunAll: TSpeedButton;
     spdbtnPause: TSpeedButton;
@@ -58,8 +59,10 @@ type
     tmrStartup: TTimer;
     vstTests: TVirtualStringTree;
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure spdbtnPauseClick(Sender: TObject);
     procedure spdbtnRunAllClick(Sender: TObject);
+    procedure spdbtnRunAllSelectedTestsClick(Sender: TObject);
     procedure spdbtnRunSelectedTestClick(Sender: TObject);
     procedure spdbtnStopClick(Sender: TObject);
     procedure tmrStartupTimer(Sender: TObject);
@@ -76,6 +79,13 @@ type
     FPaused: Boolean;
     FStopping: Boolean;
 
+    function GetIniNameNoExt: string;
+    procedure GetListOfSelectedTests(AList: TStringList);         //selected doesn't mean checked
+    procedure GetSelectedNodes(var ASelectedNodes: TNodeArray);  //selected doesn't mean checked
+    procedure SelectTestsByName(AList: TStringList);
+    procedure LoadSettingsFromIni;
+    procedure SaveSettingsToIni;
+
     procedure InitStatusOnAllTests;
     function RunTest(ANode: PVirtualNode): Boolean;
     function RunCategory(ACatNode: PVirtualNode): Boolean;
@@ -90,7 +100,6 @@ var
 - Get test result and display it when clicked on failed test.
 - Implement checkboxes on test nodes.
 - Load/Save window settings and test settings from/to ini.
-- Add progressbar.
 - Set "AllTests" category status to failed if at least one category fails.
 - Measure test duration
 - [nice to have] - report test results (xml or ini)
@@ -101,7 +110,7 @@ implementation
 {$R *.frm}
 
 uses
-  testregistry;
+  testregistry, IniFiles;
 
 { TfrmPitstopTestRunner }
 
@@ -112,6 +121,185 @@ begin
   vstTests.Colors.UnfocusedSelectionColor := clGradientInactiveCaption;
   vstTests.NodeDataSize := SizeOf(TTestNodeRec);
   tmrStartup.Enabled := True;
+end;
+
+
+procedure TfrmPitstopTestRunner.FormDestroy(Sender: TObject);
+begin
+  try
+    SaveSettingsToIni;
+  except
+  end;
+end;
+
+
+function TfrmPitstopTestRunner.GetIniNameNoExt: string;
+var
+  Ext: string;
+begin
+  Result := ExtractFileName(ParamStr(0));
+  Ext := ExtractFileExt(Result);
+  if Ext <> '' then
+    Delete(Result, Length(Result) - Length(Ext) + 1, Length(Ext));
+
+  Result := ExtractFilePath(ParamStr(0)) + Result + '.fpcunit.ini';
+end;
+
+
+procedure TfrmPitstopTestRunner.GetListOfSelectedTests(AList: TStringList);
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Node := vstTests.GetFirst;
+  if Node = nil then
+    Exit;
+
+  AList.Clear;
+
+  vstTests.BeginUpdate;
+  try
+    repeat
+      if vstTests.Selected[Node] then
+      begin
+        NodeData := vstTests.GetNodeData(Node);
+        if NodeData <> nil then
+          AList.Add(NodeData^.Test.TestName);
+      end;
+
+      Node := vstTests.GetNext(Node);
+    until Node = nil;
+  finally
+    vstTests.EndUpdate;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.GetSelectedNodes(var ASelectedNodes: TNodeArray);
+var
+  Node: PVirtualNode;
+begin
+  Node := vstTests.GetFirst;
+  if Node = nil then
+    Exit;
+
+  SetLength(ASelectedNodes, 0);
+
+  vstTests.BeginUpdate;
+  try
+    repeat
+      if vstTests.Selected[Node] then
+      begin
+        SetLength(ASelectedNodes, Length(ASelectedNodes) + 1);
+        ASelectedNodes[Length(ASelectedNodes) - 1] := Node;
+      end;
+
+      Node := vstTests.GetNext(Node);
+    until Node = nil;
+  finally
+    vstTests.EndUpdate;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.SelectTestsByName(AList: TStringList);
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Node := vstTests.GetFirst;
+  if Node = nil then
+    Exit;
+
+  vstTests.ClearSelection;
+
+  vstTests.BeginUpdate;
+  try
+    repeat
+      NodeData := vstTests.GetNodeData(Node);
+      if NodeData <> nil then
+        if AList.IndexOf(NodeData^.Test.TestName) > -1 then
+        begin
+          vstTests.Selected[Node] := True;
+          vstTests.ScrollIntoView(Node, False);
+        end;
+
+      Node := vstTests.GetNext(Node);
+    until Node = nil;
+  finally
+    vstTests.EndUpdate;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.LoadSettingsFromIni;
+var
+  Ini: TMemIniFile;
+  Fnm: string;
+  SelectedTests: TStringList;
+  i, n: Integer;
+begin
+  Fnm := GetIniNameNoExt;
+  if not FileExists(Fnm) then
+    Exit;
+
+  Ini := TMemIniFile.Create(Fnm);
+  try
+    Left := Ini.ReadInteger('PitstopTestRunner.Window', 'Left', Left);
+    Top := Ini.ReadInteger('PitstopTestRunner.Window', 'Top', Top);
+    Width := Ini.ReadInteger('PitstopTestRunner.Window', 'Width', Width);
+    Height := Ini.ReadInteger('PitstopTestRunner.Window', 'Height', Height);
+
+    SelectedTests := TStringList.Create;
+    try
+      n := Ini.ReadInteger('SelectedTests', 'Count', 0);
+      for i := 0 to n - 1 do
+        SelectedTests.Add(Ini.ReadString('SelectedTests', 'Test_' + IntToStr(i), 'UnknownTestName'));
+
+      SelectTestsByName(SelectedTests);
+    finally
+      SelectedTests.Free;
+    end;
+  finally
+    Ini.Free;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.SaveSettingsToIni;
+var
+  Ini: TMemIniFile;
+  Fnm: string;
+  SelectedTests: TStringList;
+  i: Integer;
+begin
+  Fnm := GetIniNameNoExt;
+  if not FileExists(Fnm) then
+    Exit;
+
+  Ini := TMemIniFile.Create(Fnm);
+  try
+    Ini.WriteInteger('PitstopTestRunner.Window', 'Left', Left);
+    Ini.WriteInteger('PitstopTestRunner.Window', 'Top', Top);
+    Ini.WriteInteger('PitstopTestRunner.Window', 'Width', Width);
+    Ini.WriteInteger('PitstopTestRunner.Window', 'Height', Height);
+
+    SelectedTests := TStringList.Create;
+    try
+      GetListOfSelectedTests(SelectedTests);
+      Ini.EraseSection('SelectedTests');
+
+      Ini.WriteInteger('SelectedTests', 'Count', SelectedTests.Count);
+      for i := 0 to SelectedTests.Count - 1 do
+        Ini.WriteString('SelectedTests', 'Test_' + IntToStr(i), SelectedTests.Strings[i]);  //this should contain the full test name (i.e. with parent categories)
+    finally
+      SelectedTests.Free;
+    end;
+
+    Ini.UpdateFile;
+  finally
+    Ini.Free;
+  end;
 end;
 
 
@@ -297,6 +485,7 @@ begin
   begin
     spdbtnRunAll.Enabled := False;
     spdbtnRunSelectedTest.Enabled := False;
+    spdbtnRunAllSelectedTests.Enabled := False;
     spdbtnPause.Enabled := True;
     spdbtnStop.Enabled := True;
     InitStatusOnAllTests;
@@ -308,8 +497,54 @@ begin
     finally
       spdbtnRunAll.Enabled := True;
       spdbtnRunSelectedTest.Enabled := True;
+      spdbtnRunAllSelectedTests.Enabled := True;
       spdbtnPause.Enabled := False;
       spdbtnStop.Enabled := False;
+    end;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.spdbtnRunAllSelectedTestsClick(Sender: TObject);
+var
+  Node: PVirtualNode;
+  SelectedTests: TNodeArray;
+  i: Integer;
+begin
+  FStopping := False;
+
+  Node := vstTests.GetFirstSelected;
+  if Node = nil then
+    AddToLog('No test selected.')
+  else
+  begin
+    spdbtnRunAll.Enabled := False;
+    spdbtnRunSelectedTest.Enabled := False;
+    spdbtnRunAllSelectedTests.Enabled := False;
+    spdbtnPause.Enabled := True;
+    spdbtnStop.Enabled := True;
+    InitStatusOnAllTests;
+
+    GetSelectedNodes(SelectedTests);
+
+    try
+      for i := 0 to Length(SelectedTests) - 1 do
+      begin
+        vstTests.Expanded[SelectedTests[i]] := True;
+        vstTests.Repaint;
+        RunCategory(SelectedTests[i]);
+
+        if FStopping then //The tests are skipped if FStopping is True. But then, their status is updated as passed, although they are skipped.
+          Break;
+      end;
+    finally
+      spdbtnRunAll.Enabled := True;
+      spdbtnRunSelectedTest.Enabled := True;
+      spdbtnRunAllSelectedTests.Enabled := True;
+      spdbtnPause.Enabled := False;
+      spdbtnStop.Enabled := False;
+
+      SetLength(SelectedTests, 0);
     end;
   end;
 end;
@@ -362,6 +597,8 @@ begin
   finally
     vstTests.EndUpdate;
   end;
+
+  LoadSettingsFromIni;
 end;
 
 
