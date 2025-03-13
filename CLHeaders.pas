@@ -310,7 +310,7 @@ begin
   {$ENDIF}
 
   {$IFDEF CPUX64}
-    Result := 'C:\Windows\SysWOW64\OpenCL.dll';
+    Result := 'C:\Windows\SysWOW64\';
   {$ENDIF}
 
   //...define for Linux
