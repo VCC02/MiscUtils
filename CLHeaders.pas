@@ -76,17 +76,20 @@ type
   cl_command_queue_properties = cl_bitfield;
   cl_context_properties = PtrInt;
   cl_properties = cl_ulong; // PtrUInt ????   //so far, this doesn't like any type related to cl_queue_properties;    //set to pointer, because an array has to be passed here
-  cl_queue_properties = cl_properties;
+  Tcl_queue_properties = cl_properties;
   cl_program_build_info = cl_uint;
   cl_kernel_work_group_info = cl_uint;
   cl_mem_flags = cl_bitfield;
+  cl_platform_info = cl_uint;
 
   Pcl_platform_id = ^cl_platform_id;
   Pcl_device_id = ^cl_device_id;
   pcl_uint = ^cl_uint;
   Pcl_context_properties = ^cl_context_properties;
-  Pcl_queue_properties = ^cl_queue_properties;
+  Pcl_queue_properties = ^Tcl_queue_properties;
   Pcl_event = ^cl_event;
+
+  cl_device_info = cl_uint;
 
   TContextNotify = procedure(errinfo: PAnsiChar; private_info: Pointer; cb: csize_t; user_data: Pointer); stdcall;  //cb = size
   TProgramNotify = procedure(_program: cl_program; user_data: Pointer); stdcall;
@@ -113,6 +116,9 @@ type
   TclReleaseContext = function(context: cl_context): cl_int; stdcall;
   TclCreateCommandQueueWithProperties = function(context: cl_context; device: cl_device_id; properties: Pcl_queue_properties; var errcode_ret: cl_int): cl_command_queue; stdcall;
 
+  TclGetPlatformInfo = function(_platform: cl_platform_id; param_name: cl_platform_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
+  TclGetDeviceInfo = function(device: cl_device_id; param_name: cl_device_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
+
   TOpenCL = class
   private
     FclGetPlatformIDs: TclGetPlatformIDs;
@@ -137,6 +143,9 @@ type
     FclReleaseContext: TclReleaseContext;
     FclCreateCommandQueueWithProperties: TclCreateCommandQueueWithProperties;
 
+    FclGetPlatformInfo: TclGetPlatformInfo;
+    FclGetDeviceInfo: TclGetDeviceInfo;
+
     FDllHandle: THandle;
   public
     function clGetPlatformIDs(num_entries: cl_uint; platforms: Pcl_platform_id; num_platforms: pcl_uint): cl_int;
@@ -160,6 +169,9 @@ type
     function clReleaseCommandQueue(command_queue: cl_command_queue): cl_int;
     function clReleaseContext(context: cl_context): cl_int;
     function clCreateCommandQueueWithProperties(context: cl_context; device: cl_device_id; properties: Pcl_queue_properties; var errcode_ret: cl_int): cl_command_queue;
+
+    function clGetPlatformInfo(_platform: cl_platform_id; param_name: cl_platform_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
+    function clGetDeviceInfo(device: cl_device_id; param_name: cl_device_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
 
     constructor Create;
     destructor Destroy; override;
@@ -190,6 +202,7 @@ const
   CL_DEVICE_TYPE_GPU = 4;
   CL_PROGRAM_BUILD_LOG = $1183;
   CL_KERNEL_WORK_GROUP_SIZE = $11B0;
+  CL_QUEUE_PROPERTIES = $1093;
 
   CL_FALSE = 0;
   CL_TRUE = 1;
@@ -201,8 +214,31 @@ const
   CL_MEM_ALLOC_HOST_PTR = 16;
   CL_MEM_COPY_HOST_PTR = 32;
 
+  CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE = 1;
+  CL_QUEUE_PROFILING_ENABLE = 2;
   CL_QUEUE_ON_DEVICE = 4;
   CL_QUEUE_ON_DEVICE_DEFAULT = 8;
+
+  CL_PLATFORM_PROFILE = $0900;
+  CL_PLATFORM_VERSION = $0901;
+  CL_PLATFORM_NAME = $0902;
+  CL_PLATFORM_VENDOR = $0903;
+  CL_PLATFORM_EXTENSIONS = $0904;
+
+  CL_DEVICE_NAME = $102B;
+  CL_DEVICE_VENDOR = $102C;
+  CL_DEVICE_VERSION = $102D;
+  CL_DEVICE_PROFILE = $102E;
+  CL_DEVICE_OPENCL_C_VERSION = $103D;
+  CL_DEVICE_EXTENSIONS = $1030;
+
+  CL_DEVICE_TYPE_INFO = $1000;
+  CL_DEVICE_GLOBAL_MEM_SIZE = $101F;
+  CL_DEVICE_IMAGE_SUPPORT = $1016;
+  CL_DEVICE_LOCAL_MEM_SIZE = $1023;
+  CL_DEVICE_AVAILABLE = $1027;
+  CL_DEVICE_COMPILER_AVAILABLE = $1028;
+  CL_DEVICE_EXECUTION_CAPABILITIES = $1029;
 
 
 function CLErrorToStr(AError: cl_int): string;
@@ -259,6 +295,9 @@ begin
   FclReleaseContext := nil;
   FclCreateCommandQueueWithProperties := nil;
 
+  FclGetPlatformInfo := nil;
+  FclGetDeviceInfo := nil;
+
   FDllHandle := LoadLibrary(ExpectedDllLocation);
   if FDllHandle = 0 then
     Exit;
@@ -284,6 +323,9 @@ begin
   FclReleaseCommandQueue := GetProcAddress(FDllHandle, 'clReleaseCommandQueue');
   FclReleaseContext := GetProcAddress(FDllHandle, 'clReleaseContext');
   FclCreateCommandQueueWithProperties := GetProcAddress(FDllHandle, 'clCreateCommandQueueWithProperties'); //this should return nil on older OpenCL  (e.g. < 2.0)
+
+  FclGetPlatformInfo := GetProcAddress(FDllHandle, 'clGetPlatformInfo');
+  FclGetDeviceInfo := GetProcAddress(FDllHandle, 'clGetDeviceInfo');
 end;
 
 
@@ -304,15 +346,7 @@ end;
 
 function GetWindowsLocationForOpenCL: string; //ideally, this should call a windows function, to get the installation dir
 begin
-  Result := '';
-  {$IFDEF CPU32}
-    Result := 'C:\Windows\System32\'
-  {$ENDIF}
-
-  {$IFDEF CPUX64}
-    Result := 'C:\Windows\SysWOW64\';
-  {$ENDIF}
-
+  Result := 'C:\Windows\System32\';
   //...define for Linux
 end;
 
@@ -446,6 +480,18 @@ end;
 function TOpenCL.clCreateCommandQueueWithProperties(context: cl_context; device: cl_device_id; properties: Pcl_queue_properties; var errcode_ret: cl_int): cl_command_queue;
 begin
   Result := FclCreateCommandQueueWithProperties(context, device, properties, errcode_ret);
+end;
+
+
+function TOpenCL.clGetPlatformInfo(_platform: cl_platform_id; param_name: cl_platform_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
+begin
+  Result := FclGetPlatformInfo(_platform, param_name, param_value_size, param_value, param_value_size_ret);
+end;
+
+
+function TOpenCL.clGetDeviceInfo(device: cl_device_id; param_name: cl_device_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
+begin
+  Result := FclGetDeviceInfo(device, param_name, param_value_size, param_value, param_value_size_ret);
 end;
 
 end.
