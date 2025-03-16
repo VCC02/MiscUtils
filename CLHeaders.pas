@@ -81,6 +81,7 @@ type
   cl_kernel_work_group_info = cl_uint;
   cl_mem_flags = cl_bitfield;
   cl_platform_info = cl_uint;
+  cl_command_queue_info = cl_uint;
 
   Pcl_platform_id = ^cl_platform_id;
   Pcl_device_id = ^cl_device_id;
@@ -115,6 +116,7 @@ type
   TclReleaseCommandQueue = function(command_queue: cl_command_queue): cl_int; stdcall;
   TclReleaseContext = function(context: cl_context): cl_int; stdcall;
   TclCreateCommandQueueWithProperties = function(context: cl_context; device: cl_device_id; properties: Pcl_queue_properties; var errcode_ret: cl_int): cl_command_queue; stdcall;
+  TclGetCommandQueueInfo = function(command_queue: cl_command_queue; param_name: cl_command_queue_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
 
   TclGetPlatformInfo = function(_platform: cl_platform_id; param_name: cl_platform_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
   TclGetDeviceInfo = function(device: cl_device_id; param_name: cl_device_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
@@ -142,6 +144,7 @@ type
     FclReleaseCommandQueue: TclReleaseCommandQueue;
     FclReleaseContext: TclReleaseContext;
     FclCreateCommandQueueWithProperties: TclCreateCommandQueueWithProperties;
+    FclGetCommandQueueInfo: TclGetCommandQueueInfo;
 
     FclGetPlatformInfo: TclGetPlatformInfo;
     FclGetDeviceInfo: TclGetDeviceInfo;
@@ -169,6 +172,7 @@ type
     function clReleaseCommandQueue(command_queue: cl_command_queue): cl_int;
     function clReleaseContext(context: cl_context): cl_int;
     function clCreateCommandQueueWithProperties(context: cl_context; device: cl_device_id; properties: Pcl_queue_properties; var errcode_ret: cl_int): cl_command_queue;
+    function clGetCommandQueueInfo(command_queue: cl_command_queue; param_name: cl_command_queue_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
 
     function clGetPlatformInfo(_platform: cl_platform_id; param_name: cl_platform_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
     function clGetDeviceInfo(device: cl_device_id; param_name: cl_device_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
@@ -187,11 +191,13 @@ const
   CL_OUT_OF_RESOURCES = -5;
   CL_OUT_OF_HOST_MEMORY = -6;
   CL_BUILD_PROGRAM_FAILURE = -11;
+  CL_INVALID_VALUE = -30;
   CL_INVALID_CONTEXT = -34;
   CL_INVALID_QUEUE_PROPERTIES = -35;
   CL_INVALID_COMMAND_QUEUE = -36;
   CL_INVALID_BUILD_OPTIONS = 43;
-  CL_INVALID_PROGRAM = 44;
+  CL_INVALID_PROGRAM = -44;
+  CL_INVALID_ARG_INDEX = -49;
   CL_INVALID_KERNEL_ARGS = -52;
   CL_INVALID_WORK_DIMENSION = -53;
   CL_INVALID_WORK_GROUP_SIZE = -54;
@@ -202,7 +208,10 @@ const
   CL_DEVICE_TYPE_GPU = 4;
   CL_PROGRAM_BUILD_LOG = $1183;
   CL_KERNEL_WORK_GROUP_SIZE = $11B0;
+  CL_QUEUE_REFERENCE_COUNT = $1092;
   CL_QUEUE_PROPERTIES = $1093;
+  CL_QUEUE_PROPERTIES_ARRAY = $1098; //OpenCL >= 3.0
+  CL_QUEUE_DEVICE_DEFAULT = $1095; //OpenCL >= 2.1
 
   CL_FALSE = 0;
   CL_TRUE = 1;
@@ -254,17 +263,21 @@ begin
     CL_OUT_OF_RESOURCES: Result := 'CL_OUT_OF_RESOURCES';
     CL_OUT_OF_HOST_MEMORY: Result := 'CL_OUT_OF_HOST_MEMORY';
     CL_BUILD_PROGRAM_FAILURE: Result := 'CL_BUILD_PROGRAM_FAILURE';
+    CL_INVALID_VALUE: Result := 'CL_INVALID_VALUE';
     CL_INVALID_CONTEXT: Result := 'CL_INVALID_CONTEXT';
     CL_INVALID_QUEUE_PROPERTIES: Result := 'CL_INVALID_QUEUE_PROPERTIES';
     CL_INVALID_COMMAND_QUEUE: Result := 'CL_INVALID_COMMAND_QUEUE';
     CL_INVALID_BUILD_OPTIONS : Result := 'CL_INVALID_BUILD_OPTIONS';
     CL_INVALID_PROGRAM: Result := 'CL_INVALID_PROGRAM';
+    CL_INVALID_ARG_INDEX: Result := 'CL_INVALID_ARG_INDEX';
     CL_INVALID_KERNEL_ARGS: Result := 'CL_INVALID_KERNEL_ARGS';
     CL_INVALID_WORK_DIMENSION: Result := 'CL_INVALID_WORK_DIMENSION';
     CL_INVALID_WORK_GROUP_SIZE: Result := 'CL_INVALID_WORK_GROUP_SIZE';
     CL_INVALID_WORK_ITEM_SIZE: Result := 'CL_INVALID_WORK_ITEM_SIZE';
     CL_INVALID_GLOBAL_OFFSET: Result := 'CL_INVALID_GLOBAL_OFFSET';
     CL_INVALID_BUFFER_SIZE: Result := 'CL_INVALID_BUFFER_SIZE';
+  else
+    Result := 'Unknown error: ' + IntToStr(AError);
   end;
 end;
 
@@ -294,6 +307,7 @@ begin
   FclReleaseCommandQueue := nil;
   FclReleaseContext := nil;
   FclCreateCommandQueueWithProperties := nil;
+  FclGetCommandQueueInfo := nil;
 
   FclGetPlatformInfo := nil;
   FclGetDeviceInfo := nil;
@@ -323,6 +337,7 @@ begin
   FclReleaseCommandQueue := GetProcAddress(FDllHandle, 'clReleaseCommandQueue');
   FclReleaseContext := GetProcAddress(FDllHandle, 'clReleaseContext');
   FclCreateCommandQueueWithProperties := GetProcAddress(FDllHandle, 'clCreateCommandQueueWithProperties'); //this should return nil on older OpenCL  (e.g. < 2.0)
+  FclGetCommandQueueInfo := GetProcAddress(FDllHandle, 'clGetCommandQueueInfo');
 
   FclGetPlatformInfo := GetProcAddress(FDllHandle, 'clGetPlatformInfo');
   FclGetDeviceInfo := GetProcAddress(FDllHandle, 'clGetDeviceInfo');
@@ -346,7 +361,15 @@ end;
 
 function GetWindowsLocationForOpenCL: string; //ideally, this should call a windows function, to get the installation dir
 begin
-  Result := 'C:\Windows\System32\';
+  Result := '';
+  {$IFDEF CPU32}
+    Result := 'C:\Windows\System32\'
+  {$ENDIF}
+
+  {$IFDEF CPUX64}
+    Result := 'C:\Windows\SysWOW64\';
+  {$ENDIF}
+
   //...define for Linux
 end;
 
@@ -483,6 +506,12 @@ begin
 end;
 
 
+function TOpenCL.clGetCommandQueueInfo(command_queue: cl_command_queue; param_name: cl_command_queue_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
+begin
+  Result := FclGetCommandQueueInfo(command_queue, param_name, param_value_size, param_value, param_value_size_ret);
+end;
+
+
 function TOpenCL.clGetPlatformInfo(_platform: cl_platform_id; param_name: cl_platform_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
 begin
   Result := FclGetPlatformInfo(_platform, param_name, param_value_size, param_value, param_value_size_ret);
@@ -493,6 +522,7 @@ function TOpenCL.clGetDeviceInfo(device: cl_device_id; param_name: cl_device_inf
 begin
   Result := FclGetDeviceInfo(device, param_name, param_value_size, param_value, param_value_size_ret);
 end;
+
 
 end.
 
