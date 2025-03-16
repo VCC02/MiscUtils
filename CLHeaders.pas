@@ -361,15 +361,7 @@ end;
 
 function GetWindowsLocationForOpenCL: string; //ideally, this should call a windows function, to get the installation dir
 begin
-  Result := '';
-  {$IFDEF CPU32}
-    Result := 'C:\Windows\System32\'
-  {$ENDIF}
-
-  {$IFDEF CPUX64}
-    Result := 'C:\Windows\SysWOW64\';
-  {$ENDIF}
-
+  Result := 'C:\Windows\System32\';
   //...define for Linux
 end;
 
