@@ -150,6 +150,8 @@ type
     FclGetDeviceInfo: TclGetDeviceInfo;
 
     FDllHandle: THandle;
+    FExpectedDllDir: string;
+    FExpectedDllFileName: string; //OpenCL.dll, libOpenCL.so
   public
     function clGetPlatformIDs(num_entries: cl_uint; platforms: Pcl_platform_id; num_platforms: pcl_uint): cl_int;
     function clGetDeviceIDs(_platform: cl_platform_id; device_type: cl_device_type; num_entries: cl_uint; devices: Pcl_device_id; num_devices: pcl_uint): cl_int;
@@ -180,7 +182,11 @@ type
     constructor Create;
     destructor Destroy; override;
     function Loaded: Boolean;
-    function ExpectedDllLocation: string;
+    procedure LoadOpenCLLibrary; //Called by constructor, but can be manually called after changing the file location.
+    function ExpectedDllLocation: string;  //full path, ExpectedDllDir + ExpectedDllName
+
+    property ExpectedDllDir: string read FExpectedDllDir write FExpectedDllDir;
+    property ExpectedDllFileName: string read FExpectedDllFileName write FExpectedDllFileName; //witout path
   end;
 
 //var
@@ -192,6 +198,8 @@ const
   CL_OUT_OF_HOST_MEMORY = -6;
   CL_BUILD_PROGRAM_FAILURE = -11;
   CL_INVALID_VALUE = -30;
+  CL_INVALID_PLATFORM = -32;
+  CL_INVALID_DEVICE = -33;
   CL_INVALID_CONTEXT = -34;
   CL_INVALID_QUEUE_PROPERTIES = -35;
   CL_INVALID_COMMAND_QUEUE = -36;
@@ -250,6 +258,17 @@ const
   CL_DEVICE_EXECUTION_CAPABILITIES = $1029;
 
 
+  //device errors
+  CLK_JUST_ANOTHER_ENQUEUE_FAILURE = -10; //unknown error. TBD - returned by enqueue_kernel. Value not found in OpenCL headers.
+  CLK_ENQUEUE_FAILURE = -101;
+  CLK_INVALID_QUEUE = -102;
+  CLK_INVALID_NDRANGE = -160;
+  CLK_INVALID_EVENT_WAIT_LIST = -57;
+  CLK_DEVICE_QUEUE_FULL = -161;
+  CLK_INVALID_ARG_SIZE = -51;
+  CLK_EVENT_ALLOCATION_FAILURE = -100;
+  CLK_OUT_OF_RESOURCES = -5;
+
 function CLErrorToStr(AError: cl_int): string;
 
 
@@ -264,9 +283,11 @@ begin
     CL_OUT_OF_HOST_MEMORY: Result := 'CL_OUT_OF_HOST_MEMORY';
     CL_BUILD_PROGRAM_FAILURE: Result := 'CL_BUILD_PROGRAM_FAILURE';
     CL_INVALID_VALUE: Result := 'CL_INVALID_VALUE';
+    CL_INVALID_DEVICE: Result := 'CL_INVALID_DEVICE';
+    CL_INVALID_PLATFORM: Result := 'CL_INVALID_PLATFORM';
     CL_INVALID_CONTEXT: Result := 'CL_INVALID_CONTEXT';
     CL_INVALID_QUEUE_PROPERTIES: Result := 'CL_INVALID_QUEUE_PROPERTIES';
-    CL_INVALID_COMMAND_QUEUE: Result := 'CL_INVALID_COMMAND_QUEUE';
+    CL_INVALID_COMMAND_QUEUE: Result := 'CL_INVALID_COMMAND_QUEUE';        //this might happen in case of an AV or calling a function, on device, with a bad resource identifier.
     CL_INVALID_BUILD_OPTIONS : Result := 'CL_INVALID_BUILD_OPTIONS';
     CL_INVALID_PROGRAM: Result := 'CL_INVALID_PROGRAM';
     CL_INVALID_ARG_INDEX: Result := 'CL_INVALID_ARG_INDEX';
@@ -276,9 +297,24 @@ begin
     CL_INVALID_WORK_ITEM_SIZE: Result := 'CL_INVALID_WORK_ITEM_SIZE';
     CL_INVALID_GLOBAL_OFFSET: Result := 'CL_INVALID_GLOBAL_OFFSET';
     CL_INVALID_BUFFER_SIZE: Result := 'CL_INVALID_BUFFER_SIZE';
-  else
+
+    CLK_JUST_ANOTHER_ENQUEUE_FAILURE: Result := 'CLK_JUST_ANOTHER_ENQUEUE_FAILURE';
+    -9999: Result := 'Bad OpenCL state. Please restart application. Or maybe release and reload OpenCL.'; //Happens on clCreateContext if clReleaseProgram or clReleaseCommandQueue could not be called previously. Or if clEnqueueReadBuffer was called after clFinish errored with CL_INVALID_COMMAND_QUEUE.
+  else                                                                                                    //  This error code might be nvidia specific. TBD.  May mean: "Illegal read or write to a buffer."
     Result := 'Unknown error: ' + IntToStr(AError);
   end;
+end;
+
+
+function GetWindowsLocationForOpenCL: string; //ideally, this should call a windows function, to get the installation dir
+begin
+  Result := 'C:\Windows\System32'
+end;
+
+
+function GetLinuxLocationForOpenCL: string;
+begin
+  Result := '/usr/include/CL';
 end;
 
 
@@ -312,6 +348,32 @@ begin
   FclGetPlatformInfo := nil;
   FclGetDeviceInfo := nil;
 
+  {$IFDEF Windows}
+    FExpectedDllDir := GetWindowsLocationForOpenCL;
+    FExpectedDllFileName := 'OpenCL.dll';
+  {$ELSE}
+    FExpectedDllDir := GetLinuxLocationForOpenCL;
+    FExpectedDllFileName := 'libOpenCL.so';
+  {$ENDIF}
+
+  LoadOpenCLLibrary;
+end;
+
+
+destructor TOpenCL.Destroy;
+begin
+  if FDllHandle > 0 then
+    FreeLibrary(FDllHandle);
+
+  inherited Destroy;
+end;
+
+
+procedure TOpenCL.LoadOpenCLLibrary;
+begin
+  if FDllHandle > 0 then
+    FreeLibrary(FDllHandle);
+
   FDllHandle := LoadLibrary(ExpectedDllLocation);
   if FDllHandle = 0 then
     Exit;
@@ -344,31 +406,15 @@ begin
 end;
 
 
-destructor TOpenCL.Destroy;
-begin
-  if FDllHandle > 0 then
-    FreeLibrary(FDllHandle);
-
-  inherited Destroy;
-end;
-
-
 function TOpenCL.Loaded: Boolean;
 begin
   Result := FDllHandle > 0;
 end;
 
 
-function GetWindowsLocationForOpenCL: string; //ideally, this should call a windows function, to get the installation dir
-begin
-  Result := 'C:\Windows\System32\';
-  //...define for Linux
-end;
-
-
 function TOpenCL.ExpectedDllLocation: string;
 begin
-  Result := GetWindowsLocationForOpenCL + 'OpenCL.dll';
+  Result := ExpectedDllDir + PathDelim + ExpectedDllFileName;
 end;
 
 
