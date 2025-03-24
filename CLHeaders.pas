@@ -189,11 +189,10 @@ type
     property ExpectedDllFileName: string read FExpectedDllFileName write FExpectedDllFileName; //witout path
   end;
 
-//var
-//  clGetPlatformIDs
 
 const
   CL_SUCCESS = 0;
+  CL_DEVICE_NOT_FOUND = -1;
   CL_OUT_OF_RESOURCES = -5;
   CL_OUT_OF_HOST_MEMORY = -6;
   CL_BUILD_PROGRAM_FAILURE = -11;
@@ -213,6 +212,7 @@ const
   CL_INVALID_GLOBAL_OFFSET = -56;
   CL_INVALID_BUFFER_SIZE = -61;
 
+  CL_DEVICE_TYPE_CPU = 2;
   CL_DEVICE_TYPE_GPU = 4;
   CL_PROGRAM_BUILD_LOG = $1183;
   CL_KERNEL_WORK_GROUP_SIZE = $11B0;
@@ -279,6 +279,7 @@ function CLErrorToStr(AError: cl_int): string;
 begin
   case AError of
     CL_SUCCESS: Result := '';
+    CL_DEVICE_NOT_FOUND: Result := 'CL_DEVICE_NOT_FOUND';
     CL_OUT_OF_RESOURCES: Result := 'CL_OUT_OF_RESOURCES';
     CL_OUT_OF_HOST_MEMORY: Result := 'CL_OUT_OF_HOST_MEMORY';
     CL_BUILD_PROGRAM_FAILURE: Result := 'CL_BUILD_PROGRAM_FAILURE';
