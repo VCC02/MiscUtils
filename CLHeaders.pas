@@ -92,34 +92,38 @@ type
 
   cl_device_info = cl_uint;
 
-  TContextNotify = procedure(errinfo: PAnsiChar; private_info: Pointer; cb: csize_t; user_data: Pointer); stdcall;  //cb = size
-  TProgramNotify = procedure(_program: cl_program; user_data: Pointer); stdcall;
+  {$IFnDEF Windows}
+    size_t = PtrUInt;
+  {$ENDIF}
 
-  TclGetPlatformIDs = function(num_entries: cl_uint; platforms: Pcl_platform_id; num_platforms: pcl_uint): cl_int; stdcall;
-  TclGetDeviceIDs = function(_platform: cl_platform_id; device_type: cl_device_type; num_entries: cl_uint; devices: Pcl_device_id; num_devices: pcl_uint): cl_int; stdcall;
-  TclCreateContext = function(properties: Pcl_context_properties; num_devices: cl_uint; devices: Pcl_device_id; pfn_notify: TContextNotify; user_data: Pointer; var errcode_ret: cl_int): cl_context; stdcall;
-  TclCreateCommandQueue = function(context: cl_context; device: cl_device_id; properties: cl_command_queue_properties; var errcode_ret: cl_int): cl_command_queue; stdcall;
-  TclCreateProgramWithSource = function(context: cl_context; count: cl_uint; strings: PPAnsiChar; lengths: Pcsize_t; var errcode_ret: cl_int): cl_program; stdcall;
-  TclBuildProgram = function(_program: cl_program; num_devices: cl_uint; device_list: Pcl_device_id; options: PAnsiChar; pfn_notify: TProgramNotify; user_data: Pointer): cl_int; stdcall;
-  TclGetProgramBuildInfo = function(_program: cl_program; device: cl_device_id; param_name: cl_program_build_info; param_value_size: csize_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
-  TclCreateKernel = function(_program: cl_program; kernel_name: PAnsiChar; var errcode_ret: cl_int): cl_kernel; stdcall;
-  TclGetKernelWorkGroupInfo = function(kernel: cl_kernel; device: cl_device_id; param_name: cl_kernel_work_group_info; param_value_size: csize_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
-  TclCreateBuffer = function(context: cl_context; flags: cl_mem_flags; size: csize_t; host_ptr: Pointer; var errcode_ret: cl_int): cl_mem; stdcall;
-  TclEnqueueWriteBuffer = function(command_queue: cl_command_queue; buffer: cl_mem; blocking_write: cl_bool; offset, size: size_t; ptr: Pointer; num_events_in_wait_list: cl_uint; event_wait_list, event: Pcl_event): cl_int; stdcall;
-  TclEnqueueReadBuffer = function(command_queue: cl_command_queue; buffer: cl_mem; blocking_read: cl_bool; offset, size: size_t; ptr: Pointer; num_events_in_wait_list: cl_uint; event_wait_list, event: Pcl_event): cl_int; stdcall;
-  TclSetKernelArg = function(kernel: cl_kernel; arg_index: cl_uint; arg_size: csize_t; arg_value: Pointer): cl_int; stdcall;
-  TclEnqueueNDRangeKernel = function(command_queue: cl_command_queue; kernel: cl_kernel; work_dim: cl_uint; global_work_offset, global_work_size, local_work_size: Pcsize_t; num_events_in_wait_list: cl_uint; event_wait_list, event: Pcl_event): cl_int; stdcall;
-  TclFinish = function(command_queue: cl_command_queue): cl_int; stdcall;
-  TclReleaseMemObject = function(memobj: cl_mem): cl_int; stdcall;
-  TclReleaseKernel = function(kernel: cl_kernel): cl_int; stdcall;
-  TclReleaseProgram = function(_program: cl_program): cl_int; stdcall;
-  TclReleaseCommandQueue = function(command_queue: cl_command_queue): cl_int; stdcall;
-  TclReleaseContext = function(context: cl_context): cl_int; stdcall;
-  TclCreateCommandQueueWithProperties = function(context: cl_context; device: cl_device_id; properties: Pcl_queue_properties; var errcode_ret: cl_int): cl_command_queue; stdcall;
-  TclGetCommandQueueInfo = function(command_queue: cl_command_queue; param_name: cl_command_queue_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
+  TContextNotify = procedure(errinfo: PAnsiChar; private_info: Pointer; cb: csize_t; user_data: Pointer); {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}  //cb = size
+  TProgramNotify = procedure(_program: cl_program; user_data: Pointer); {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
 
-  TclGetPlatformInfo = function(_platform: cl_platform_id; param_name: cl_platform_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
-  TclGetDeviceInfo = function(device: cl_device_id; param_name: cl_device_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
+  TclGetPlatformIDs = function(num_entries: cl_uint; platforms: Pcl_platform_id; num_platforms: pcl_uint): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclGetDeviceIDs = function(_platform: cl_platform_id; device_type: cl_device_type; num_entries: cl_uint; devices: Pcl_device_id; num_devices: pcl_uint): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclCreateContext = function(properties: Pcl_context_properties; num_devices: cl_uint; devices: Pcl_device_id; pfn_notify: TContextNotify; user_data: Pointer; var errcode_ret: cl_int): cl_context; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclCreateCommandQueue = function(context: cl_context; device: cl_device_id; properties: cl_command_queue_properties; var errcode_ret: cl_int): cl_command_queue; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclCreateProgramWithSource = function(context: cl_context; count: cl_uint; strings: PPAnsiChar; lengths: Pcsize_t; var errcode_ret: cl_int): cl_program; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclBuildProgram = function(_program: cl_program; num_devices: cl_uint; device_list: Pcl_device_id; options: PAnsiChar; pfn_notify: TProgramNotify; user_data: Pointer): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclGetProgramBuildInfo = function(_program: cl_program; device: cl_device_id; param_name: cl_program_build_info; param_value_size: csize_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclCreateKernel = function(_program: cl_program; kernel_name: PAnsiChar; var errcode_ret: cl_int): cl_kernel; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclGetKernelWorkGroupInfo = function(kernel: cl_kernel; device: cl_device_id; param_name: cl_kernel_work_group_info; param_value_size: csize_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclCreateBuffer = function(context: cl_context; flags: cl_mem_flags; size: csize_t; host_ptr: Pointer; var errcode_ret: cl_int): cl_mem; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclEnqueueWriteBuffer = function(command_queue: cl_command_queue; buffer: cl_mem; blocking_write: cl_bool; offset, size: size_t; ptr: Pointer; num_events_in_wait_list: cl_uint; event_wait_list, event: Pcl_event): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclEnqueueReadBuffer = function(command_queue: cl_command_queue; buffer: cl_mem; blocking_read: cl_bool; offset, size: size_t; ptr: Pointer; num_events_in_wait_list: cl_uint; event_wait_list, event: Pcl_event): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclSetKernelArg = function(kernel: cl_kernel; arg_index: cl_uint; arg_size: csize_t; arg_value: Pointer): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclEnqueueNDRangeKernel = function(command_queue: cl_command_queue; kernel: cl_kernel; work_dim: cl_uint; global_work_offset, global_work_size, local_work_size: Pcsize_t; num_events_in_wait_list: cl_uint; event_wait_list, event: Pcl_event): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclFinish = function(command_queue: cl_command_queue): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclReleaseMemObject = function(memobj: cl_mem): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclReleaseKernel = function(kernel: cl_kernel): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclReleaseProgram = function(_program: cl_program): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclReleaseCommandQueue = function(command_queue: cl_command_queue): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclReleaseContext = function(context: cl_context): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclCreateCommandQueueWithProperties = function(context: cl_context; device: cl_device_id; properties: Pcl_queue_properties; var errcode_ret: cl_int): cl_command_queue; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclGetCommandQueueInfo = function(command_queue: cl_command_queue; param_name: cl_command_queue_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+
+  TclGetPlatformInfo = function(_platform: cl_platform_id; param_name: cl_platform_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
+  TclGetDeviceInfo = function(device: cl_device_id; param_name: cl_device_info; param_value_size: size_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; {$IFDEF Windows} stdcall; {$ELSE} cdecl; {$ENDIF}
 
   TOpenCL = class
   private
@@ -455,7 +459,7 @@ begin
 end;
 
 
-function TOpenCL.clGetProgramBuildInfo(_program: cl_program; device: cl_device_id; param_name: cl_program_build_info; param_value_size: csize_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int; stdcall;
+function TOpenCL.clGetProgramBuildInfo(_program: cl_program; device: cl_device_id; param_name: cl_program_build_info; param_value_size: csize_t; param_value: Pointer; var param_value_size_ret: csize_t): cl_int;
 begin
   Result := FclGetProgramBuildInfo(_program, device, param_name, param_value_size, param_value, param_value_size_ret);
 end;
