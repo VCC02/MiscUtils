@@ -38,7 +38,12 @@ Files can have additional user-defined info attached to them.
 interface
 
 uses
-  Windows, SysUtils, Classes;
+  {$IFDEF Windows}
+    Windows,
+  {$ELSE}
+    LCLIntf, LCLType,
+  {$ENDIF}
+  SysUtils, Classes;
 
 const
   CDefaultInMemFileNameHashSeparator = #1#4;
@@ -179,7 +184,12 @@ constructor TInMemFileSystem.Create;
 begin
   inherited Create;
   SetLength(FListOfFiles, 0);
-  InitializeCriticalSection(FSystemCriticalSection);
+
+  {$IFDEF Windows}
+    InitializeCriticalSection(FSystemCriticalSection);
+  {$ELSE}
+    InitCriticalSection(FSystemCriticalSection);
+  {$ENDIF}
 
   FFileNameHashSeparator := CDefaultInMemFileNameHashSeparator;
   FOnComputeInMemFileHash := nil;
@@ -191,7 +201,11 @@ begin
   try
     Clear;
   finally
-    DeleteCriticalSection(FSystemCriticalSection);
+    {$IFDEF Windows}
+      DeleteCriticalSection(FSystemCriticalSection);
+    {$ELSE}
+      DoneCriticalSection(FSystemCriticalSection);
+    {$ENDIF}
   end;
   
   inherited Destroy;
