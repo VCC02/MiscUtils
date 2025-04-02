@@ -32,7 +32,13 @@ interface
 
 uses
   LCLIntf, LCLType, Classes, SysUtils, Forms, Controls, ExtCtrls, Graphics, ImgList,
-  ColorBox, StdCtrls, Dialogs, ComCtrls, Menus, Buttons, VirtualTrees, ActiveX, ComboEx;
+  ColorBox, StdCtrls, Dialogs, ComCtrls, Menus, Buttons, VirtualTrees,
+  {$IFDEF Windows}
+    ActiveX,
+  {$ELSE}
+    FakeActiveX,
+  {$ENDIF}
+  ComboEx;
 
 
 const
@@ -1084,16 +1090,26 @@ begin
       etTextWithArrow:
       begin
         //CreateArrowButton(FEditingNode, GetVertScrollBarWidth, etTextWithArrow);
-        FSpdBtnArrowProperty := TSpeedButton.Create(Self);
-        FSpdBtnArrowProperty.Parent := FTextEditorEditBox; //using the edtibox as parent, to automatically move the arrow button on scrolling
-        FSpdBtnArrowProperty.Width := 17;
-        FSpdBtnArrowProperty.Height := FTextEditorEditBox.Height - 4;
-        FSpdBtnArrowProperty.Left := FTextEditorEditBox.Width - FSpdBtnArrowProperty.Width - 4; ///////////////////// - icon width - icon spacing
-        FSpdBtnArrowProperty.Top := 0;
+        {$IFnDEF Windows}
+          FSpdBtnArrowProperty := TSpeedButton.Create(Self);
+          FSpdBtnArrowProperty.Parent := FTextEditorEditBox.Parent;  //the edtibox can't be used as parent in Linux, so use the VST then
+          FSpdBtnArrowProperty.Width := 17;
+          FTextEditorEditBox.Width := FTextEditorEditBox.Width - FSpdBtnArrowProperty.Width;
+          FSpdBtnArrowProperty.Height := FTextEditorEditBox.Height - 4;
+          FSpdBtnArrowProperty.Left := GetLocalEditorLeft(FSpdBtnArrowProperty.Width, GetVertScrollBarWidth) - CTextEditorSpacing;
+          FSpdBtnArrowProperty.Top := FTextEditorEditBox.Top + 2;
+        {$ELSE}
+          FSpdBtnArrowProperty := TSpeedButton.Create(Self);
+          FSpdBtnArrowProperty.Parent := FTextEditorEditBox; //using the edtibox as parent, to automatically move the arrow button on scrolling
+          FSpdBtnArrowProperty.Width := 17;
+          FSpdBtnArrowProperty.Height := FTextEditorEditBox.Height - 4;
+          FSpdBtnArrowProperty.Left := FTextEditorEditBox.Width - FSpdBtnArrowProperty.Width - 4; ///////////////////// - icon width - icon spacing
+          FSpdBtnArrowProperty.Top := 0;
+          FSpdBtnArrowProperty.Anchors := [akRight, akTop];
+        {$ENDIF}
         FSpdBtnArrowProperty.Flat := True;
         FSpdBtnArrowProperty.Glyph.Assign(imgDownArrow.Picture.Bitmap);
         FSpdBtnArrowProperty.OnClick := spdbtnArrowPropertyClick;
-        FSpdBtnArrowProperty.Anchors := [akRight, akTop];
 
         FSpdBtnArrowProperty.Visible := True;
         FSpdBtnArrowProperty.BringToFront;
@@ -2431,7 +2447,12 @@ begin
 
   AssignPopupMenuAndTooltipToEditor(FCmbMiscEnumProperty);
   FCmbMiscEnumProperty.Visible := True;
-  FCmbMiscEnumProperty.SetFocus;
+
+  try
+    FCmbMiscEnumProperty.SetFocus;
+  except
+    //there is an exception in Linux
+  end;
 end;
 
 
