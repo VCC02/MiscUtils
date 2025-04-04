@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2025 VCC
     creation date: Jan 2023
     initial release date: 02 Feb 2023
 
@@ -2900,10 +2900,18 @@ begin
       FEditingText := NewItems;
       vstOIEdited(vstOI, FEditingNode, 1);
 
-      if FBtnItemsProperty.Tag = 1 then
-        if Assigned(FCmbMiscEnumProperty) then
-          //FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf({CEmptySpaceForIcon +} NewItems);
-          FCmbMiscEnumProperty.ItemIndex := ComboBoxExIndexOf(FCmbMiscEnumProperty, Trim(NewItems));
+      if FBtnItemsProperty <> nil then  //The button can be destroyed, if the OnOIEditItems handler calls Application.ProcessMessages.
+        if FBtnItemsProperty.Tag = 1 then
+          if Assigned(FCmbMiscEnumProperty) then
+          begin
+            //FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf({CEmptySpaceForIcon +} NewItems);
+            FCmbMiscEnumProperty.ItemIndex := ComboBoxExIndexOf(FCmbMiscEnumProperty, Trim(NewItems));
+            if FCmbMiscEnumProperty.ItemIndex = -1 then //new item
+            begin
+              FCmbMiscEnumProperty.Add(NewItems);
+              FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.Count - 1;
+            end;
+          end;
     end;
 
   finally
