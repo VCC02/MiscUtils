@@ -2443,7 +2443,12 @@ begin
 
   FEditingText := GetPropertyValueForEditor(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, etEnumCombo);
   //FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.IndexOf({CEmptySpaceForIcon +} FEditingText);
-  FCmbMiscEnumProperty.ItemIndex := ComboBoxExIndexOf(FCmbMiscEnumProperty, FEditingText);
+  FCmbMiscEnumProperty.ItemIndex := ComboBoxExIndexOf(FCmbMiscEnumProperty, Trim(FEditingText));
+  if FCmbMiscEnumProperty.ItemIndex = -1 then //new item
+  begin
+    FCmbMiscEnumProperty.Add(FEditingText);
+    FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.Count - 1;
+  end;
 
   AssignPopupMenuAndTooltipToEditor(FCmbMiscEnumProperty);
   FCmbMiscEnumProperty.Visible := True;
