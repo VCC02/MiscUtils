@@ -266,7 +266,10 @@ begin
   FListOfFuncs := TStringList.Create;
   FListOfVarsDesc := TStringList.Create;
   FListOfFuncsDesc := TStringList.Create;
-
+  FListOfVars.LineBreak := #13#10;
+  FListOfFuncs.LineBreak := #13#10;
+  FListOfVarsDesc.LineBreak := #13#10;
+  FListOfFuncsDesc.LineBreak := #13#10;
   FSelected := '';
   FHold := False;
 

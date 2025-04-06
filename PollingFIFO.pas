@@ -71,6 +71,7 @@ constructor TPollingFIFO.Create;
 begin
   inherited Create;
   FFIFO := TStringList.Create;
+  FFIFO.LineBreak := #13#10;
 
   {$IFDEF FPC}
     InitCriticalSection(FCritSec);
