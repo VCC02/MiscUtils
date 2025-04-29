@@ -127,6 +127,7 @@ type
     Sender: TObject; var Key: Word; Shift: TShiftState) of object;
 
   TOnOITextEditorKeyDown = TOnOITextEditorKeyUp;
+  TOnOIEditorKeyDown = TOnOITextEditorKeyUp;
 
   TOnOIEditorAssignMenuAndTooltip = procedure(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
     Sender: TObject; var APopupMenu: TPopupMenu; var AHint: string; var AShowHint: Boolean) of object;
@@ -233,6 +234,7 @@ type
 
     FOnOITextEditorKeyUp: TOnOITextEditorKeyUp;
     FOnOITextEditorKeyDown: TOnOITextEditorKeyDown;
+    FOnOIEditorKeyDown: TOnOIEditorKeyDown;
 
     FOnOIEditorAssignMenuAndTooltip: TOnOIEditorAssignMenuAndTooltip;
     FOnOIGetFileDialogSettings: TOnOIGetFileDialogSettings;
@@ -310,6 +312,9 @@ type
     procedure DoOnOITextEditorKeyDown(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       Sender: TObject; var Key: Word; Shift: TShiftState);
 
+    procedure DoOnOIEditorKeyDown(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
+      Sender: TObject; var Key: Word; Shift: TShiftState);
+
     procedure DoOnOIEditorAssignMenuAndTooltip(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
       Sender: TObject; var APopupMenu: TPopupMenu; var AHint: string; var AShowHint: Boolean);
 
@@ -366,6 +371,8 @@ type
     procedure TextEditorKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure TextEditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure updownTextEditorChangingEx(Sender: TObject; var AllowChange: Boolean; NewValue: SmallInt; Direction: TUpDownDirection);
+
+    procedure EditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState); //for all editors
 
     procedure vstOICompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
     procedure vstOICreateEditor(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; out EditLink: IVTEditLink);
@@ -449,6 +456,7 @@ type
     procedure ScrollToNode(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer);
     procedure SetNodeCheckState(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; ACheckState: TCheckState);
     procedure ClearNodeSelection;
+    procedure SetEditorValue(AValue: string); //The last resort of setting the editor value, while editing.   Implemented for MiscCmb only, for now.
 
     property ListItemsVisible: Boolean read FListItemsVisible write FListItemsVisible; //to be set before calling ReloadContent
     property DataTypeVisible: Boolean read FDataTypeVisible write SetDataTypeVisible;    //to be set before calling ReloadContent
@@ -493,6 +501,7 @@ type
 
     property OnOITextEditorKeyUp: TOnOITextEditorKeyUp write FOnOITextEditorKeyUp;
     property OnOITextEditorKeyDown: TOnOITextEditorKeyDown write FOnOITextEditorKeyDown;
+    property OnOIEditorKeyDown: TOnOIEditorKeyDown write FOnOIEditorKeyDown; //for all editor types
 
     property OnOIEditorAssignMenuAndTooltip: TOnOIEditorAssignMenuAndTooltip write FOnOIEditorAssignMenuAndTooltip;
     property OnOIGetFileDialogSettings: TOnOIGetFileDialogSettings write FOnOIGetFileDialogSettings;
@@ -822,6 +831,7 @@ begin
   FOnOITextEditorMouseUp := nil;
   FOnOITextEditorKeyUp := nil;
   FOnOITextEditorKeyDown := nil;
+  FOnOIEditorKeyDown := nil;
 
   FOnOIEditorAssignMenuAndTooltip := nil;
   FOnOIGetFileDialogSettings := nil;
@@ -1082,6 +1092,7 @@ begin
         FupdownTextEditor.Flat := True;
         FupdownTextEditor.ParentColor := False;
         FupdownTextEditor.OnChangingEx := updownTextEditorChangingEx;
+        FupdownTextEditor.OnKeyDown := EditorKeyDown;
 
         FupdownTextEditor.Visible := True;
         FupdownTextEditor.BringToFront;
@@ -1110,6 +1121,7 @@ begin
         FSpdBtnArrowProperty.Flat := True;
         FSpdBtnArrowProperty.Glyph.Assign(imgDownArrow.Picture.Bitmap);
         FSpdBtnArrowProperty.OnClick := spdbtnArrowPropertyClick;
+        //FSpdBtnArrowProperty.OnKeyDown := EditorKeyDown;  //can't focus this one
 
         FSpdBtnArrowProperty.Visible := True;
         FSpdBtnArrowProperty.BringToFront;
@@ -1484,6 +1496,16 @@ begin
     Exit;//raise Exception.Create('OnOITextEditorKeyDown not assigned.')
 
   FOnOITextEditorKeyDown(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, Sender, Key, Shift);
+end;
+
+
+procedure TfrObjectInspector.DoOnOIEditorKeyDown(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex: Integer;
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if not Assigned(FOnOIEditorKeyDown) then
+    Exit;//raise Exception.Create('OnOIEditorKeyDown not assigned.')
+
+  FOnOIEditorKeyDown(ANodeLevel, ACategoryIndex, APropertyIndex, AItemIndex, Sender, Key, Shift);
 end;
 
 
@@ -2138,6 +2160,7 @@ begin
   FEditingNode := Node;
   FCmbBooleanProperty.OnSelect := cmbBooleanPropertySelect;
   FCmbBooleanProperty.OnExit := cmbBooleanPropertyExit;
+  FCmbBooleanProperty.OnKeyDown := EditorKeyDown;
 
   FCmbBooleanProperty.Clear;
   FCmbBooleanProperty.Items.Add('       False');
@@ -2189,6 +2212,7 @@ begin
   FEditingNode := Node;
   FBtnItemsProperty.OnClick := btnItemsPropertyClick;
   FBtnItemsProperty.OnExit := btnItemsPropertyExit;
+  FBtnItemsProperty.OnKeyDown := EditorKeyDown;
 
   if AUsedForPath then
   begin
@@ -2205,6 +2229,7 @@ begin
     FEdtPath.Text := GetPropertyValueForEditor(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, etFilePath);  //can also be etDirPath;
 
     FEdtPath.OnExit := EdtPathExit;
+    FEdtPath.OnKeyDown := EditorKeyDown;
 
     AssignPopupMenuAndTooltipToEditor(FEdtPath);
     FEdtPath.Visible := True;
@@ -2254,6 +2279,7 @@ begin
   //FEditingNode := Node;
   FBtnArrowProperty.OnClick := btnArrowPropertyClick;
   FBtnArrowProperty.OnExit := btnArrowPropertyExit;
+  FBtnArrowProperty.OnKeyDown := EditorKeyDown;
 
   AssignPopupMenuAndTooltipToEditor(FBtnArrowProperty);
 
@@ -2418,6 +2444,7 @@ begin
   FEditingNode := Node;
   FCmbMiscEnumProperty.OnSelect := cmbMiscEnumPropertySelect;
   FCmbMiscEnumProperty.OnExit := cmbMiscEnumPropertyExit;
+  FCmbMiscEnumProperty.OnKeyDown := EditorKeyDown;
 
   if ACreateBrowseButton then
   begin
@@ -2580,9 +2607,16 @@ end;
 
 procedure TfrObjectInspector.edtColorPropertyKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
 begin
   if Key = VK_RETURN then
     tmrColCmbDropped.Enabled := True;
+
+  if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOIEditorKeyDown(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Sender, Key, Shift);
 end;
 
 
@@ -2649,6 +2683,7 @@ end;
 procedure TfrObjectInspector.colcmbPropertyKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 var
   PastedText: string;
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
 begin
   if ssCtrl in Shift then
   begin
@@ -2679,6 +2714,11 @@ begin
       Key := 0;
     end;
   end;
+
+  if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOIEditorKeyDown(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Sender, Key, Shift);
 end;
 
 
@@ -3428,6 +3468,7 @@ begin
     Exit;
 
   DoOnOITextEditorKeyDown(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Sender, Key, Shift);
+  DoOnOIEditorKeyDown(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Sender, Key, Shift);
   SetTextEditorEditPosAndSize;
 end;
 
@@ -3458,6 +3499,30 @@ begin
   end;
 end;
 
+
+procedure TfrObjectInspector.EditorKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+var
+  NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex: Integer;
+begin
+  if not GetNodeIndexInfo(FEditingNode, NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex) then
+    Exit;
+
+  DoOnOIEditorKeyDown(NodeLevel, CategoryIndex, PropertyIndex, PropertyItemIndex, Sender, Key, Shift);
+end;
+
+
+procedure TfrObjectInspector.SetEditorValue(AValue: string);
+begin
+  if (FCmbMiscEnumProperty = nil) or not FCmbMiscEnumProperty.Visible then
+    Exit;
+
+  FCmbMiscEnumProperty.ItemIndex := ComboBoxExIndexOf(FCmbMiscEnumProperty, Trim(AValue));
+  if FCmbMiscEnumProperty.ItemIndex = -1 then //new item
+  begin
+    FCmbMiscEnumProperty.Add(AValue);
+    FCmbMiscEnumProperty.ItemIndex := FCmbMiscEnumProperty.Items.Count - 1;
+  end;
+end;
 
 end.
 
