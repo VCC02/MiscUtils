@@ -28,6 +28,8 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
     OnGetText = vstTestsGetText
     OnGetImageIndex = vstTestsGetImageIndex
     OnGetImageIndexEx = vstTestsGetImageIndexEx
+    OnKeyUp = vstTestsKeyUp
+    OnMouseUp = vstTestsMouseUp
   end
   object memLog: TMemo
     Left = 0
@@ -37,8 +39,7 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
     Anchors = [akLeft, akRight, akBottom]
     Lines.Strings = (
       'This test runner can be paused and stopped.'
-      'Currently, it cannot display error messages.'
-      'Also, tests cannot be skipped.'
+      'Currently, tests cannot be skipped.'
     )
     ReadOnly = True
     ScrollBars = ssBoth

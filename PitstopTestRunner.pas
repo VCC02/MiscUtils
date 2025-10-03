@@ -29,7 +29,7 @@ unit PitstopTestRunner;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
+  LCLType, Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
   Buttons, VirtualTrees, fpcunit, ImgList, ComCtrls;
 
 type
@@ -45,7 +45,7 @@ type
 
   { TfrmPitstopTestRunner }
 
-  TfrmPitstopTestRunner = class(TForm)
+  TfrmPitstopTestRunner = class(TForm, ITestListener)
     imglstTestStatus: TImageList;
     memLog: TMemo;
     memTestResult: TMemo;
@@ -75,6 +75,9 @@ type
       var ImageList: TCustomImageList);
     procedure vstTestsGetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
       Column: TColumnIndex; TextType: TVSTTextType; var CellText: string);
+    procedure vstTestsKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure vstTestsMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
   private
     FPaused: Boolean;
     FStopping: Boolean;
@@ -83,12 +86,21 @@ type
     procedure GetListOfSelectedTests(AList: TStringList);         //selected doesn't mean checked
     procedure GetSelectedNodes(var ASelectedNodes: TNodeArray);  //selected doesn't mean checked
     procedure SelectTestsByName(AList: TStringList);
+    function GetNodeByTest(ATest: TTest): PVirtualNode;
     procedure LoadSettingsFromIni;
     procedure SaveSettingsToIni;
+    procedure DisplayTestResultFromSelectedTest;
 
     procedure InitStatusOnAllTests;
     function RunTest(ANode: PVirtualNode): Boolean;
     function RunCategory(ACatNode: PVirtualNode): Boolean;
+
+    procedure AddFailure(ATest: TTest; AFailure: TTestFailure);
+    procedure AddError(ATest: TTest; AError: TTestFailure);
+    procedure StartTest(ATest: TTest);
+    procedure EndTest(ATest: TTest);
+    procedure StartTestSuite(ATestSuite: TTestSuite);
+    procedure EndTestSuite(ATestSuite: TTestSuite);
   public
     procedure AddToLog(s: string);
   end;
@@ -97,7 +109,6 @@ var
   frmPitstopTestRunner: TfrmPitstopTestRunner;
 
 {ToDo:
-- Get test result and display it when clicked on failed test.
 - Implement checkboxes on test nodes.
 - Load/Save window settings and test settings from/to ini.
 - Set "AllTests" category status to failed if at least one category fails.
@@ -222,6 +233,35 @@ begin
         begin
           vstTests.Selected[Node] := True;
           vstTests.ScrollIntoView(Node, False);
+        end;
+
+      Node := vstTests.GetNext(Node);
+    until Node = nil;
+  finally
+    vstTests.EndUpdate;
+  end;
+end;
+
+
+function TfrmPitstopTestRunner.GetNodeByTest(ATest: TTest): PVirtualNode;
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Result := nil;
+  Node := vstTests.GetFirst;
+  if Node = nil then
+    Exit;
+
+  vstTests.BeginUpdate;
+  try
+    repeat
+      NodeData := vstTests.GetNodeData(Node);
+      if NodeData <> nil then
+        if NodeData^.Test = ATest then
+        begin
+          Result := Node;
+          Exit;
         end;
 
       Node := vstTests.GetNext(Node);
@@ -357,6 +397,93 @@ begin
 end;
 
 
+procedure TfrmPitstopTestRunner.AddFailure(ATest: TTest; AFailure: TTestFailure);
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Node := GetNodeByTest(ATest);
+  if Node = nil then
+    Exit;
+
+  NodeData := vstTests.GetNodeData(Node);
+  if NodeData <> nil then
+  begin
+    NodeData^.TestResult := DateTimeToStr(Now) + #13#10 +
+                            AFailure.ExceptionMessage + #13#10 +
+                            '(' + AFailure.ExceptionClassName + ') at ' + AFailure.LocationInfo;
+    memTestResult.Lines.Text := NodeData^.TestResult;
+
+    if vstTests.GetNodeLevel(Node) = 2 then
+    begin
+      Node := Node^.Parent;
+      if Node <> nil then
+      begin
+        NodeData := vstTests.GetNodeData(Node);
+        if NodeData <> nil then
+          NodeData^.Status := tsFailed;
+      end;
+    end;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.AddError(ATest: TTest; AError: TTestFailure);
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Node := GetNodeByTest(ATest);
+  if Node = nil then
+    Exit;
+
+  NodeData := vstTests.GetNodeData(Node);
+  if NodeData <> nil then
+  begin
+    NodeData^.TestResult := DateTimeToStr(Now) + #13#10 +
+                            AError.ExceptionMessage + #13#10 +
+                            '(' + AError.ExceptionClassName + ') at ' + AError.LocationInfo;
+    memTestResult.Lines.Text := NodeData^.TestResult;
+
+    if vstTests.GetNodeLevel(Node) = 2 then
+    begin
+      Node := Node^.Parent;
+      if Node <> nil then
+      begin
+        NodeData := vstTests.GetNodeData(Node);
+        if NodeData <> nil then
+          NodeData^.Status := tsFailed;
+      end;
+    end;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.StartTest(ATest: TTest);
+begin
+  // UI update if needed
+end;
+
+
+procedure TfrmPitstopTestRunner.EndTest(ATest: TTest);
+begin
+  // UI update if needed
+end;
+
+
+procedure TfrmPitstopTestRunner.StartTestSuite(ATestSuite: TTestSuite);
+begin
+  //
+end;
+
+
+procedure TfrmPitstopTestRunner.EndTestSuite(ATestSuite: TTestSuite);
+begin
+  //
+end;
+
+
+
 function TfrmPitstopTestRunner.RunTest(ANode: PVirtualNode): Boolean; //ANode is expected to be a leaf
 var
   NodeData: PTestNodeRec;
@@ -398,6 +525,7 @@ begin
 
   TestRes := TTestResult.Create;
   try
+    TestRes.AddListener(Self);
     NodeData^.Test.Run(TestRes);
   finally
     if TestRes.WasSuccessful then
@@ -408,7 +536,6 @@ begin
     else
     begin
       NodeData^.Status := tsFailed;
-      NodeData^.TestResult := 'ToDo '; //TestRes.Errors.;  //TestRes.Errors.Count,  TestRes.Failures.Count,  TestRes.Listeners.
       Result := False;
     end;
 
@@ -644,6 +771,38 @@ begin
   except
     CellText := 'bug';
   end;
+end;
+
+
+procedure TfrmPitstopTestRunner.vstTestsKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key in [VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_HOME, VK_END, VK_PRIOR, VK_NEXT] then
+    DisplayTestResultFromSelectedTest;
+end;
+
+
+procedure TfrmPitstopTestRunner.DisplayTestResultFromSelectedTest;
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Node := vstTests.GetFirstSelected;
+  if Node = nil then
+    Exit;
+
+  NodeData := vstTests.GetNodeData(Node);
+  if NodeData = nil then
+    Exit;
+
+  memTestResult.Lines.Text := NodeData^.TestResult;
+end;
+
+
+procedure TfrmPitstopTestRunner.vstTestsMouseUp(Sender: TObject;
+  Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  DisplayTestResultFromSelectedTest;
 end;
 
 end.
