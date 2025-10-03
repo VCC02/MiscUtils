@@ -314,8 +314,6 @@ var
   i: Integer;
 begin
   Fnm := GetIniNameNoExt;
-  if not FileExists(Fnm) then
-    Exit;
 
   Ini := TMemIniFile.Create(Fnm);
   try
