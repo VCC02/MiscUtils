@@ -20,8 +20,22 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
     Anchors = [akTop, akLeft, akRight, akBottom]
     DefaultText = 'Node'
     Header.AutoSizeIndex = 0
-    Header.Columns = <>
-    Header.MainColumn = -1
+    Header.Columns = <    
+      item
+        MinWidth = 200
+        Position = 0
+        Text = 'Test name'
+        Width = 200
+      end    
+      item
+        MinWidth = 500
+        Position = 1
+        Text = 'Result'
+        Width = 500
+      end>
+    Header.DefaultHeight = 21
+    Header.Height = 21
+    Header.Options = [hoColumnResize, hoDblClickResize, hoDrag, hoShowSortGlyphs, hoVisible]
     StateImages = imglstTestStatus
     TabOrder = 0
     TreeOptions.SelectionOptions = [toMultiSelect]

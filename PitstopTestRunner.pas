@@ -290,6 +290,9 @@ begin
     Width := Ini.ReadInteger('PitstopTestRunner.Window', 'Width', Width);
     Height := Ini.ReadInteger('PitstopTestRunner.Window', 'Height', Height);
 
+    for i := 0 to vstTests.Header.Columns.Count - 1 do
+      vstTests.Header.Columns.Items[i].Width := Ini.ReadInteger('PitstopTestRunner.Window', 'ColWidth', vstTests.Header.Columns.Items[i].Width);
+
     SelectedTests := TStringList.Create;
     try
       n := Ini.ReadInteger('SelectedTests', 'Count', 0);
@@ -321,6 +324,9 @@ begin
     Ini.WriteInteger('PitstopTestRunner.Window', 'Top', Top);
     Ini.WriteInteger('PitstopTestRunner.Window', 'Width', Width);
     Ini.WriteInteger('PitstopTestRunner.Window', 'Height', Height);
+
+    for i := 0 to vstTests.Header.Columns.Count - 1 do
+      Ini.WriteInteger('PitstopTestRunner.Window', 'ColWidth', vstTests.Header.Columns.Items[i].Width);
 
     SelectedTests := TStringList.Create;
     try
@@ -762,10 +768,18 @@ begin
     if NodeData = nil then
       Exit;
 
-    if NodeData^.IsRootTest then
-      CellText := 'All Tests'
-    else
-      CellText := NodeData^.Test.TestName;
+    case Column of
+      0:
+      begin
+        if NodeData^.IsRootTest then
+          CellText := 'All Tests'
+        else
+          CellText := NodeData^.Test.TestName;
+      end;
+
+      1:
+        CellText := StringReplace(NodeData^.TestResult, #13#10, '  ', [rfReplaceAll]);
+    end;
   except
     CellText := 'bug';
   end;
