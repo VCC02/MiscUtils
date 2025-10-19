@@ -30,7 +30,7 @@ interface
 
 uses
   LCLType, Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
-  Buttons, VirtualTrees, fpcunit, ImgList, ComCtrls;
+  Buttons, VirtualTrees, fpcunit, ImgList, ComCtrls, Menus;
 
 type
   TTestStatus = (tsInit, tsFailed, tsPassed, tsRunning, tsPaused);
@@ -49,7 +49,9 @@ type
     imglstTestStatus: TImageList;
     memLog: TMemo;
     memTestResult: TMemo;
+    MenuItem_CopyTestNameToClipboard: TMenuItem;
     pnlToolbar: TPanel;
+    pmTests: TPopupMenu;
     prbTestProgress: TProgressBar;
     spdbtnRunAllSelectedTests: TSpeedButton;
     spdbtnStop: TSpeedButton;
@@ -60,6 +62,7 @@ type
     vstTests: TVirtualStringTree;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure MenuItem_CopyTestNameToClipboardClick(Sender: TObject);
     procedure spdbtnPauseClick(Sender: TObject);
     procedure spdbtnRunAllClick(Sender: TObject);
     procedure spdbtnRunAllSelectedTestsClick(Sender: TObject);
@@ -90,6 +93,7 @@ type
     procedure LoadSettingsFromIni;
     procedure SaveSettingsToIni;
     procedure DisplayTestResultFromSelectedTest;
+    procedure CopySelectedTestNamesToClipboard;
 
     procedure InitStatusOnAllTests;
     function RunTest(ANode: PVirtualNode): Boolean;
@@ -110,7 +114,7 @@ var
 
 {ToDo:
 - Implement checkboxes on test nodes.
-- Load/Save window settings and test settings from/to ini.
+[in work] - Load/Save window settings and test settings from/to ini.
 - Set "AllTests" category status to failed if at least one category fails.
 - Measure test duration
 - [nice to have] - report test results (xml or ini)
@@ -121,7 +125,7 @@ implementation
 {$R *.frm}
 
 uses
-  testregistry, IniFiles;
+  testregistry, IniFiles, Clipbrd;
 
 { TfrmPitstopTestRunner }
 
@@ -141,6 +145,34 @@ begin
     SaveSettingsToIni;
   except
   end;
+end;
+
+
+procedure TfrmPitstopTestRunner.CopySelectedTestNamesToClipboard;
+var
+  ListOfTests: TStringList;
+  s: string;
+begin
+  ListOfTests := TStringList.Create;
+  try
+    ListOfTests.LineBreak := #13#10;
+    GetListOfSelectedTests(ListOfTests);
+    s := ListOfTests.Text;
+
+    if Length(s) > 0 then
+      Delete(s, Length(s) - 1, 2);
+
+    Clipboard.AsText := s;
+  finally
+    ListOfTests.Free;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.MenuItem_CopyTestNameToClipboardClick(
+  Sender: TObject);
+begin
+  CopySelectedTestNamesToClipboard;
 end;
 
 
@@ -791,6 +823,10 @@ procedure TfrmPitstopTestRunner.vstTestsKeyUp(Sender: TObject; var Key: Word;
 begin
   if Key in [VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_HOME, VK_END, VK_PRIOR, VK_NEXT] then
     DisplayTestResultFromSelectedTest;
+
+  if Key = Ord('C') then
+    if ssCtrl in Shift then
+      CopySelectedTestNamesToClipboard;
 end;
 
 

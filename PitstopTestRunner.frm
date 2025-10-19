@@ -36,9 +36,10 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
     Header.DefaultHeight = 21
     Header.Height = 21
     Header.Options = [hoColumnResize, hoDblClickResize, hoDrag, hoShowSortGlyphs, hoVisible]
+    PopupMenu = pmTests
     StateImages = imglstTestStatus
     TabOrder = 0
-    TreeOptions.SelectionOptions = [toMultiSelect]
+    TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect]
     OnGetText = vstTestsGetText
     OnGetImageIndex = vstTestsGetImageIndex
     OnGetImageIndexEx = vstTestsGetImageIndexEx
@@ -851,5 +852,13 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
       D7F339456EEC658682AC65A0E4F5F3DA260324357A4834DDD164687DADFCFF01
       BCE7D05D
     }
+  end
+  object pmTests: TPopupMenu
+    Left = 291
+    Top = 84
+    object MenuItem_CopyTestNameToClipboard: TMenuItem
+      Caption = 'Copy selected test name(s) to clipboard'
+      OnClick = MenuItem_CopyTestNameToClipboardClick
+    end
   end
 end
