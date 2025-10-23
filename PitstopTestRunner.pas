@@ -49,10 +49,13 @@ type
     imglstTestStatus: TImageList;
     memLog: TMemo;
     memTestResult: TMemo;
+    MenuItemRunUntilFails: TMenuItem;
     MenuItem_CopyTestNameToClipboard: TMenuItem;
     pnlToolbar: TPanel;
     pmTests: TPopupMenu;
+    pmRun: TPopupMenu;
     prbTestProgress: TProgressBar;
+    spdbtnExtraRunSelectedTest: TSpeedButton;
     spdbtnRunAllSelectedTests: TSpeedButton;
     spdbtnStop: TSpeedButton;
     spdbtnRunAll: TSpeedButton;
@@ -62,7 +65,9 @@ type
     vstTests: TVirtualStringTree;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure MenuItemRunUntilFailsClick(Sender: TObject);
     procedure MenuItem_CopyTestNameToClipboardClick(Sender: TObject);
+    procedure spdbtnExtraRunSelectedTestClick(Sender: TObject);
     procedure spdbtnPauseClick(Sender: TObject);
     procedure spdbtnRunAllClick(Sender: TObject);
     procedure spdbtnRunAllSelectedTestsClick(Sender: TObject);
@@ -115,6 +120,7 @@ var
 {ToDo:
 - Implement checkboxes on test nodes.
 [in work] - Load/Save window settings and test settings from/to ini.
+  - The test name should be saved as path (root -> leaf), because multiple tests may have the same name (they are derived from the same class).
 - Set "AllTests" category status to failed if at least one category fails.
 - Measure test duration
 - [nice to have] - report test results (xml or ini)
@@ -148,6 +154,52 @@ begin
 end;
 
 
+procedure TfrmPitstopTestRunner.MenuItemRunUntilFailsClick(Sender: TObject);
+var
+  tk: QWord;
+  Cnt: Integer;
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Node := vstTests.GetFirstSelected;
+  if Node = nil then
+  begin
+    MessageBoxFunction('Please select a test to be run until it fails.', 'Test runner', 0);
+    Exit;
+  end;
+
+  NodeData := vstTests.GetNodeData(Node);
+  if NodeData = nil then
+  begin
+    AddToLog('Error getting node data.');
+    Exit;
+  end;
+
+  vstTests.BeginUpdate;
+  MenuItemRunUntilFails.Enabled := False;
+  try
+    AddToLog('Running selected test until fails: ' + NodeData^.Test.TestName);
+    Cnt := 1;
+    repeat
+      AddToLog('Run #' + IntToStr(Cnt));
+      Inc(Cnt);
+      spdbtnRunAllSelectedTests.Click;
+
+      tk := GetTickCount64;
+      repeat
+        Application.ProcessMessages;
+        Sleep(1);
+      until (GetTickCount64 - tk > 1000) or FStopping or (NodeData^.Status = tsFailed);
+    until FStopping or (NodeData^.Status = tsFailed);
+  finally
+    vstTests.EndUpdate;
+    MenuItemRunUntilFails.Enabled := True;
+  end;
+
+  AddToLog('');
+end;
+
+
 procedure TfrmPitstopTestRunner.CopySelectedTestNamesToClipboard;
 var
   ListOfTests: TStringList;
@@ -173,6 +225,12 @@ procedure TfrmPitstopTestRunner.MenuItem_CopyTestNameToClipboardClick(
   Sender: TObject);
 begin
   CopySelectedTestNamesToClipboard;
+end;
+
+
+procedure TfrmPitstopTestRunner.spdbtnExtraRunSelectedTestClick(Sender: TObject);
+begin
+  pmRun.PopUp;
 end;
 
 

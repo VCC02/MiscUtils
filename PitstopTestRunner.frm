@@ -353,7 +353,7 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
       OnClick = spdbtnRunSelectedTestClick
     end
     object spdbtnPause: TSpeedButton
-      Left = 140
+      Left = 157
       Height = 40
       Top = 2
       Width = 40
@@ -493,7 +493,7 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
       OnClick = spdbtnPauseClick
     end
     object spdbtnStop: TSpeedButton
-      Left = 184
+      Left = 201
       Height = 40
       Top = 2
       Width = 40
@@ -601,15 +601,15 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
       OnClick = spdbtnStopClick
     end
     object prbTestProgress: TProgressBar
-      Left = 232
+      Left = 248
       Height = 20
       Top = 8
-      Width = 144
+      Width = 128
       Smooth = True
       TabOrder = 0
     end
     object spdbtnRunAllSelectedTests: TSpeedButton
-      Left = 96
+      Left = 113
       Height = 40
       Hint = 'Run all selected and checked tests'
       Top = 2
@@ -750,6 +750,25 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
       ParentShowHint = False
       OnClick = spdbtnRunAllSelectedTestsClick
     end
+    object spdbtnExtraRunSelectedTest: TSpeedButton
+      Left = 90
+      Height = 40
+      Top = 2
+      Width = 18
+      Font.Color = clWindowText
+      Glyph.Data = {
+        EA000000424DEA0000000000000036000000280000000B000000050000000100
+        180000000000B400000000000000000000000000000000000000FFFFFFFFFFFF
+        FFFFFFFFFFFFFFFFFF39841AFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000FFFF
+        FFFFFFFFFFFFFFFFFFFF39841A39841A39841AFFFFFFFFFFFFFFFFFFFFFFFF00
+        0000FFFFFFFFFFFFFFFFFF39841A39841A39841A39841A39841AFFFFFFFFFFFF
+        FFFFFF000000FFFFFFFFFFFF39841A39841A39841A39841A39841A39841A3984
+        1AFFFFFFFFFFFF000000FFFFFF39841A39841A39841A39841A39841A39841A39
+        841A39841A39841AFFFFFF000000
+      }
+      ParentFont = False
+      OnClick = spdbtnExtraRunSelectedTestClick
+    end
   end
   object memTestResult: TMemo
     Left = 0
@@ -859,6 +878,14 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
     object MenuItem_CopyTestNameToClipboard: TMenuItem
       Caption = 'Copy selected test name(s) to clipboard'
       OnClick = MenuItem_CopyTestNameToClipboardClick
+    end
+  end
+  object pmRun: TPopupMenu
+    Left = 200
+    Top = 144
+    object MenuItemRunUntilFails: TMenuItem
+      Caption = 'Run selected test until it fails'
+      OnClick = MenuItemRunUntilFailsClick
     end
   end
 end
