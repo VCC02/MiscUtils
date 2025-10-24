@@ -91,9 +91,9 @@ type
     FStopping: Boolean;
 
     function GetIniNameNoExt: string;
-    procedure GetListOfSelectedTests(AList: TStringList);         //selected doesn't mean checked
+    procedure GetListOfSelectedTests(AList: TStringList; ATestNameContainsParent: Boolean = False);         //selected doesn't mean checked
     procedure GetSelectedNodes(var ASelectedNodes: TNodeArray);  //selected doesn't mean checked
-    procedure SelectTestsByName(AList: TStringList);
+    procedure SelectTestsByName(AList: TStringList; ATestNameContainsParent: Boolean = False);
     function GetNodeByTest(ATest: TTest): PVirtualNode;
     procedure LoadSettingsFromIni;
     procedure SaveSettingsToIni;
@@ -119,8 +119,6 @@ var
 
 {ToDo:
 - Implement checkboxes on test nodes.
-[in work] - Load/Save window settings and test settings from/to ini.
-  - The test name should be saved as path (root -> leaf), because multiple tests may have the same name (they are derived from the same class).
 - Set "AllTests" category status to failed if at least one category fails.
 - Measure test duration
 - [nice to have] - report test results (xml or ini)
@@ -247,12 +245,16 @@ begin
 end;
 
 
-procedure TfrmPitstopTestRunner.GetListOfSelectedTests(AList: TStringList);
+procedure TfrmPitstopTestRunner.GetListOfSelectedTests(AList: TStringList; ATestNameContainsParent: Boolean = False);
 var
-  Node: PVirtualNode;
-  NodeData: PTestNodeRec;
+  Node, ParentNode: PVirtualNode;
+  NodeData, ParentNodeData: PTestNodeRec;
 begin
   Node := vstTests.GetFirst;
+  if Node = nil then
+    Exit;
+
+  Node := vstTests.GetNext(Node);   //move away from the first node
   if Node = nil then
     Exit;
 
@@ -261,11 +263,26 @@ begin
   vstTests.BeginUpdate;
   try
     repeat
-      if vstTests.Selected[Node] then
+      if not ATestNameContainsParent then
       begin
-        NodeData := vstTests.GetNodeData(Node);
-        if NodeData <> nil then
-          AList.Add(NodeData^.Test.TestName);
+        if vstTests.Selected[Node] then
+        begin
+          NodeData := vstTests.GetNodeData(Node);
+          if NodeData <> nil then
+            AList.Add(NodeData^.Test.TestName);
+        end;
+      end
+      else
+      begin
+        if (Node^.Parent <> nil) and (vstTests.Selected[Node]) then
+        begin
+          ParentNode := Node^.Parent;
+          NodeData := vstTests.GetNodeData(Node);
+          ParentNodeData := vstTests.GetNodeData(ParentNode);
+
+          if (NodeData <> nil) and (ParentNodeData <> nil) then
+            AList.Add(ParentNodeData^.Test.TestName + '.' + NodeData^.Test.TestName);
+        end;
       end;
 
       Node := vstTests.GetNext(Node);
@@ -303,12 +320,16 @@ begin
 end;
 
 
-procedure TfrmPitstopTestRunner.SelectTestsByName(AList: TStringList);
+procedure TfrmPitstopTestRunner.SelectTestsByName(AList: TStringList; ATestNameContainsParent: Boolean = False);
 var
-  Node: PVirtualNode;
-  NodeData: PTestNodeRec;
+  Node, ParentNode: PVirtualNode;
+  NodeData, ParentNodeData: PTestNodeRec;
 begin
   Node := vstTests.GetFirst;
+  if Node = nil then
+    Exit;
+
+  Node := vstTests.GetNext(Node);   //move away from the first node
   if Node = nil then
     Exit;
 
@@ -317,12 +338,29 @@ begin
   vstTests.BeginUpdate;
   try
     repeat
-      NodeData := vstTests.GetNodeData(Node);
-      if NodeData <> nil then
-        if AList.IndexOf(NodeData^.Test.TestName) > -1 then
+      if not ATestNameContainsParent then
+      begin
+        NodeData := vstTests.GetNodeData(Node);
+        if NodeData <> nil then
+          if AList.IndexOf(NodeData^.Test.TestName) > -1 then
+          begin
+            vstTests.Selected[Node] := True;
+            vstTests.ScrollIntoView(Node, False);
+          end;
+      end
+      else
+        if Node^.Parent <> nil then
         begin
-          vstTests.Selected[Node] := True;
-          vstTests.ScrollIntoView(Node, False);
+          ParentNode := Node^.Parent;
+          NodeData := vstTests.GetNodeData(Node);
+          ParentNodeData := vstTests.GetNodeData(ParentNode);
+
+          if (NodeData <> nil) and (ParentNodeData <> nil) then
+            if AList.IndexOf(ParentNodeData^.Test.TestName + '.' + NodeData^.Test.TestName) > -1 then
+            begin
+              vstTests.Selected[Node] := True;
+              vstTests.ScrollIntoView(Node, False);
+            end;
         end;
 
       Node := vstTests.GetNext(Node);
@@ -389,7 +427,7 @@ begin
       for i := 0 to n - 1 do
         SelectedTests.Add(Ini.ReadString('SelectedTests', 'Test_' + IntToStr(i), 'UnknownTestName'));
 
-      SelectTestsByName(SelectedTests);
+      SelectTestsByName(SelectedTests, True);
     finally
       SelectedTests.Free;
     end;
@@ -420,7 +458,7 @@ begin
 
     SelectedTests := TStringList.Create;
     try
-      GetListOfSelectedTests(SelectedTests);
+      GetListOfSelectedTests(SelectedTests, True);
       Ini.EraseSection('SelectedTests');
 
       Ini.WriteInteger('SelectedTests', 'Count', SelectedTests.Count);
