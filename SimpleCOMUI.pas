@@ -41,7 +41,7 @@ uses
 type
   TOnConnectionToCOM = procedure of object;
   TOnDisconnectionFromCOM = procedure of object;
-  TOnExecuteCOMThread = procedure of object;
+  TOnExecuteCOMThread = procedure(ATerminated: PBoolean) of object;
 
   TfrSimpleCOMUI = class;
 
@@ -82,7 +82,7 @@ type
 
     procedure DoOnConnectionToCOM;
     procedure DoOnDisconnectionFromCOM;
-    procedure DoOnExecuteCOMThread;
+    procedure DoOnExecuteCOMThread(ATerminated: PBoolean);
 
     procedure CreateTh;
     procedure TerminateTh;
@@ -126,14 +126,10 @@ uses
 
 procedure TComThread.Execute;
 begin
-  repeat
-    try
-      FOwnerFrame.DoOnExecuteCOMThread;
-      Sleep(1);
-    except
-
-    end;
-  until Terminated;
+  try
+    FOwnerFrame.DoOnExecuteCOMThread(@Terminated);
+  except
+  end;
 end;
 
 
@@ -187,10 +183,10 @@ begin
 end;
 
 
-procedure TfrSimpleCOMUI.DoOnExecuteCOMThread;
+procedure TfrSimpleCOMUI.DoOnExecuteCOMThread(ATerminated: PBoolean);
 begin
   //The Assigned(FOnExecuteCOMThread) verification is done once in DoOnConnectionToCOM.
-  FOnExecuteCOMThread();
+  FOnExecuteCOMThread(ATerminated);
 end;
 
 
