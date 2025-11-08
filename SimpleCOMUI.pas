@@ -24,7 +24,9 @@
 
 unit SimpleCOMUI;
 
-{$mode ObjFPC}{$H+}
+{$IFDEF FPC}
+  {$MODE Delphi}{$H+}
+{$ENDIF}
 
 interface
 
@@ -112,7 +114,11 @@ type
 
 implementation
 
-{$R *.frm}
+{$IFDEF FPC}
+  {$R *.frm}
+{$ELSE}
+  {$R *.dfm}
+{$ENDIF}
 
 uses
   SimpleCOM;
@@ -123,6 +129,7 @@ begin
   repeat
     try
       FOwnerFrame.DoOnExecuteCOMThread;
+      Sleep(1);
     except
 
     end;
