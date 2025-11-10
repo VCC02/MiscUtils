@@ -36,6 +36,10 @@ uses
   //{$ELSE}
   //  Windows,
   //{$ENDIF}
+  {$IFnDEF FPC}
+    Windows,
+  {$ENDIF}
+
   Messages, Classes, SysUtils, Forms, Controls, StdCtrls, Graphics;
 
 type
@@ -237,11 +241,11 @@ begin
   try
     FTh.Terminate;
 
-    tk := GetTickCount64;
+    tk := {$IFDEF VER180} GetTickCount; {$ELSE} GetTickCount64; {$ENDIF}
     repeat
       Application.ProcessMessages;
       Sleep(1);
-    until FTh.Terminated or (GetTickCount64 - tk > 1000);
+    until FTh.Terminated or ({$IFDEF VER180} GetTickCount {$ELSE} GetTickCount64 {$ENDIF} - tk > 1000);
   except
   end;
 

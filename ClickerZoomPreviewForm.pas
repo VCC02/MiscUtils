@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2025 VCC
     creation date: Sep 2022
     initial release date: 27 Sep 2022
 
@@ -223,19 +223,43 @@ begin
     Application.ProcessMessages;
     frmClickerZoomPreview.FlblLeft.Canvas.Pen.Color := clDottedLine;
     frmClickerZoomPreview.FlblLeft.Canvas.Pen.Style := psDot;
-    frmClickerZoomPreview.FlblLeft.Canvas.Line(0, 0, 0, frmClickerZoomPreview.FlblLeft.Height);
+
+    {$IFDEF FPC}
+      frmClickerZoomPreview.FlblLeft.Canvas.Line(0, 0, 0, frmClickerZoomPreview.FlblLeft.Height);
+    {$ELSE}
+      frmClickerZoomPreview.FlblLeft.Canvas.MoveTo(0, 0);
+      frmClickerZoomPreview.FlblLeft.Canvas.LineTo(0, frmClickerZoomPreview.FlblLeft.Height);
+    {$ENDIF}
 
     frmClickerZoomPreview.FlblRight.Canvas.Pen.Color := clDottedLine;
     frmClickerZoomPreview.FlblRight.Canvas.Pen.Style := psDot;
-    frmClickerZoomPreview.FlblRight.Canvas.Line(0, 0, 0, frmClickerZoomPreview.FlblRight.Height);
+
+    {$IFDEF FPC}
+      frmClickerZoomPreview.FlblRight.Canvas.Line(0, 0, 0, frmClickerZoomPreview.FlblRight.Height);
+    {$ELSE}
+      frmClickerZoomPreview.FlblRight.Canvas.MoveTo(0, 0);
+      frmClickerZoomPreview.FlblRight.Canvas.LineTo(0, frmClickerZoomPreview.FlblRight.Height);
+    {$ENDIF}
 
     frmClickerZoomPreview.FlblTop.Canvas.Pen.Color := clDottedLine;
     frmClickerZoomPreview.FlblTop.Canvas.Pen.Style := psDot;
-    frmClickerZoomPreview.FlblTop.Canvas.Line(0, 0, frmClickerZoomPreview.FlblTop.Width, 0);
+
+    {$IFDEF FPC}
+      frmClickerZoomPreview.FlblTop.Canvas.Line(0, 0, frmClickerZoomPreview.FlblTop.Width, 0);
+    {$ELSE}
+      frmClickerZoomPreview.FlblTop.Canvas.MoveTo(0, 0);
+      frmClickerZoomPreview.FlblTop.Canvas.LineTo(frmClickerZoomPreview.FlblTop.Width, 0);
+    {$ENDIF}
 
     frmClickerZoomPreview.FlblBottom.Canvas.Pen.Color := clDottedLine;
     frmClickerZoomPreview.FlblBottom.Canvas.Pen.Style := psDot;
-    frmClickerZoomPreview.FlblBottom.Canvas.Line(0, 0, frmClickerZoomPreview.FlblBottom.Width, 0);
+
+    {$IFDEF FPC}
+      frmClickerZoomPreview.FlblBottom.Canvas.Line(0, 0, frmClickerZoomPreview.FlblBottom.Width, 0);
+    {$ELSE}
+      frmClickerZoomPreview.FlblBottom.Canvas.MoveTo(0, 0);
+      frmClickerZoomPreview.FlblBottom.Canvas.LineTo(frmClickerZoomPreview.FlblBottom.Width, 0);
+    {$ENDIF}
   except
     on E: Exception do
       frmClickerZoomPreview.Color := clYellow + Random(64) shl 16;
