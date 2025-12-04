@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2025 VCC
     creation date: 04 Mar 2016
     initial release date: 31 Dec 2023
 
@@ -218,7 +218,7 @@ begin
     Exit;
 
   repeat
-    if Node.Index = NodeIndex then
+    if Node^.Index = NodeIndex then
     begin
       Result := Node;
       Exit;
@@ -308,7 +308,7 @@ begin
     Exit;
 
   repeat
-    Result := Result + Node.NodeHeight; 
+    Result := Result + Node^.NodeHeight; 
 
     //Node := Node.NextSibling;
     Node := vst.GetNext(Node);
@@ -377,8 +377,8 @@ begin
   if not Assigned(ASignal) then
     Exit;
     
-  for i := 0 to Length(ASignal.SignalEvents) - 1 do
-    ASignal.SignalEvents[i].EditingEvent := False;
+  for i := 0 to Length(ASignal^.SignalEvents) - 1 do
+    ASignal^.SignalEvents[i].EditingEvent := False;
 end;
 
 
@@ -393,27 +393,27 @@ var
   var
     i: Integer;
   begin
-    MoveDiff := NewMoment - ASignal.SignalEvents[EventNumber].Moment;   //can be negative
-    ASignal.SignalEvents[EventNumber].Moment := NewMoment;
+    MoveDiff := NewMoment - ASignal^.SignalEvents[EventNumber].Moment;   //can be negative
+    ASignal^.SignalEvents[EventNumber].Moment := NewMoment;
 
     if DragSubsequentEvents then
       for i := EventNumber + 1 to Length(ASignal^.SignalEvents) - 1 do
-        ASignal.SignalEvents[i].Moment := ASignal.SignalEvents[i].Moment + MoveDiff;
+        ASignal^.SignalEvents[i].Moment := ASignal^.SignalEvents[i].Moment + MoveDiff;
   end;
 begin
   FirstEvent := EventNumber = 0;
-  LastEvent := EventNumber = Length(ASignal.SignalEvents) - 1;
+  LastEvent := EventNumber = Length(ASignal^.SignalEvents) - 1;
 
   if FirstEvent and LastEvent then                 //single event
   begin
-    ASignal.SignalEvents[EventNumber].Moment := NewMoment;
+    ASignal^.SignalEvents[EventNumber].Moment := NewMoment;
     Exit;
   end;
 
   if (not FirstEvent) and (not LastEvent) then     //middle
   begin
-    PrevTran := ASignal.SignalEvents[EventNumber - 1].Moment;
-    NextTran := ASignal.SignalEvents[EventNumber + 1].Moment;
+    PrevTran := ASignal^.SignalEvents[EventNumber - 1].Moment;
+    NextTran := ASignal^.SignalEvents[EventNumber + 1].Moment;
     if (NewMoment > PrevTran) and (NewMoment < NextTran) then
       MoveTran;
       
@@ -422,7 +422,7 @@ begin
 
   if FirstEvent and (not LastEvent) then        //first transition
   begin
-    NextTran := ASignal.SignalEvents[EventNumber + 1].Moment;
+    NextTran := ASignal^.SignalEvents[EventNumber + 1].Moment;
     if NewMoment < NextTran then
       MoveTran;
 
@@ -431,7 +431,7 @@ begin
 
   if (not FirstEvent) and LastEvent then        //last transition
   begin
-    PrevTran := ASignal.SignalEvents[EventNumber - 1].Moment;
+    PrevTran := ASignal^.SignalEvents[EventNumber - 1].Moment;
     if (NewMoment >= PrevTran) and (NewMoment < MaxInt - 1) then
       MoveTran;
       
@@ -449,24 +449,24 @@ begin
   if SearchMoment < 0 then
     Exit;
 
-  if Length(ASignal.SignalEvents) = 0 then
+  if Length(ASignal^.SignalEvents) = 0 then
     Exit;
 
-  if SearchMoment < ASignal.SignalEvents[0].Moment then
+  if SearchMoment < ASignal^.SignalEvents[0].Moment then
   begin
     Result := 0;
     Exit;
   end;
 
-  for i := 0 to Length(ASignal.SignalEvents) - 2 do
-    if (SearchMoment >= ASignal.SignalEvents[i].Moment) and (SearchMoment < ASignal.SignalEvents[i + 1].Moment) then
+  for i := 0 to Length(ASignal^.SignalEvents) - 2 do
+    if (SearchMoment >= ASignal^.SignalEvents[i].Moment) and (SearchMoment < ASignal^.SignalEvents[i + 1].Moment) then
     begin
       Result := i;
       Exit;
     end;
 
-  if SearchMoment > ASignal.SignalEvents[Length(ASignal.SignalEvents) - 1].Moment then
-    Result := Length(ASignal.SignalEvents) - 1; //calling function should increase array length to add this event as the last event
+  if SearchMoment > ASignal^.SignalEvents[Length(ASignal^.SignalEvents) - 1].Moment then
+    Result := Length(ASignal^.SignalEvents) - 1; //calling function should increase array length to add this event as the last event
 end;
 
 
@@ -483,9 +483,9 @@ procedure AdjustEventMomentsToAvoidOverlapping(ASignal: PSignal);
 var
   i: Integer;
 begin
-  for i := 0 to Length(ASignal.SignalEvents) - 2 do
-    if ASignal.SignalEvents[i].Moment >= ASignal.SignalEvents[i + 1].Moment then
-      Inc(ASignal.SignalEvents[i + 1].Moment, ASignal.SignalEvents[i].Moment - ASignal.SignalEvents[i + 1].Moment + 2);
+  for i := 0 to Length(ASignal^.SignalEvents) - 2 do
+    if ASignal^.SignalEvents[i].Moment >= ASignal^.SignalEvents[i + 1].Moment then
+      Inc(ASignal^.SignalEvents[i + 1].Moment, ASignal^.SignalEvents[i].Moment - ASignal^.SignalEvents[i + 1].Moment + 2);
 end;
 
 
@@ -496,19 +496,19 @@ var
   PhEvent: TSignalEvent;
 begin
   Result := -1;
-  if Length(ASignal.SignalEvents) <= 1 then
+  if Length(ASignal^.SignalEvents) <= 1 then
     Exit;
 
-  FoundProperEventIndex := GetProperEventIndexByMoment(ASignal, ASignal.SignalEvents[Length(ASignal.SignalEvents) - 1].Moment);
-  if (FoundProperEventIndex = Length(ASignal.SignalEvents) - 1) or (FoundProperEventIndex = -1) then
+  FoundProperEventIndex := GetProperEventIndexByMoment(ASignal, ASignal^.SignalEvents[Length(ASignal^.SignalEvents) - 1].Moment);
+  if (FoundProperEventIndex = Length(ASignal^.SignalEvents) - 1) or (FoundProperEventIndex = -1) then
     Exit;
 
-  PhEvent := ASignal.SignalEvents[Length(ASignal.SignalEvents) - 1];
+  PhEvent := ASignal^.SignalEvents[Length(ASignal^.SignalEvents) - 1];
     
-  for i := Length(ASignal.SignalEvents) - 1 downto FoundProperEventIndex + 1 do
-    ASignal.SignalEvents[i] := ASignal.SignalEvents[i - 1];
+  for i := Length(ASignal^.SignalEvents) - 1 downto FoundProperEventIndex + 1 do
+    ASignal^.SignalEvents[i] := ASignal^.SignalEvents[i - 1];
 
-  ASignal.SignalEvents[FoundProperEventIndex + 1] := PhEvent;
+  ASignal^.SignalEvents[FoundProperEventIndex + 1] := PhEvent;
   AdjustEventMomentsToAvoidOverlapping(ASignal);
   Result := FoundProperEventIndex;
 end;
@@ -521,38 +521,38 @@ begin
   if MomentOnValue < 0 then
     Exit;
 
-  n := Length(ASignal.SignalEvents);
+  n := Length(ASignal^.SignalEvents);
 
   if n = 0 then
     Exit;
 
-  if MomentOnValue < ASignal.SignalEvents[0].Moment then
+  if MomentOnValue < ASignal^.SignalEvents[0].Moment then
   begin
-    SetLength(ASignal.SignalEvents[0].ValueAfterEvent.NumericValue, 4);
-    ASignal.SignalEvents[0].ValueAfterEvent.NumericValue[0] := Lo(Word(NewValue));
-    ASignal.SignalEvents[0].ValueAfterEvent.NumericValue[1] := Hi(Word(NewValue));
-    ASignal.SignalEvents[0].ValueAfterEvent.NumericValue[2] := Higher(NewValue);
-    ASignal.SignalEvents[0].ValueAfterEvent.NumericValue[3] := Highest(NewValue);
+    SetLength(ASignal^.SignalEvents[0].ValueAfterEvent.NumericValue, 4);
+    ASignal^.SignalEvents[0].ValueAfterEvent.NumericValue[0] := Lo(Word(NewValue));
+    ASignal^.SignalEvents[0].ValueAfterEvent.NumericValue[1] := Hi(Word(NewValue));
+    ASignal^.SignalEvents[0].ValueAfterEvent.NumericValue[2] := Higher(NewValue);
+    ASignal^.SignalEvents[0].ValueAfterEvent.NumericValue[3] := Highest(NewValue);
   end
   else
-    if MomentOnValue > ASignal.SignalEvents[n - 1].Moment then
+    if MomentOnValue > ASignal^.SignalEvents[n - 1].Moment then
     begin
-      SetLength(ASignal.SignalEvents[n - 1].ValueAfterEvent.NumericValue, 4);
-      ASignal.SignalEvents[n - 1].ValueAfterEvent.NumericValue[0] := Lo(Word(NewValue));
-      ASignal.SignalEvents[n - 1].ValueAfterEvent.NumericValue[1] := Hi(Word(NewValue));
-      ASignal.SignalEvents[n - 1].ValueAfterEvent.NumericValue[2] := Higher(NewValue);
-      ASignal.SignalEvents[n - 1].ValueAfterEvent.NumericValue[3] := Highest(NewValue);
+      SetLength(ASignal^.SignalEvents[n - 1].ValueAfterEvent.NumericValue, 4);
+      ASignal^.SignalEvents[n - 1].ValueAfterEvent.NumericValue[0] := Lo(Word(NewValue));
+      ASignal^.SignalEvents[n - 1].ValueAfterEvent.NumericValue[1] := Hi(Word(NewValue));
+      ASignal^.SignalEvents[n - 1].ValueAfterEvent.NumericValue[2] := Higher(NewValue);
+      ASignal^.SignalEvents[n - 1].ValueAfterEvent.NumericValue[3] := Highest(NewValue);
     end  
     else
       for i := 1 to n - 1 do
       begin
-        if InIntervalExtended(MomentOnValue, ASignal.SignalEvents[i - 1].Moment, ASignal.SignalEvents[i].Moment) then
+        if InIntervalExtended(MomentOnValue, ASignal^.SignalEvents[i - 1].Moment, ASignal^.SignalEvents[i].Moment) then
         begin
-          SetLength(ASignal.SignalEvents[i].ValueAfterEvent.NumericValue, 4);
-          ASignal.SignalEvents[i].ValueAfterEvent.NumericValue[0] := Lo(Word(NewValue));
-          ASignal.SignalEvents[i].ValueAfterEvent.NumericValue[1] := Hi(Word(NewValue));
-          ASignal.SignalEvents[i].ValueAfterEvent.NumericValue[2] := Higher(NewValue);
-          ASignal.SignalEvents[i].ValueAfterEvent.NumericValue[3] := Highest(NewValue);
+          SetLength(ASignal^.SignalEvents[i].ValueAfterEvent.NumericValue, 4);
+          ASignal^.SignalEvents[i].ValueAfterEvent.NumericValue[0] := Lo(Word(NewValue));
+          ASignal^.SignalEvents[i].ValueAfterEvent.NumericValue[1] := Hi(Word(NewValue));
+          ASignal^.SignalEvents[i].ValueAfterEvent.NumericValue[2] := Higher(NewValue);
+          ASignal^.SignalEvents[i].ValueAfterEvent.NumericValue[3] := Highest(NewValue);
         end; //if
       end;//for
 end;
@@ -566,15 +566,15 @@ begin
   begin
     if Assigned(Signals[i]) then
     begin
-      for j := 0 to Length(Signals[i].SignalEvents) - 1 do
+      for j := 0 to Length(Signals[i]^.SignalEvents) - 1 do
       begin
-        SetLength(Signals[i].SignalEvents[j].ValueAfterEvent.NumericValue, 0);
-        SetLength(Signals[i].SignalEvents[j].ValueAfterEvent.STD_LOGIC_Value, 0);
+        SetLength(Signals[i]^.SignalEvents[j].ValueAfterEvent.NumericValue, 0);
+        SetLength(Signals[i]^.SignalEvents[j].ValueAfterEvent.STD_LOGIC_Value, 0);
       end; //for j
 
-      SetLength(Signals[i].SignalEvents, 0);
-      SetLength(Signals[i].NumericMinValue, 0);
-      SetLength(Signals[i].NumericMaxValue, 0);
+      SetLength(Signals[i]^.SignalEvents, 0);
+      SetLength(Signals[i]^.NumericMinValue, 0);
+      SetLength(Signals[i]^.NumericMaxValue, 0);
 
       Dispose(Signals[i]);
     end;

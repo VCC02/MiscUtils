@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2025 VCC
     creation date: 30 Oct 2023   (most of the code from 2016)
     initial release date: 31 Dec 2023
 
@@ -62,17 +62,23 @@ var
   XMultMid, XMultEnd, NextMultMid: Integer;
   ClockPeriod, NumberOfVisiblePeriods: Integer;  //Moment scale
 begin
-  FirstVisibleMoment := ASignal.SignalEvents[TransitionIndex].Moment;
-  LastVisibleMoment := ASignal.SignalEvents[TransitionIndex + 1].Moment;
+  FirstVisibleMoment := ASignal^.SignalEvents[TransitionIndex].Moment;
+  LastVisibleMoment := ASignal^.SignalEvents[TransitionIndex + 1].Moment;
 
-  ClockPeriod := ASignal.SignalEvents[TransitionIndex].ClockPatternAfterEvent.EndTransitionOffset;
+  if ASignal^.SignalEvents[TransitionIndex].ClockPatternAfterEvent.MidTransitionOffset < 1 then
+    raise Exception.Create('MidTransitionOffset must be set to a value greater than 0.');
+
+  if ASignal^.SignalEvents[TransitionIndex].ClockPatternAfterEvent.EndTransitionOffset < 2 then
+    raise Exception.Create('EndTransitionOffset must be set to a value greater than 1.');
+
+  ClockPeriod := ASignal^.SignalEvents[TransitionIndex].ClockPatternAfterEvent.EndTransitionOffset;
   NumberOfVisiblePeriods := (LastVisibleMoment - FirstVisibleMoment) div ClockPeriod;
 
   ACanvas.Pen.Color := clOlive;
 
-  XMultMid := ASignal.SignalEvents[TransitionIndex].Moment + ASignal.SignalEvents[TransitionIndex].ClockPatternAfterEvent.MidTransitionOffset;
+  XMultMid := ASignal^.SignalEvents[TransitionIndex].Moment + ASignal^.SignalEvents[TransitionIndex].ClockPatternAfterEvent.MidTransitionOffset;
   CurrentXTranMid := CellRect.Left + 1 + Round((XMultMid - ScrBarPos) * Zoom);
-  XMultEnd := ASignal.SignalEvents[TransitionIndex].Moment - ClockPeriod + ASignal.SignalEvents[TransitionIndex].ClockPatternAfterEvent.EndTransitionOffset;
+  XMultEnd := ASignal^.SignalEvents[TransitionIndex].Moment - ClockPeriod + ASignal^.SignalEvents[TransitionIndex].ClockPatternAfterEvent.EndTransitionOffset;
   CurrentXTranEnd := CellRect.Left + 1 + Round((XMultEnd - ScrBarPos) * Zoom);
   Line(ACanvas, CurrentXTranEnd, y1, CurrentXTranMid, y1);  //horiz
 
@@ -83,16 +89,16 @@ begin
   for i := 1 to NumberOfVisiblePeriods do
   begin
     //ACanvas.Pen.Color := clRed;
-    XMultMid := ASignal.SignalEvents[TransitionIndex].Moment + (i - 1) * ClockPeriod + ASignal.SignalEvents[TransitionIndex].ClockPatternAfterEvent.MidTransitionOffset;
+    XMultMid := ASignal^.SignalEvents[TransitionIndex].Moment + (i - 1) * ClockPeriod + ASignal^.SignalEvents[TransitionIndex].ClockPatternAfterEvent.MidTransitionOffset;
     CurrentXTranMid := CellRect.Left + 1 + Round((XMultMid - ScrBarPos) * Zoom);
     Line(ACanvas, CurrentXTranMid, y0, CurrentXTranMid, y1); //vertical Line
 
     //ACanvas.Pen.Color := clBlue;
-    XMultEnd := ASignal.SignalEvents[TransitionIndex].Moment + (i - 1) * ClockPeriod + ASignal.SignalEvents[TransitionIndex].ClockPatternAfterEvent.EndTransitionOffset;
+    XMultEnd := ASignal^.SignalEvents[TransitionIndex].Moment + (i - 1) * ClockPeriod + ASignal^.SignalEvents[TransitionIndex].ClockPatternAfterEvent.EndTransitionOffset;
     CurrentXTranEnd := CellRect.Left + 1 + Round((XMultEnd - ScrBarPos) * Zoom);
     Line(ACanvas, CurrentXTranEnd, y0, CurrentXTranEnd, y1); //vertical Line
 
-    NextMultMid := ASignal.SignalEvents[TransitionIndex].Moment + (i - 0) * ClockPeriod + ASignal.SignalEvents[TransitionIndex].ClockPatternAfterEvent.MidTransitionOffset;
+    NextMultMid := ASignal^.SignalEvents[TransitionIndex].Moment + (i - 0) * ClockPeriod + ASignal^.SignalEvents[TransitionIndex].ClockPatternAfterEvent.MidTransitionOffset;
     NextXTranMid := CellRect.Left + 1 + Round((NextMultMid - ScrBarPos) * Zoom);
 
     //ACanvas.Pen.Color := clGreen;
@@ -114,11 +120,11 @@ var
   XTranMinus1: Integer;
   XTranPlus1: Integer;
 begin
-  OldSampleBin := ASignal.SignalEvents[TransitionIndex].ValueAfterEvent.NumericValue[0];
+  OldSampleBin := ASignal^.SignalEvents[TransitionIndex].ValueAfterEvent.NumericValue[0];
   NewSampleBin := (not OldSampleBin) and $1;
 
-  //XTran := CellRect.Left + 1 + Round((ASignal.SignalEvents[TransitionIndex].Moment - ScrBarPos) * Zoom);
-  XTran := CellRect.Left + 1 + Round((ASignal.SignalEvents[TransitionIndex + 1].Moment - ScrBarPos) * Zoom);
+  //XTran := CellRect.Left + 1 + Round((ASignal^.SignalEvents[TransitionIndex].Moment - ScrBarPos) * Zoom);
+  XTran := CellRect.Left + 1 + Round((ASignal^.SignalEvents[TransitionIndex + 1].Moment - ScrBarPos) * Zoom);
   XTranMinus1 := XTran - 1;
   XTranPlus1 := XTran + 1;
 
@@ -126,7 +132,7 @@ begin
   begin
     ACanvas.Pen.Color := clBlack;
     Line(ACanvas, XTran, y0, XTran, y1); //vertical Line
-    if ASignal.SignalEvents[TransitionIndex].Highlighted then
+    if ASignal^.SignalEvents[TransitionIndex].Highlighted then
     begin
       ACanvas.Pen.Color := clAqua;
       Line(ACanvas, XTranMinus1, y0, XTranMinus1, y1); //vertical Line
@@ -163,11 +169,11 @@ begin
       LimitTransitionsToVisibleArea(CellRect.Left, CellRect.Right, PrevXTran, XTran);
       Line(ACanvas, PrevXTran, y0, XTran, y0);
           
-      if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+      if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         Line(ACanvas, XTran, y1, CellRect.Right - 1, y1);
 
       if DrawGreenZero then
-        if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+        if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         begin
           ACanvas.Pen.Color := GreenZeroColor;
           ACanvas.Brush.Color := GreenZeroColor;
@@ -181,7 +187,7 @@ begin
       LimitTransitionsToVisibleArea(CellRect.Left, CellRect.Right, PrevXTran, XTran);
       Line(ACanvas, PrevXTran, y1, XTran, y1);
 
-      if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+      if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         Line(ACanvas, XTranPlus1, y0, CellRect.Right - 1, y0);
 
       if DrawGreenZero then
@@ -204,11 +210,11 @@ var
   XTranMinus1: Integer;
   XTranPlus1: Integer;
 begin
-  NewSampleBin := ASignal.SignalEvents[TransitionIndex + 1].ValueAfterEvent.NumericValue[0];
+  NewSampleBin := ASignal^.SignalEvents[TransitionIndex + 1].ValueAfterEvent.NumericValue[0];
   OldSampleBin := (not NewSampleBin) and $1;
 
   //XTran := CellRect.Left + 1 + Round((ASignal.SignalEvents[TransitionIndex].Moment - ScrBarPos) * Zoom);
-  XTran := CellRect.Left + 1 + Round((ASignal.SignalEvents[TransitionIndex + 1].Moment - ScrBarPos) * Zoom);
+  XTran := CellRect.Left + 1 + Round((ASignal^.SignalEvents[TransitionIndex + 1].Moment - ScrBarPos) * Zoom);
   XTranMinus1 := XTran - 1;
   XTranPlus1 := XTran + 1;
 
@@ -216,7 +222,7 @@ begin
   begin
     ACanvas.Pen.Color := clBlack;
     Line(ACanvas, XTran, y0, XTran, y1); //vertical Line
-    if ASignal.SignalEvents[TransitionIndex].Highlighted then
+    if ASignal^.SignalEvents[TransitionIndex].Highlighted then
     begin
       ACanvas.Pen.Color := clAqua;
       Line(ACanvas, XTranMinus1, y0, XTranMinus1, y1); //vertical Line
@@ -254,11 +260,11 @@ begin
       LimitTransitionsToVisibleArea(CellRect.Left, CellRect.Right, PrevXTran, XTran);
       Line(ACanvas, PrevXTran, y0, XTran, y0);
 
-      if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+      if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         Line(ACanvas, XTran, y1, CellRect.Right - 1, y1);
 
       if DrawGreenZero then
-        if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+        if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         begin
           ACanvas.Pen.Color := clRed;
           ACanvas.Brush.Color := clRed;
@@ -272,7 +278,7 @@ begin
       LimitTransitionsToVisibleArea(CellRect.Left, CellRect.Right, PrevXTran, XTran);
       Line(ACanvas, PrevXTran, y1, XTran, y1);
 
-      if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+      if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         Line(ACanvas, XTranPlus1, y0, CellRect.Right - 1, y0);
 
       if DrawGreenZero then
@@ -315,30 +321,30 @@ begin
   OldSampleBin := 2;
   NewSampleBin := 2;
   
-  if ASignal.ValueType = sutNumeric then
+  if ASignal^.ValueType = sutNumeric then
   begin
-    OldSampleBin := ASignal.SignalEvents[TransitionIndex].ValueAfterEvent.NumericValue[0];
-    NewSampleBin := ASignal.SignalEvents[TransitionIndex + 1].ValueAfterEvent.NumericValue[0];
+    OldSampleBin := ASignal^.SignalEvents[TransitionIndex].ValueAfterEvent.NumericValue[0];
+    NewSampleBin := ASignal^.SignalEvents[TransitionIndex + 1].ValueAfterEvent.NumericValue[0];
   end
   else
-    if ASignal.ValueType = sutSTD_LOGIC then
+    if ASignal^.ValueType = sutSTD_LOGIC then
     begin
-      if ASignal.SignalEvents[TransitionIndex].ValueAfterEvent.STD_LOGIC_Value[0] = TSL0 then
+      if ASignal^.SignalEvents[TransitionIndex].ValueAfterEvent.STD_LOGIC_Value[0] = TSL0 then
         OldSampleBin := 0
       else
-        if ASignal.SignalEvents[TransitionIndex].ValueAfterEvent.STD_LOGIC_Value[0] = TSL1 then
+        if ASignal^.SignalEvents[TransitionIndex].ValueAfterEvent.STD_LOGIC_Value[0] = TSL1 then
           OldSampleBin := 1;
 
-      if ASignal.SignalEvents[TransitionIndex + 1].ValueAfterEvent.STD_LOGIC_Value[0] = TSL0 then
+      if ASignal^.SignalEvents[TransitionIndex + 1].ValueAfterEvent.STD_LOGIC_Value[0] = TSL0 then
         NewSampleBin := 0
       else
-        if ASignal.SignalEvents[TransitionIndex + 1].ValueAfterEvent.STD_LOGIC_Value[0] = TSL1 then
+        if ASignal^.SignalEvents[TransitionIndex + 1].ValueAfterEvent.STD_LOGIC_Value[0] = TSL1 then
           NewSampleBin := 1;    
     end;
 
 
-  //XTran := CellRect.Left + 1 + Round((ASignal.SignalEvents[TransitionIndex].Moment - ScrBarPos) * Zoom);
-  XTran := CellRect.Left + 1 + Round((ASignal.SignalEvents[TransitionIndex + 1].Moment - ScrBarPos) * Zoom);
+  //XTran := CellRect.Left + 1 + Round((ASignal^.SignalEvents[TransitionIndex].Moment - ScrBarPos) * Zoom);
+  XTran := CellRect.Left + 1 + Round((ASignal^.SignalEvents[TransitionIndex + 1].Moment - ScrBarPos) * Zoom);
   XTranMinus1 := XTran - 1;
   //XTranMinus2 := XTran - 2;
   XTranPlus1 := XTran + 1;
@@ -357,7 +363,7 @@ begin
         ACanvas.Pen.Color := clBlack;
         Line(ACanvas, XTran, y0, XTran, y1); //vertical Line
 
-        if ASignal.SignalEvents[TransitionIndex].Highlighted then
+        if ASignal^.SignalEvents[TransitionIndex].Highlighted then
         begin
           ACanvas.Pen.Color := clAqua;
           Line(ACanvas, XTranMinus1, y0, XTranMinus1, y1); //vertical Line
@@ -371,7 +377,7 @@ begin
       Line(ACanvas, XTran, y0, XTran, y0 - 2); //vertical short Line
       Line(ACanvas, XTran, y1, XTran, y1 + 2); //vertical short Line
 
-      {if ASignal.SignalEvents[TransitionIndex].Highlighted then
+      {if ASignal^.SignalEvents[TransitionIndex].Highlighted then
       begin
         ACanvas.Pen.Color := clAqua;
         Line(ACanvas, XTranMinus1, y0, XTranMinus1, y1); //vertical Line
@@ -409,11 +415,11 @@ begin
       LimitTransitionsToVisibleArea(CellRect.Left, CellRect.Right, PrevXTran, XTran);
       Line(ACanvas, PrevXTran, y0, XTran, y0);
           
-      if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+      if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         Line(ACanvas, XTran, y1, CellRect.Right - 1, y1);
 
       if DrawGreenZero then
-        if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+        if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         begin
           ACanvas.Pen.Color := GreenZeroColor;
           ACanvas.Brush.Color := GreenZeroColor;
@@ -427,7 +433,7 @@ begin
       LimitTransitionsToVisibleArea(CellRect.Left, CellRect.Right, PrevXTran, XTran);
       Line(ACanvas, PrevXTran, y1, XTran, y1);
 
-      if TransitionIndex = Length(ASignal.SignalEvents) - 1 then
+      if TransitionIndex = Length(ASignal^.SignalEvents) - 1 then
         Line(ACanvas, XTranPlus1, y0, CellRect.Right - 1, y0);
 
       if DrawGreenZero then
@@ -464,19 +470,19 @@ var
   XTranMinus1: Integer;
   XTranPlus1: Integer;
 begin
-  //XTran := CellRect.Left + 1 + Round((ASignal.SignalEvents[TransitionIndex].Moment - ScrBarPos) * Zoom);
-  XTran := CellRect.Left + 1 + Round((ASignal.SignalEvents[TransitionIndex + 1].Moment - ScrBarPos) * Zoom);
+  //XTran := CellRect.Left + 1 + Round((ASignal^.SignalEvents[TransitionIndex].Moment - ScrBarPos) * Zoom);
+  XTran := CellRect.Left + 1 + Round((ASignal^.SignalEvents[TransitionIndex + 1].Moment - ScrBarPos) * Zoom);
   XTranMinus1 := XTran - 1;
   XTranPlus1 := XTran + 1;
 
-  //StartOfClockMoment := ASignal.SignalEvents[TransitionIndex].Moment;
-  //EndOfClockMoment := ASignal.SignalEvents[TransitionIndex + 1].Moment;
+  //StartOfClockMoment := ASignal^.SignalEvents[TransitionIndex].Moment;
+  //EndOfClockMoment := ASignal^.SignalEvents[TransitionIndex + 1].Moment;
 
   if InIntervalInteger(XTran, CellRect.Left, CellRect.Right) then
   begin
     ACanvas.Pen.Color := clBlack;
     Line(ACanvas, XTran, y0, XTran, y1); //vertical Line
-    if ASignal.SignalEvents[TransitionIndex].Highlighted then
+    if ASignal^.SignalEvents[TransitionIndex].Highlighted then
     begin
       ACanvas.Pen.Color := clAqua;
       Line(ACanvas, XTranMinus1, y0, XTranMinus1, y1); //vertical Line
@@ -588,18 +594,18 @@ begin
   if not Assigned(ASignalRec) then
     raise Exception.Create('Can''t draw a signal, because it is not assigned.');
 
-  ASignal := ASignalRec.Signal;
+  ASignal := ASignalRec^.Signal;
 
   if IsSelected then   //selected node
   begin
-    if ASignal.Editing then
+    if ASignal^.Editing then
       ACanvas.Brush.Color := CEditingSelectedColor
     else
       ACanvas.Brush.Color := CNotEditingSelectedColor;
   end
   else
   begin
-    if ASignal.Editing then
+    if ASignal^.Editing then
       ACanvas.Brush.Color := CEditingNotSelectedColor
     else
       ACanvas.Brush.Color := CBackgroundColor;
@@ -612,14 +618,14 @@ begin
 
   ACanvas.Brush.Color := HighlightedSectionColor;
 
-  if (ASignal.HighlightedSectionAfterEvent >= 0) and (ASignal.HighlightedSectionAfterEvent < Length(ASignal.SignalEvents)) then
+  if (ASignal^.HighlightedSectionAfterEvent >= 0) and (ASignal^.HighlightedSectionAfterEvent < Length(ASignal^.SignalEvents)) then
   begin
-    StartOfHighlightedSection := CellRect.Left + 1 + Round((ASignal.SignalEvents[ASignal.HighlightedSectionAfterEvent].Moment - AScrBarPos) * AZoom);
+    StartOfHighlightedSection := CellRect.Left + 1 + Round((ASignal^.SignalEvents[ASignal^.HighlightedSectionAfterEvent].Moment - AScrBarPos) * AZoom);
 
-    if ASignal.HighlightedSectionAfterEvent < Length(ASignal.SignalEvents) - 1 then
-      EndOfHighlightedSection := CellRect.Left + 1 + Round((ASignal.SignalEvents[ASignal.HighlightedSectionAfterEvent + 1].Moment - AScrBarPos) * AZoom)
+    if ASignal^.HighlightedSectionAfterEvent < Length(ASignal^.SignalEvents) - 1 then
+      EndOfHighlightedSection := CellRect.Left + 1 + Round((ASignal^.SignalEvents[ASignal^.HighlightedSectionAfterEvent + 1].Moment - AScrBarPos) * AZoom)
     else
-      EndOfHighlightedSection := Max(CellRect.Left + 1 + Round((ASignal.SignalEvents[ASignal.HighlightedSectionAfterEvent].Moment - AScrBarPos) * AZoom), CellRect.Right);
+      EndOfHighlightedSection := Max(CellRect.Left + 1 + Round((ASignal^.SignalEvents[ASignal^.HighlightedSectionAfterEvent].Moment - AScrBarPos) * AZoom), CellRect.Right);
 
     ACanvas.Pen.Color := HighlightedSectionColor;
     ACanvas.Rectangle(StartOfHighlightedSection, CellRect.Top + 2, EndOfHighlightedSection, CellRect.Bottom - 1);
@@ -649,16 +655,16 @@ begin
   OldSampleOrdinal := 0;
   NewSampleOrdinal := 0;
 
-  if ASignal.Size = 1 then   //using NumericValue[0]
+  if ASignal^.Size = 1 then   //using NumericValue[0]
   begin
-    for i := 0 to Length(ASignal.SignalEvents) - 2 do
+    for i := 0 to Length(ASignal^.SignalEvents) - 2 do
     begin
       PrevXTran := XTran;
 
-      OldPatternTypeAfterEvent := ASignal.SignalEvents[i].PatternTypeAfterEvent;
-      NewPatternTypeAfterEvent := ASignal.SignalEvents[i + 1].PatternTypeAfterEvent;
+      OldPatternTypeAfterEvent := ASignal^.SignalEvents[i].PatternTypeAfterEvent;
+      NewPatternTypeAfterEvent := ASignal^.SignalEvents[i + 1].PatternTypeAfterEvent;
 
-      if i = ASignal.HighlightedSectionAfterEvent then
+      if i = ASignal^.HighlightedSectionAfterEvent then
         DisplayedZeroGreenColor := HighlightedSectionZeroGreenColor
       else
         DisplayedZeroGreenColor := ZeroGreenColor;
@@ -676,116 +682,116 @@ begin
               XTran := DrawClock(ACanvas, ASignal, XTran, CellRect, i, y0, y1, AScrBarPos, AZoom, ADrawGreenZero);
 
 
-      if ASignal.ValueType = sutSTD_LOGIC then
+      if ASignal^.ValueType = sutSTD_LOGIC then
       begin
         ACanvas.Brush.Style := bsClear;     
-        s := ArrayOfTSTD_LOGIC_ToString(ASignal.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value);
+        s := ArrayOfTSTD_LOGIC_ToString(ASignal^.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value);
         
         //if i = 0 then
         //  ACanvas.TextOut((CellRect.Left + 2 + XTranMinus2) shr 1 - ACanvas.TextWidth(s) shr 1, (CellRect.Top + CellRect.Bottom) shr 1 - ACanvas.TextHeight(s) shr 1, s)
         //else
-        //  if i = Length(ASignal.SignalEvents) - 1 then    //last transition
+        //  if i = Length(ASignal^.SignalEvents) - 1 then    //last transition
         //    ACanvas.TextOut((Max(XTran, CellRect.Left) + 2 + CellRect.Right - 2) shr 1 - ACanvas.TextWidth(s) shr 1, (CellRect.Top + CellRect.Bottom) shr 1 - ACanvas.TextHeight(s) shr 1, s)
         //  else
             if ACanvas.TextWidth(s) <= Min(XTran, CellRect.Right) - 2 - Max(PrevXTran, CellRect.Left) - 4 then
               ACanvas.TextOut((Max(PrevXTran, CellRect.Left) + 2 + Min(XTran, CellRect.Right) - 2) shr 1 - ACanvas.TextWidth(s) shr 1,(CellRect.Top + CellRect.Bottom) shr 1 - ACanvas.TextHeight(s) shr 1, s);
 
         ACanvas.Brush.Style := bsSolid;         
-      end; //if ASignal.ValueType = sutSTD_LOGIC
+      end; //if ASignal^.ValueType = sutSTD_LOGIC
        
     end; //for
 
 //    XTranMinus1 := XTran - 1;
     XTranPlus1 := XTran + 1;
 
-    if (Length(ASignal.SignalEvents) > 0) and (Length(ASignal.SignalEvents[Length(ASignal.SignalEvents) - 1].ValueAfterEvent.NumericValue) > 0) then //Last sample
-      if ASignal.SignalEvents[Length(ASignal.SignalEvents) - 1].EventType = 0 then //real transition
+    if (Length(ASignal^.SignalEvents) > 0) and (Length(ASignal^.SignalEvents[Length(ASignal^.SignalEvents) - 1].ValueAfterEvent.NumericValue) > 0) then //Last sample
+      if ASignal^.SignalEvents[Length(ASignal^.SignalEvents) - 1].EventType = 0 then //real transition
       begin
-        if ASignal.SignalEvents[Length(ASignal.SignalEvents) - 1].ValueAfterEvent.NumericValue[0] = 0 then
+        if ASignal^.SignalEvents[Length(ASignal^.SignalEvents) - 1].ValueAfterEvent.NumericValue[0] = 0 then
         begin
           ACanvas.Pen.Color := clBlack;
           Line(ACanvas, XTranPlus1, y0, CellRect.Right - 1, y0);  //horiz
         end
         else
-          if ASignal.SignalEvents[Length(ASignal.SignalEvents) - 1].ValueAfterEvent.NumericValue[0] = 1 then
+          if ASignal^.SignalEvents[Length(ASignal^.SignalEvents) - 1].ValueAfterEvent.NumericValue[0] = 1 then
           begin
             ACanvas.Pen.Color := clBlack;
             Line(ACanvas, XTranPlus1, y1, CellRect.Right - 1, y1);  //horiz
           end;
       end;
-  end //ASignal.Signal.Size = 1
+  end //ASignal^.Signal.Size = 1
 
-  else   //ASignal.Signal.Size > 1
+  else   //ASignal^.Signal.Size > 1
 
   begin
     ACanvas.Pen.Color := clBlack;
     
-    for i := 0 to Length(ASignal.SignalEvents) - 2 do
+    for i := 0 to Length(ASignal^.SignalEvents) - 2 do
     begin
-      case ASignal.ValueType of
+      case ASignal^.ValueType of
         sutNumeric:
         begin
           OldSampleInt := 0;
-          for j := 0 to Length(ASignal.SignalEvents[i].ValueAfterEvent.NumericValue) - 1 do
-            OldSampleInt := OldSampleInt + ASignal.SignalEvents[i].ValueAfterEvent.NumericValue[j] * Integer(TwoPowered(j shl 3));
+          for j := 0 to Length(ASignal^.SignalEvents[i].ValueAfterEvent.NumericValue) - 1 do
+            OldSampleInt := OldSampleInt + ASignal^.SignalEvents[i].ValueAfterEvent.NumericValue[j] * Integer(TwoPowered(j shl 3));
 
           NewSampleInt := 0;
-          for j := 0 to Length(ASignal.SignalEvents[i].ValueAfterEvent.NumericValue) - 1 do
-            NewSampleInt := NewSampleInt + ASignal.SignalEvents[i + 1].ValueAfterEvent.NumericValue[j] * Integer(TwoPowered(j shl 3));
+          for j := 0 to Length(ASignal^.SignalEvents[i].ValueAfterEvent.NumericValue) - 1 do
+            NewSampleInt := NewSampleInt + ASignal^.SignalEvents[i + 1].ValueAfterEvent.NumericValue[j] * Integer(TwoPowered(j shl 3));
         end;
 
         sutSTD_LOGIC:
         begin
           OldSampleInt := 0;
-          {for j := 0 to Length(ASignal.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value) - 1 do
+          {for j := 0 to Length(ASignal^.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value) - 1 do
           begin
-            TempSampleInt := Integer(Ord(ASignal.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value[j]) - Integer(T0) );
+            TempSampleInt := Integer(Ord(ASignal^.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value[j]) - Integer(T0) );
             OldSampleInt := OldSampleInt + Int64(TempSampleInt) * TwoPoweredInt64(j);
           end;}
 
           NewSampleInt := 0;
-          {for j := 0 to Length(ASignal.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value) - 1 do
+          {for j := 0 to Length(ASignal^.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value) - 1 do
           begin
-            TempSampleInt := Integer(Ord(ASignal.SignalEvents[i + 1].ValueAfterEvent.STD_LOGIC_Value[j]) - Integer(T0) );
+            TempSampleInt := Integer(Ord(ASignal^.SignalEvents[i + 1].ValueAfterEvent.STD_LOGIC_Value[j]) - Integer(T0) );
             NewSampleInt := NewSampleInt + Int64(TempSampleInt) * TwoPoweredInt64(j);  
           end;}
         end;
 
         sutOrdinal:
         begin
-          OldSampleInt := ASignal.SignalEvents[i].ValueAfterEvent.OrdinalValue;
-          NewSampleInt := ASignal.SignalEvents[i + 1].ValueAfterEvent.OrdinalValue;
+          OldSampleInt := ASignal^.SignalEvents[i].ValueAfterEvent.OrdinalValue;
+          NewSampleInt := ASignal^.SignalEvents[i + 1].ValueAfterEvent.OrdinalValue;
         end;
 
         sutInt32:
         begin
-          OldSampleInt := ASignal.SignalEvents[i].ValueAfterEvent.Int32Value;
-          NewSampleInt := ASignal.SignalEvents[i + 1].ValueAfterEvent.Int32Value;
+          OldSampleInt := ASignal^.SignalEvents[i].ValueAfterEvent.Int32Value;
+          NewSampleInt := ASignal^.SignalEvents[i + 1].ValueAfterEvent.Int32Value;
         end;
 
         sutInt64:
         begin
-          OldSampleInt := ASignal.SignalEvents[i].ValueAfterEvent.Int64Value;
-          NewSampleInt := ASignal.SignalEvents[i + 1].ValueAfterEvent.Int64Value;
+          OldSampleInt := ASignal^.SignalEvents[i].ValueAfterEvent.Int64Value;
+          NewSampleInt := ASignal^.SignalEvents[i + 1].ValueAfterEvent.Int64Value;
         end;
         
         else
         begin
-          OldSampleOrdinal := ASignal.SignalEvents[i].ValueAfterEvent.Int32Value;
-          NewSampleOrdinal := ASignal.SignalEvents[i + 1].ValueAfterEvent.Int32Value;
+          OldSampleOrdinal := ASignal^.SignalEvents[i].ValueAfterEvent.Int32Value;
+          NewSampleOrdinal := ASignal^.SignalEvents[i + 1].ValueAfterEvent.Int32Value;
         end;
-      end; //case ASignal.ValueType
+      end; //case ASignal^.ValueType
 
       PrevXTran := XTran;
       PrevXTranPlus2 := PrevXTran + 2;
-      //XTran := CellRect.Left + 1 + Round((Integer(ASignal.SignalEvents[i].Moment) - AScrBarPos) * AZoom);
-      XTran := CellRect.Left + 1 + Round((Integer(ASignal.SignalEvents[i + 1].Moment) - AScrBarPos) * AZoom);
+      //XTran := CellRect.Left + 1 + Round((Integer(ASignal^.SignalEvents[i].Moment) - AScrBarPos) * AZoom);
+      XTran := CellRect.Left + 1 + Round((Integer(ASignal^.SignalEvents[i + 1].Moment) - AScrBarPos) * AZoom);
 
       XTranMinus1 := XTran - 1;
       XTranMinus2 := XTran - 2;
       XTranPlus2 := XTran + 2;
 
-      case ASignal.DrawType of
+      case ASignal^.DrawType of
         dtNumeric:
         begin
           if i = 0 then
@@ -795,33 +801,33 @@ begin
             Line(ACanvas, XTranMinus2, y1, XTran, ym); //slope     ¯¯\
             Line(ACanvas, XTranMinus2, y0, XTran, ym); //slope     __/
 
-            if ASignal.ValueType = sutNumeric then
+            if ASignal^.ValueType = sutNumeric then
               s := IntToStr(OldSampleInt);
-            if ASignal.ValueType = sutOrdinal then
+            if ASignal^.ValueType = sutOrdinal then
               s := TestOrdinalValue[OldSampleOrdinal];
-            if ASignal.ValueType = sutSTD_LOGIC then
+            if ASignal^.ValueType = sutSTD_LOGIC then
               //s := CSTD_LOGIC_Str[TSTD_LOGIC(OldSampleInt)];  ///////////////////////////////???????????????????????????????????????????????????????????
-              s := ArrayOfTSTD_LOGIC_ToString(ASignal.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value); 
+              s := ArrayOfTSTD_LOGIC_ToString(ASignal^.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value); 
 
             if ACanvas.TextWidth(s) <= XTranMinus2 - CellRect.Left - 4 then
               ACanvas.TextOut((CellRect.Left + 2 + XTranMinus2) shr 1 - ACanvas.TextWidth(s) shr 1, (CellRect.Top + CellRect.Bottom) shr 1 - ACanvas.TextHeight(s) shr 1, s);
           end //i = 0
           else //i > 0
           begin
-            if i = Length(ASignal.SignalEvents) - 1 then    //last transition
+            if i = Length(ASignal^.SignalEvents) - 1 then    //last transition
             begin
               Line(ACanvas, XTranPlus2, y1, CellRect.Right - 1, y1);  //horiz
               Line(ACanvas, XTranPlus2, y0, CellRect.Right - 1, y0);  //horiz
               Line(ACanvas, XTran, ym, XTranPlus2, y1); //slope              /¯¯
               Line(ACanvas, XTran, ym, XTranPlus2, y0); //slope              \__
 
-              if ASignal.ValueType = sutNumeric then
+              if ASignal^.ValueType = sutNumeric then
                 s := IntToStr(NewSampleInt);
-              if ASignal.ValueType = sutOrdinal then
+              if ASignal^.ValueType = sutOrdinal then
                 s := TestOrdinalValue[NewSampleOrdinal];
-              if ASignal.ValueType = sutSTD_LOGIC then
+              if ASignal^.ValueType = sutSTD_LOGIC then
                 //s := CSTD_LOGIC_Str[TSTD_LOGIC(OldSampleInt)];  ///////////////////////////////???????????????????????????????????????????????????????????
-                s := ArrayOfTSTD_LOGIC_ToString(ASignal.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value);  ///this was [i + 1]
+                s := ArrayOfTSTD_LOGIC_ToString(ASignal^.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value);  ///this was [i + 1]
 
               if ACanvas.TextWidth(s) <= CellRect.Right - 2 - XTran - 4 then
                 ACanvas.TextOut((Max(XTran, CellRect.Left) + 2 + CellRect.Right - 2) shr 1 - ACanvas.TextWidth(s) shr 1, (CellRect.Top + CellRect.Bottom) shr 1 - ACanvas.TextHeight(s) shr 1, s);
@@ -829,13 +835,13 @@ begin
 
             DrawMultiBitTransition(ACanvas, XTran, PrevXTran, y0, y1, ym);
 
-            if ASignal.ValueType = sutNumeric then
+            if ASignal^.ValueType = sutNumeric then
               s := IntToStr(OldSampleInt);
-            if ASignal.ValueType = sutOrdinal then
+            if ASignal^.ValueType = sutOrdinal then
               s := TestOrdinalValue[OldSampleOrdinal];
-            if ASignal.ValueType = sutSTD_LOGIC then
+            if ASignal^.ValueType = sutSTD_LOGIC then
               //s := CSTD_LOGIC_Str[TSTD_LOGIC(OldSampleInt)];  ///////////////////////////////???????????????????????????????????????????????????????????
-              s := ArrayOfTSTD_LOGIC_ToString(ASignal.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value);
+              s := ArrayOfTSTD_LOGIC_ToString(ASignal^.SignalEvents[i].ValueAfterEvent.STD_LOGIC_Value);
 
             if ACanvas.TextWidth(s) <= Min(XTran, CellRect.Right) - 2 - Max(PrevXTran, CellRect.Left) - 4 then
               ACanvas.TextOut((Max(PrevXTran, CellRect.Left) + 2 + Min(XTran, CellRect.Right) - 2) shr 1 - ACanvas.TextWidth(s) shr 1,(CellRect.Top + CellRect.Bottom) shr 1 - ACanvas.TextHeight(s) shr 1, s);
@@ -844,34 +850,34 @@ begin
       
         dtAnalog:
         begin
-          case ASignal.ValueType of
+          case ASignal^.ValueType of
             sutNumeric, sutSTD_LOGIC, sutOrdinal:
             begin
               MinSampleValueInt64 := 0;
-              for j := 0 to Length(ASignal.NumericMinValue) - 1 do
-                MinSampleValueInt64 := MinSampleValueInt64 + ASignal.NumericMinValue[j] * TwoPoweredInt64(j shl 3);
+              for j := 0 to Length(ASignal^.NumericMinValue) - 1 do
+                MinSampleValueInt64 := MinSampleValueInt64 + ASignal^.NumericMinValue[j] * TwoPoweredInt64(j shl 3);
 
               MaxSampleValueInt64 := 0;
-              for j := 0 to Length(ASignal.NumericMinValue) - 1 do
-                MaxSampleValueInt64 := MaxSampleValueInt64 + ASignal.NumericMaxValue[j] * TwoPoweredInt64(j shl 3);
+              for j := 0 to Length(ASignal^.NumericMinValue) - 1 do
+                MaxSampleValueInt64 := MaxSampleValueInt64 + ASignal^.NumericMaxValue[j] * TwoPoweredInt64(j shl 3);
             end;
 
             sutInt32:
             begin
-              MinSampleValueInt64 := ASignal.Int32MinValue;
-              MaxSampleValueInt64 := ASignal.Int32MaxValue;
+              MinSampleValueInt64 := ASignal^.Int32MinValue;
+              MaxSampleValueInt64 := ASignal^.Int32MaxValue;
             end;
 
             sutInt64:
             begin
-              MinSampleValueInt64 := ASignal.Int64MinValue;
-              MaxSampleValueInt64 := ASignal.Int64MaxValue;
+              MinSampleValueInt64 := ASignal^.Int64MinValue;
+              MaxSampleValueInt64 := ASignal^.Int64MaxValue;
             end;
 
             else
             begin
-              MinSampleValueInt64 := ASignal.Int32MinValue;
-              MaxSampleValueInt64 := ASignal.Int32MaxValue;
+              MinSampleValueInt64 := ASignal^.Int32MinValue;
+              MaxSampleValueInt64 := ASignal^.Int32MaxValue;
             end;
           end; //case
 

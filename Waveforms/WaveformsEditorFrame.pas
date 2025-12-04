@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2025 VCC
     creation date: 04 Mar 2016
     initial release date: 31 Dec 2023
 
@@ -151,6 +151,9 @@ type
     procedure UpdateStatusBarPanel(APanelIndex: Integer; AWaveformXPoint: Integer = 0);
 
     procedure HandleOnPaintAllWaveforms;
+
+    procedure CreateRemainingUIComponents;
+    procedure InitFrame;
   public
     { Public declarations }
     vstHeaderWaves: TVirtualStringTree;
@@ -158,9 +161,6 @@ type
     pnlWaveforms: TPanel;
 
     constructor Create(AOwner: TComponent); override; 
-
-    procedure InitFrame;
-    procedure CreateRemainingUIComponents;
 
     procedure LoadSettings(AIni: TMemIniFile);
     procedure SaveSettings(AIni: TMemIniFile);
@@ -272,9 +272,9 @@ begin
   vstHeaderWaves.OnColumnResize := vstHeaderWavesColumnResize;
 
   NewColum := vstHeaderWaves.Header.Columns.Add;
-  NewColum.MinWidth := 300;
+  NewColum.MinWidth := 150;
   NewColum.Position := 0;
-  NewColum.Width := 300;
+  NewColum.Width := 150;
   NewColum.Text := 'Index: Signal  (Size)  [Type]';
 
   NewColum := vstHeaderWaves.Header.Columns.Add;
@@ -291,9 +291,9 @@ begin
   NewColum.Text := 'Waveforms';
 
   NewColum := vstHeaderWaves.Header.Columns.Add;
-  NewColum.MinWidth := 200;
+  NewColum.MinWidth := 100;
   NewColum.Position := 2;
-  NewColum.Width := 200;
+  NewColum.Width := 100;
   NewColum.Text := 'Synchronized By';
 
   vstWaveformsEditor := TVirtualStringTree.Create(Self);
@@ -343,9 +343,9 @@ begin
   vstWaveformsEditor.OnMouseWheel := vstWaveformsEditorMouseWheel;
 
   NewColum := vstWaveformsEditor.Header.Columns.Add;
-  NewColum.MinWidth := 300;
+  NewColum.MinWidth := 150;
   NewColum.Position := 0;
-  NewColum.Width := 300;
+  NewColum.Width := 150;
   NewColum.Text := 'Index: Signal  (Size)  [Type]';
   NewColum.Options := [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coVisible, coFixed, coAllowFocus];
 
@@ -363,10 +363,12 @@ begin
   NewColum.Text := 'Waveforms';
 
   NewColum := vstWaveformsEditor.Header.Columns.Add;
-  NewColum.MinWidth := 200;
+  NewColum.MinWidth := 100;
   NewColum.Position := 2;
-  NewColum.Width := 200;
+  NewColum.Width := 100;
   NewColum.Text := 'Synchronized By';
+
+  Application.CreateForm(TfrmMouseHint, frmMouseHint);
 end;
 
 
@@ -374,6 +376,7 @@ constructor TFrameWaveformsEditor.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   CreateRemainingUIComponents;
+  InitFrame;
 end;
 
 
