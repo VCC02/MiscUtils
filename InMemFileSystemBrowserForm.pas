@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 24 May 2024
     initial release date: 25 May 2024
 
@@ -29,8 +29,8 @@ unit InMemFileSystemBrowserForm;
 interface
 
 uses
-  LCLIntf, LCLType, Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
-  VirtualTrees, InMemFileSystem;
+  LCLIntf, LCLType, Classes, SysUtils, Forms, Controls, Graphics, Dialogs,
+  ExtCtrls, StdCtrls, Menus, VirtualTrees, InMemFileSystem;
 
 type
 
@@ -40,11 +40,13 @@ type
     btnOK: TButton;
     btnCancel: TButton;
     imgPreview: TImage;
+    MenuItem_CopyToClipboard: TMenuItem;
     pnlHorizSplitterResults: TPanel;
     pnlImg: TPanel;
     pnlToolbar: TPanel;
     pnlPreview: TPanel;
     pnlFileList: TPanel;
+    pmImage: TPopupMenu;
     scrboxPreview: TScrollBox;
     tmrStartup: TTimer;
     vstFiles: TVirtualStringTree;
@@ -52,6 +54,7 @@ type
     procedure btnOKClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormResize(Sender: TObject);
+    procedure MenuItem_CopyToClipboardClick(Sender: TObject);
     procedure pnlHorizSplitterResultsMouseDown(Sender: TObject;
       Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure pnlHorizSplitterResultsMouseMove(Sender: TObject;
@@ -88,6 +91,10 @@ function BrowseInMemFSFile(AInMemFS: TInMemFileSystem): string;
 implementation
 
 {$R *.frm}
+
+
+uses
+  Clipbrd;
 
 
 function BrowseInMemFSFile(AInMemFS: TInMemFileSystem): string;
@@ -178,6 +185,14 @@ var
 begin
   NewLeft := pnlHorizSplitterResults.Left;
   ResizeFrameSectionsBySplitterResults(NewLeft);
+end;
+
+
+procedure TfrmInMemFileSystemBrowser.MenuItem_CopyToClipboardClick(
+  Sender: TObject);
+begin
+  if (imgPreview.Width > 0) and (imgPreview.Height > 0) then
+    Clipboard.Assign(imgPreview.Picture.Bitmap);
 end;
 
 

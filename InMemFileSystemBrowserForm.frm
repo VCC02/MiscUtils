@@ -53,6 +53,7 @@ object frmInMemFileSystemBrowser: TfrmInMemFileSystemBrowser
       Header.Height = 21
       Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
       Header.Style = hsFlatButtons
+      PopupMenu = pmImage
       TabOrder = 0
       TreeOptions.AutoOptions = [toAutoDropExpand, toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes, toDisableAutoscrollOnFocus, toAutoChangeScale, toDisableAutoscrollOnEdit]
       TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowRoot, toThemeAware, toUseBlendedImages]
@@ -142,6 +143,7 @@ object frmInMemFileSystemBrowser: TfrmInMemFileSystemBrowser
           Height = 200
           Top = 0
           Width = 392
+          PopupMenu = pmImage
         end
       end
     end
@@ -172,5 +174,13 @@ object frmInMemFileSystemBrowser: TfrmInMemFileSystemBrowser
     OnTimer = tmrStartupTimer
     Left = 151
     Top = 66
+  end
+  object pmImage: TPopupMenu
+    Left = 496
+    Top = 40
+    object MenuItem_CopyToClipboard: TMenuItem
+      Caption = 'Copy to clipboard'
+      OnClick = MenuItem_CopyToClipboardClick
+    end
   end
 end
