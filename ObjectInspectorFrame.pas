@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2025 VCC
+    Copyright (C) 2026 VCC
     creation date: Jan 2023
     initial release date: 02 Feb 2023
 
@@ -167,6 +167,7 @@ type
     tmrColCmbDropped: TTimer;
     tmrEditingProperty: TTimer;
     procedure edtSearchChange(Sender: TObject);
+    procedure FrameResize(Sender: TObject);
     procedure MenuItem_ShowHideSearchBoxClick(Sender: TObject);
     procedure tmrColCmbDroppedTimer(Sender: TObject);
     procedure tmrEditingPropertyTimer(Sender: TObject);
@@ -457,6 +458,7 @@ type
     procedure SetNodeCheckState(ANodeLevel, ACategoryIndex, APropertyIndex, APropertyItemIndex: Integer; ACheckState: TCheckState);
     procedure ClearNodeSelection;
     procedure SetEditorValue(AValue: string); //The last resort of setting the editor value, while editing.   Implemented for MiscCmb only, for now.
+    procedure SetVSTOISize; //Called by parent component on resize. This should not be needed, unless the OS is set to display larger fonts.
 
     property ListItemsVisible: Boolean read FListItemsVisible write FListItemsVisible; //to be set before calling ReloadContent
     property DataTypeVisible: Boolean read FDataTypeVisible write SetDataTypeVisible;    //to be set before calling ReloadContent
@@ -682,6 +684,20 @@ begin
 end;
 
 
+procedure TfrObjectInspector.SetVSTOISize;
+begin
+  pnlvstOI.Left := 0;
+  pnlvstOI.Top := 0;
+  pnlvstOI.Width := Width;
+  pnlvstOI.Height := Height;
+
+  vstOI.Left := 0;
+  vstOI.Top := 0;
+  vstOI.Width := pnlvstOI.Width;
+  vstOI.Height := Height;
+end;
+
+
 procedure TfrObjectInspector.CreateRemainingUIComponents;
 var
   NewColum: TVirtualTreeColumn;
@@ -692,10 +708,7 @@ begin
 
   vstOI.ParentFont := False;
   vstOI.Font.Style := [];
-  vstOI.Left := 0;
-  vstOI.Top := 0;
-  vstOI.Width := pnlvstOI.Width;
-  vstOI.Height := Height;
+  SetVSTOISize;
   vstOI.Constraints.MinWidth := 100;
   vstOI.Constraints.MinHeight := vstOI.Height;
   vstOI.DefaultNodeHeight := 22; //the default value, 18, should be enough, but the TEdit has a greater default height
@@ -1159,6 +1172,12 @@ end;
 procedure TfrObjectInspector.edtSearchChange(Sender: TObject);
 begin
   tmrSearch.Enabled := True;
+end;
+
+
+procedure TfrObjectInspector.FrameResize(Sender: TObject);
+begin
+  SetVSTOISize;
 end;
 
 

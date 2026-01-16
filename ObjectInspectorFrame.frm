@@ -10,6 +10,7 @@ object frObjectInspector: TfrObjectInspector
   ParentBackground = False
   ParentColor = False
   TabOrder = 0
+  OnResize = FrameResize
   DesignLeft = 86
   DesignTop = 85
   object pnlvstOI: TPanel
