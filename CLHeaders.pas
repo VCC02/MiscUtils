@@ -217,6 +217,7 @@ const
   CL_INVALID_KERNEL = -48;
   CL_INVALID_ARG_INDEX = -49;
   CL_INVALID_ARG_VALUE = -50;
+  CL_INVALID_ARG_SIZE = -51;
   CL_INVALID_KERNEL_ARGS = -52;
   CL_INVALID_WORK_DIMENSION = -53;
   CL_INVALID_WORK_GROUP_SIZE = -54;
@@ -274,6 +275,7 @@ const
   CL_DEVICE_QUEUE_ON_DEVICE_MAX_SIZE = $1050;
 
   //device errors
+  CLK_SUCCESS = 0;
   CLK_JUST_ANOTHER_ENQUEUE_FAILURE = -10; //unknown error. TBD - returned by enqueue_kernel. Value not found in OpenCL headers.
   CLK_ENQUEUE_FAILURE = -101;
   CLK_INVALID_QUEUE = -102;
@@ -284,46 +286,94 @@ const
   CLK_EVENT_ALLOCATION_FAILURE = -100;
   CLK_OUT_OF_RESOURCES = -5;
 
+
 function CLErrorToStr(AError: cl_int): string;
+function CLDeviceErrorToStr(AError: cl_int): string;
 
 
 implementation
 
 
-function CLErrorToStr(AError: cl_int): string;
-begin
-  case AError of
-    CL_SUCCESS: Result := '';
-    CL_DEVICE_NOT_FOUND: Result := 'CL_DEVICE_NOT_FOUND';
-    CL_OUT_OF_RESOURCES: Result := 'CL_OUT_OF_RESOURCES';
-    CL_OUT_OF_HOST_MEMORY: Result := 'CL_OUT_OF_HOST_MEMORY';
-    CL_BUILD_PROGRAM_FAILURE: Result := 'CL_BUILD_PROGRAM_FAILURE';
-    CL_INVALID_VALUE: Result := 'CL_INVALID_VALUE';
-    CL_INVALID_DEVICE: Result := 'CL_INVALID_DEVICE';
-    CL_INVALID_PLATFORM: Result := 'CL_INVALID_PLATFORM';
-    CL_INVALID_CONTEXT: Result := 'CL_INVALID_CONTEXT';
-    CL_INVALID_QUEUE_PROPERTIES: Result := 'CL_INVALID_QUEUE_PROPERTIES';
-    CL_INVALID_COMMAND_QUEUE: Result := 'CL_INVALID_COMMAND_QUEUE';        //this might happen in case of an AV or calling a function, on device, with a bad resource identifier.
-    CL_INVALID_HOST_PTR: Result := 'CL_INVALID_HOST_PTR';
-    CL_INVALID_MEM_OBJECT: Result := 'CL_INVALID_MEM_OBJECT';
-    CL_INVALID_BUILD_OPTIONS : Result := 'CL_INVALID_BUILD_OPTIONS';
-    CL_INVALID_PROGRAM: Result := 'CL_INVALID_PROGRAM';
-    CL_INVALID_KERNEL_NAME: Result := 'CL_INVALID_KERNEL_NAME';
-    CL_INVALID_KERNEL: Result := 'CL_INVALID_KERNEL';
-    CL_INVALID_ARG_INDEX: Result := 'CL_INVALID_ARG_INDEX';
-    CL_INVALID_ARG_VALUE: Result := 'CL_INVALID_ARG_VALUE';
-    CL_INVALID_KERNEL_ARGS: Result := 'CL_INVALID_KERNEL_ARGS';
-    CL_INVALID_WORK_DIMENSION: Result := 'CL_INVALID_WORK_DIMENSION';
-    CL_INVALID_WORK_GROUP_SIZE: Result := 'CL_INVALID_WORK_GROUP_SIZE';
-    CL_INVALID_WORK_ITEM_SIZE: Result := 'CL_INVALID_WORK_ITEM_SIZE';
-    CL_INVALID_GLOBAL_OFFSET: Result := 'CL_INVALID_GLOBAL_OFFSET';
-    CL_INVALID_BUFFER_SIZE: Result := 'CL_INVALID_BUFFER_SIZE';
-
-    CLK_JUST_ANOTHER_ENQUEUE_FAILURE: Result := 'CLK_JUST_ANOTHER_ENQUEUE_FAILURE';
-    -9999: Result := 'Bad OpenCL state. Please restart application. Or maybe release and reload OpenCL.'; //Happens on clCreateContext if clReleaseProgram or clReleaseCommandQueue could not be called previously. Or if clEnqueueReadBuffer was called after clFinish errored with CL_INVALID_COMMAND_QUEUE.
-  else                                                                                                    //  This error code might be nvidia specific. TBD.  May mean: "Illegal read or write to a buffer."
-    Result := 'Unknown error: ' + IntToStr(AError);
+type
+  TCLErrMsg = record
+    Code: Integer;
+    Msg: string;
   end;
+
+const
+  CCLHostErrMsg: array[0..26] of TCLErrMsg = (
+    (Code: CL_SUCCESS; Msg: ''),
+    (Code: CL_DEVICE_NOT_FOUND; Msg: 'CL_DEVICE_NOT_FOUND'),
+    (Code: CL_OUT_OF_RESOURCES; Msg: 'CL_OUT_OF_RESOURCES'),
+    (Code: CL_OUT_OF_HOST_MEMORY; Msg: 'CL_OUT_OF_HOST_MEMORY'),
+    (Code: CL_BUILD_PROGRAM_FAILURE; Msg: 'CL_BUILD_PROGRAM_FAILURE'),
+    (Code: CL_INVALID_VALUE; Msg: 'CL_INVALID_VALUE'),
+    (Code: CL_INVALID_DEVICE; Msg: 'CL_INVALID_DEVICE'),
+    (Code: CL_INVALID_PLATFORM; Msg: 'CL_INVALID_PLATFORM'),
+    (Code: CL_INVALID_CONTEXT; Msg: 'CL_INVALID_CONTEXT'),
+    (Code: CL_INVALID_QUEUE_PROPERTIES; Msg: 'CL_INVALID_QUEUE_PROPERTIES'),
+    (Code: CL_INVALID_COMMAND_QUEUE; Msg: 'CL_INVALID_COMMAND_QUEUE'),  //This might happen in case of an AV or calling a function, on device, with a bad resource identifier. It is also returned when the kernel enters an infinite loop.
+    (Code: CL_INVALID_HOST_PTR; Msg: 'CL_INVALID_HOST_PTR'),
+    (Code: CL_INVALID_MEM_OBJECT; Msg: 'CL_INVALID_MEM_OBJECT'),
+    (Code: CL_INVALID_BUILD_OPTIONS; Msg: 'CL_INVALID_BUILD_OPTIONS'),
+    (Code: CL_INVALID_PROGRAM; Msg: 'CL_INVALID_PROGRAM'),
+    (Code: CL_INVALID_KERNEL_NAME; Msg: 'CL_INVALID_KERNEL_NAME'),
+    (Code: CL_INVALID_KERNEL; Msg: 'CL_INVALID_KERNEL'),
+    (Code: CL_INVALID_ARG_INDEX; Msg: 'CL_INVALID_ARG_INDEX'),
+    (Code: CL_INVALID_ARG_VALUE; Msg: 'CL_INVALID_ARG_VALUE'),
+    (Code: CL_INVALID_ARG_SIZE; Msg: 'CL_INVALID_ARG_SIZE'),
+    (Code: CL_INVALID_KERNEL_ARGS; Msg: 'CL_INVALID_KERNEL_ARGS'),
+    (Code: CL_INVALID_WORK_DIMENSION; Msg: 'CL_INVALID_WORK_DIMENSION'),
+    (Code: CL_INVALID_WORK_GROUP_SIZE; Msg: 'CL_INVALID_WORK_GROUP_SIZE'),
+    (Code: CL_INVALID_WORK_ITEM_SIZE; Msg: 'CL_INVALID_WORK_ITEM_SIZE'),
+    (Code: CL_INVALID_GLOBAL_OFFSET; Msg: 'CL_INVALID_GLOBAL_OFFSET'),
+    (Code: CL_INVALID_BUFFER_SIZE; Msg: 'CL_INVALID_BUFFER_SIZE'),
+
+    (Code: -9999; Msg: 'Bad OpenCL state. Please restart application. Or maybe release and reload OpenCL.') //Happens on clCreateContext if clReleaseProgram or clReleaseCommandQueue could not be called previously. Or if clEnqueueReadBuffer was called after clFinish errored with CL_INVALID_COMMAND_QUEUE. This error code might be nvidia specific. TBD.  May mean: "Illegal read or write to a buffer."
+  );
+
+  CCLDeviceErrMsg: array[0..9] of TCLErrMsg = (
+    (Code: CLK_SUCCESS; Msg: ''),
+    (Code: CLK_JUST_ANOTHER_ENQUEUE_FAILURE; Msg: 'CLK_JUST_ANOTHER_ENQUEUE_FAILURE'), //unknown error. TBD - returned by enqueue_kernel. Value not found in OpenCL headers.
+    (Code: CLK_ENQUEUE_FAILURE; Msg: 'CLK_ENQUEUE_FAILURE'),
+    (Code: CLK_INVALID_QUEUE; Msg: 'CLK_INVALID_QUEUE'),
+    (Code: CLK_INVALID_NDRANGE; Msg: 'CLK_INVALID_NDRANGE'),
+    (Code: CLK_INVALID_EVENT_WAIT_LIST; Msg: 'CLK_INVALID_EVENT_WAIT_LIST'),
+    (Code: CLK_DEVICE_QUEUE_FULL; Msg: 'CLK_DEVICE_QUEUE_FULL'),
+    (Code: CLK_INVALID_ARG_SIZE; Msg: 'CLK_INVALID_ARG_SIZE'),
+    (Code: CLK_EVENT_ALLOCATION_FAILURE; Msg: 'CLK_EVENT_ALLOCATION_FAILURE'),
+    (Code: CLK_OUT_OF_RESOURCES; Msg: 'CLK_OUT_OF_RESOURCES')
+  );
+
+function CLErrorToStr(AError: cl_int): string;
+var
+  i: Integer;
+begin
+  Result := '';
+  for i := 0 to Length(CCLHostErrMsg) - 1 do
+    if AError = CCLHostErrMsg[i].Code then
+    begin
+      Result := CCLHostErrMsg[i].Msg;
+      Exit;
+    end;
+
+  Result := 'Unknown error: ' + IntToStr(AError);
+end;
+
+
+function CLDeviceErrorToStr(AError: cl_int): string;
+var
+  i: Integer;
+begin
+  Result := '';
+  for i := 0 to Length(CCLDeviceErrMsg) - 1 do
+    if AError = CCLDeviceErrMsg[i].Code then
+    begin
+      Result := CCLDeviceErrMsg[i].Msg;
+      Exit;
+    end;
+
+  Result := 'Unknown error: ' + IntToStr(AError);
 end;
 
 
