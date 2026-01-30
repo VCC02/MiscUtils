@@ -40,6 +40,7 @@ type
     IsRootTest: Boolean;
     Status: TTestStatus;
     TestResult: string;
+    ExtraResult: string; //can be set in test code
   end;
   PTestNodeRec = ^TTestNodeRec;
 
@@ -95,6 +96,7 @@ type
     procedure GetSelectedNodes(var ASelectedNodes: TNodeArray);  //selected doesn't mean checked
     procedure SelectTestsByName(AList: TStringList; ATestNameContainsParent: Boolean = False);
     function GetNodeByTest(ATest: TTest): PVirtualNode;
+    function GetNodeByName(AName: string): PVirtualNode;
     procedure LoadSettingsFromIni;
     procedure SaveSettingsToIni;
     procedure DisplayTestResultFromSelectedTest;
@@ -112,7 +114,13 @@ type
     procedure EndTestSuite(ATestSuite: TTestSuite);
   public
     procedure AddToLog(s: string);
+    function RunCategoryByName(ACatName: string; out AResponse: string): Boolean;
+    procedure SetExtraTestResult(ATest: TTest; AExtraResult: string);
   end;
+
+
+const
+  CTestStatusStr: array[TTestStatus] of string = ('tsInit', 'tsFailed', 'tsPassed', 'tsRunning', 'tsPaused');
 
 var
   frmPitstopTestRunner: TfrmPitstopTestRunner;
@@ -387,6 +395,35 @@ begin
       NodeData := vstTests.GetNodeData(Node);
       if NodeData <> nil then
         if NodeData^.Test = ATest then
+        begin
+          Result := Node;
+          Exit;
+        end;
+
+      Node := vstTests.GetNext(Node);
+    until Node = nil;
+  finally
+    vstTests.EndUpdate;
+  end;
+end;
+
+
+function TfrmPitstopTestRunner.GetNodeByName(AName: string): PVirtualNode;   //For now, it works only if the test names are unique, or a category is searched for (as a test)
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Result := nil;
+  Node := vstTests.GetFirst;
+  if Node = nil then
+    Exit;
+
+  vstTests.BeginUpdate;
+  try
+    repeat
+      NodeData := vstTests.GetNodeData(Node);
+      if NodeData <> nil then
+        if NodeData^.Test.TestName = AName then
         begin
           Result := Node;
           Exit;
@@ -947,6 +984,69 @@ procedure TfrmPitstopTestRunner.vstTestsMouseUp(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
   DisplayTestResultFromSelectedTest;
+end;
+
+
+function TfrmPitstopTestRunner.RunCategoryByName(ACatName: string; out AResponse: string): Boolean;
+const
+  CFirstSeparator = '(::)';
+  CSecondSeparator = '(:.:)';
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Result := False;
+  Node := GetNodeByName(ACatName);
+  if Node = nil then
+  begin
+    AResponse := 'Category not found';
+    Exit;
+  end;
+
+  AResponse := '';
+  try
+    Result := RunCategory(Node);
+  finally
+    Node := Node^.FirstChild;
+    repeat
+      NodeData := vstTests.GetNodeData(Node);
+      AResponse := AResponse + NodeData^.Test.TestName + '=' + CTestStatusStr[NodeData^.Status] + CFirstSeparator +
+                                                               NodeData^.TestResult + CSecondSeparator +
+                                                               NodeData^.ExtraResult +
+                                                               #4#5;
+
+      Node := Node^.NextSibling;
+    until Node = nil;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.SetExtraTestResult(ATest: TTest; AExtraResult: string);
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  if ATest = nil then
+  begin
+    AddToLog('Nil "Test" argument when setting extra result.');
+    Exit;
+  end;
+
+  Node := GetNodeByTest(ATest);
+  if Node = nil then
+  begin
+    try
+      AddToLog('Test "' + ATest.TestName + '" not found when setting extra result. ATest = ' + IntToStr(QWord(Pointer(ATest))));
+    except
+      AddToLog('Invalid "Test" argument when setting extra result. ATest = ' + IntToStr(QWord(Pointer(ATest))));
+    end;
+
+    Exit;
+  end;
+
+  AddToLog('Setting extra test result of ' + ATest.TestName + ' to ' + AExtraResult);
+  NodeData := vstTests.GetNodeData(Node);
+  NodeData^.ExtraResult := AExtraResult;
 end;
 
 end.
