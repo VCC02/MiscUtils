@@ -44,6 +44,20 @@ type
   end;
   PTestNodeRec = ^TTestNodeRec;
 
+  TSettingsHandler = TNotifyEvent; //procedure of object;
+
+  TSettingsHandlerRec = record
+    SettingsCategory: string;
+    ParentCaption: string;
+    MenuCaption: string;
+    Handler: TSettingsHandler;
+    IsAutoCheck: Boolean;
+    IsRadioItem: Boolean;
+    IsChecked: Boolean;
+  end;
+
+  TSettingsHandlerRecArr = array of TSettingsHandlerRec;
+
   { TfrmPitstopTestRunner }
 
   TfrmPitstopTestRunner = class(TForm, ITestListener)
@@ -55,9 +69,11 @@ type
     pnlToolbar: TPanel;
     pmTests: TPopupMenu;
     pmRun: TPopupMenu;
+    pmSettings: TPopupMenu;
     prbTestProgress: TProgressBar;
     spdbtnExtraRunSelectedTest: TSpeedButton;
     spdbtnRunAllSelectedTests: TSpeedButton;
+    spdbtnSettings: TSpeedButton;
     spdbtnStop: TSpeedButton;
     spdbtnRunAll: TSpeedButton;
     spdbtnPause: TSpeedButton;
@@ -73,6 +89,7 @@ type
     procedure spdbtnRunAllClick(Sender: TObject);
     procedure spdbtnRunAllSelectedTestsClick(Sender: TObject);
     procedure spdbtnRunSelectedTestClick(Sender: TObject);
+    procedure spdbtnSettingsClick(Sender: TObject);
     procedure spdbtnStopClick(Sender: TObject);
     procedure tmrStartupTimer(Sender: TObject);
     procedure vstTestsGetImageIndex(Sender: TBaseVirtualTree;
@@ -90,6 +107,11 @@ type
   private
     FPaused: Boolean;
     FStopping: Boolean;
+    FPersistentTestSettings: TStringList;
+    FSettingsHandlers: TSettingsHandlerRecArr;
+
+    procedure CreateAllMenuCategories;
+    procedure NoUserSettingsConfiguredClick(Sender: TObject);
 
     function GetIniNameNoExt: string;
     procedure GetListOfSelectedTests(AList: TStringList; ATestNameContainsParent: Boolean = False);         //selected doesn't mean checked
@@ -116,6 +138,11 @@ type
     procedure AddToLog(s: string);
     function RunCategoryByName(ACatName: string; out AResponse: string): Boolean;
     procedure SetExtraTestResult(ATest: TTest; AExtraResult: string);
+    procedure GetPersistentTestSettings(ASettings: TStringList);
+    procedure SetValueToPersistentTestSettings(AVarName, AValue: string);
+
+    procedure RegisterTestSettings(ASettingsCategory, AParentCaption, AMenuEntryCaption: string; ASettingsHandler: TSettingsHandler; AIsAutoCheck, AIsRadioItem, AIsChecked: Boolean);
+    procedure UpdateTestSettingsItemCheckedState(ASettingsCategory, AParentCaption, AMenuEntryCaption: string; AIsChecked: Boolean);
   end;
 
 
@@ -147,6 +174,9 @@ begin
   FStopping := False;
   vstTests.Colors.UnfocusedSelectionColor := clGradientInactiveCaption;
   vstTests.NodeDataSize := SizeOf(TTestNodeRec);
+  FPersistentTestSettings := TStringList.Create;
+  SetLength(FSettingsHandlers, 0);
+
   tmrStartup.Enabled := True;
 end;
 
@@ -157,6 +187,9 @@ begin
     SaveSettingsToIni;
   except
   end;
+
+  FreeAndNil(FPersistentTestSettings);
+  SetLength(FSettingsHandlers, 0);
 end;
 
 
@@ -468,6 +501,8 @@ begin
     finally
       SelectedTests.Free;
     end;
+
+    Ini.ReadSectionRaw('PersistentTestSettings', FPersistentTestSettings);
   finally
     Ini.Free;
   end;
@@ -504,6 +539,9 @@ begin
     finally
       SelectedTests.Free;
     end;
+
+    for i := 0 to FPersistentTestSettings.Count - 1 do
+      Ini.WriteString('PersistentTestSettings', FPersistentTestSettings.Names[i], FPersistentTestSettings.ValueFromIndex[i]);
 
     Ini.UpdateFile;
   finally
@@ -801,6 +839,79 @@ begin
 end;
 
 
+procedure TfrmPitstopTestRunner.CreateAllMenuCategories;
+var
+  i: Integer;
+  CategoryMenuItem: TMenuItem;
+begin
+  for i := 0 to Length(FSettingsHandlers) - 1 do
+  begin
+    CategoryMenuItem := pmSettings.Items.Find(FSettingsHandlers[i].SettingsCategory);
+    if (CategoryMenuItem = nil) or (FSettingsHandlers[i].SettingsCategory = '-') then
+    begin
+      CategoryMenuItem := TMenuItem.Create(Self);
+      CategoryMenuItem.Caption := FSettingsHandlers[i].SettingsCategory;
+      pmSettings.Items.Add(CategoryMenuItem);
+    end;
+  end;
+end;
+
+
+procedure TfrmPitstopTestRunner.NoUserSettingsConfiguredClick(Sender: TObject);
+begin
+  MessageBoxFunction('You may have to run a "BeforeAll" test first, or other configuration procedure, in order to generate the menu.', PChar(Caption), MB_ICONINFORMATION);
+end;
+
+
+procedure TfrmPitstopTestRunner.spdbtnSettingsClick(Sender: TObject);
+var
+  CategoryMenuItem, ParentMenuItem, MenuItem: TMenuItem;
+  i: Integer;
+begin
+  pmSettings.Items.Clear;
+  if Length(FSettingsHandlers) = 0 then
+  begin
+    MenuItem := TMenuItem.Create(Self);
+    MenuItem.Caption := 'No user settings configured.';
+    MenuItem.OnClick := @NoUserSettingsConfiguredClick;
+    pmSettings.Items.Add(MenuItem);
+  end;
+
+  CreateAllMenuCategories;
+
+  for i := 0 to Length(FSettingsHandlers) - 1 do
+    if FSettingsHandlers[i].SettingsCategory <> '-' then
+    begin
+      MenuItem := TMenuItem.Create(Self);
+      MenuItem.Caption := FSettingsHandlers[i].MenuCaption;
+      MenuItem.OnClick := FSettingsHandlers[i].Handler;
+      MenuItem.Bitmap := nil; //
+      MenuItem.AutoCheck := FSettingsHandlers[i].IsAutoCheck;
+      MenuItem.RadioItem := FSettingsHandlers[i].IsRadioItem;
+      MenuItem.Checked := FSettingsHandlers[i].IsChecked;
+
+      CategoryMenuItem := pmSettings.Items.Find(FSettingsHandlers[i].SettingsCategory);
+      if CategoryMenuItem = nil then   //if CategoryMenuItem is nil, it means that pmSettings.Items.Find is not reliable
+      begin
+        CategoryMenuItem := TMenuItem.Create(Self);
+        CategoryMenuItem.Caption := FSettingsHandlers[i].SettingsCategory;
+        pmSettings.Items.Add(CategoryMenuItem);
+      end;
+
+      if FSettingsHandlers[i].ParentCaption = '' then
+        CategoryMenuItem.Add(MenuItem)
+      else
+      begin
+        ParentMenuItem := CategoryMenuItem.Find(FSettingsHandlers[i].ParentCaption);
+        if ParentMenuItem <> nil then
+          ParentMenuItem.Add(MenuItem);
+      end;
+    end;
+
+  pmSettings.PopUp;
+end;
+
+
 procedure TfrmPitstopTestRunner.spdbtnRunAllSelectedTestsClick(Sender: TObject);
 var
   Node: PVirtualNode;
@@ -1036,9 +1147,9 @@ begin
   if Node = nil then
   begin
     try
-      AddToLog('Test "' + ATest.TestName + '" not found when setting extra result. ATest = ' + IntToStr(QWord(Pointer(ATest))));
+      AddToLog('Test "' + ATest.TestName + '" not found when setting extra result.' { ATest = ' + IntToStr(QWord(Pointer(ATest)))});
     except
-      AddToLog('Invalid "Test" argument when setting extra result. ATest = ' + IntToStr(QWord(Pointer(ATest))));
+      AddToLog('Invalid "Test" argument when setting extra result.' { ATest = ' + IntToStr(QWord(Pointer(ATest)))});
     end;
 
     Exit;
@@ -1047,6 +1158,60 @@ begin
   AddToLog('Setting extra test result of ' + ATest.TestName + ' to ' + AExtraResult);
   NodeData := vstTests.GetNodeData(Node);
   NodeData^.ExtraResult := AExtraResult;
+end;
+
+
+procedure TfrmPitstopTestRunner.GetPersistentTestSettings(ASettings: TStringList);
+begin
+  ASettings.Assign(FPersistentTestSettings);
+end;
+
+
+procedure TfrmPitstopTestRunner.SetValueToPersistentTestSettings(AVarName, AValue: string);
+begin
+  FPersistentTestSettings.Values[AVarName] := AValue;
+end;
+
+
+procedure TfrmPitstopTestRunner.RegisterTestSettings(ASettingsCategory, AParentCaption, AMenuEntryCaption: string; ASettingsHandler: TSettingsHandler; AIsAutoCheck, AIsRadioItem, AIsChecked: Boolean);
+begin
+  SetLength(FSettingsHandlers, Length(FSettingsHandlers) + 1);
+  FSettingsHandlers[Length(FSettingsHandlers) - 1].SettingsCategory := ASettingsCategory;
+  FSettingsHandlers[Length(FSettingsHandlers) - 1].ParentCaption := AParentCaption;
+  FSettingsHandlers[Length(FSettingsHandlers) - 1].MenuCaption := AMenuEntryCaption;
+
+  FSettingsHandlers[Length(FSettingsHandlers) - 1].Handler := ASettingsHandler;
+  FSettingsHandlers[Length(FSettingsHandlers) - 1].IsAutoCheck := AIsAutoCheck;
+  FSettingsHandlers[Length(FSettingsHandlers) - 1].IsRadioItem := AIsRadioItem;
+  FSettingsHandlers[Length(FSettingsHandlers) - 1].IsChecked := AIsChecked;
+end;
+
+
+procedure TfrmPitstopTestRunner.UpdateTestSettingsItemCheckedState(ASettingsCategory, AParentCaption, AMenuEntryCaption: string; AIsChecked: Boolean);
+var
+  i: Integer;
+  TargetItemIsRadio: Boolean;
+begin
+  TargetItemIsRadio := False;
+  for i := 0 to Length(FSettingsHandlers) - 1 do
+    if (FSettingsHandlers[i].SettingsCategory = ASettingsCategory) and
+       (FSettingsHandlers[i].MenuCaption = AMenuEntryCaption) and
+       (FSettingsHandlers[i].ParentCaption = AParentCaption) then
+    begin
+      FSettingsHandlers[i].IsChecked := AIsChecked;
+      TargetItemIsRadio := FSettingsHandlers[i].IsRadioItem;
+      Break;
+    end;
+
+  if AIsChecked then
+  begin
+    for i := 0 to Length(FSettingsHandlers) - 1 do
+      if (FSettingsHandlers[i].SettingsCategory = ASettingsCategory) and
+         (FSettingsHandlers[i].MenuCaption <> AMenuEntryCaption) and
+         (FSettingsHandlers[i].ParentCaption = AParentCaption) then
+        if FSettingsHandlers[i].IsRadioItem and TargetItemIsRadio then
+          FSettingsHandlers[i].IsChecked := False;  //uncheck all the other radio items
+  end;
 end;
 
 end.
