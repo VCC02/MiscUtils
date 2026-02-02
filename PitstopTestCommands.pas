@@ -176,10 +176,12 @@ begin
   TestVars := TStringList.Create;
   try
     IdHTTPServer1.OnCommandGet := @ServerHandlers.IdHTTPServer1CommandGet;
+
+    frmPitstopTestRunner.AddToLog('Starting server module in PitstopTestRunner.');
     IdHTTPServer1.Active := True;
     frmPitstopTestRunner.AddToLog('PitstopTestRunner is listening on port ' + IntToStr(IdHTTPServer1.DefaultPort));
   except
-    on E: Exception do
+    on E: EIdHTTPServerError do
     begin
       frmPitstopTestRunner.AddToLog('PitstopTestRunner can''t listen on port ' + IntToStr(IdHTTPServer1.DefaultPort) + '. ' + E.Message);
       raise;

@@ -1116,7 +1116,24 @@ begin
 
   AResponse := '';
   try
-    Result := RunCategory(Node);
+    spdbtnRunAll.Enabled := False;
+    spdbtnRunSelectedTest.Enabled := False;
+    spdbtnRunAllSelectedTests.Enabled := False;
+    spdbtnPause.Enabled := True;
+    spdbtnStop.Enabled := True;
+    InitStatusOnAllTests;
+
+    try
+      vstTests.Expanded[Node] := True;
+      vstTests.Repaint;
+      Result := RunCategory(Node);
+    finally
+      spdbtnRunAll.Enabled := True;
+      spdbtnRunSelectedTest.Enabled := True;
+      spdbtnRunAllSelectedTests.Enabled := True;
+      spdbtnPause.Enabled := False;
+      spdbtnStop.Enabled := False;
+    end;
   finally
     Node := Node^.FirstChild;
     repeat
