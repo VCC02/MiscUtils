@@ -355,6 +355,7 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
     object spdbtnPause: TSpeedButton
       Left = 157
       Height = 40
+      Hint = 'Click to pause and click again to continue.'
       Top = 2
       Width = 40
       Enabled = False
@@ -490,6 +491,8 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
         FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
         FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
       }
+      ShowHint = True
+      ParentShowHint = False
       OnClick = spdbtnPauseClick
     end
     object spdbtnStop: TSpeedButton

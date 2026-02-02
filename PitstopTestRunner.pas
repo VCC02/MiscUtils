@@ -143,6 +143,10 @@ type
 
     procedure RegisterTestSettings(ASettingsCategory, AParentCaption, AMenuEntryCaption: string; ASettingsHandler: TSettingsHandler; AIsAutoCheck, AIsRadioItem, AIsChecked: Boolean);
     procedure UpdateTestSettingsItemCheckedState(ASettingsCategory, AParentCaption, AMenuEntryCaption: string; AIsChecked: Boolean);
+
+    procedure PauseTests;
+    procedure ContinueTests;
+    procedure StopTests;
   end;
 
 
@@ -553,11 +557,6 @@ end;
 procedure TfrmPitstopTestRunner.spdbtnPauseClick(Sender: TObject);
 begin
   FPaused := not FPaused;
-  if FPaused then
-  begin
-    spdbtnPause.Enabled := False;
-    spdbtnPause.Repaint;
-  end;
 end;
 
 
@@ -811,6 +810,7 @@ var
   Node: PVirtualNode;
 begin
   FStopping := False;
+  FPaused := False;
 
   Node := vstTests.GetFirstSelected;
   if Node = nil then
@@ -919,6 +919,7 @@ var
   i: Integer;
 begin
   FStopping := False;
+  FPaused := False;
 
   Node := vstTests.GetFirstSelected;
   if Node = nil then
@@ -959,10 +960,7 @@ end;
 
 procedure TfrmPitstopTestRunner.spdbtnStopClick(Sender: TObject);
 begin
-  FPaused := False;
-  FStopping := True;
-  spdbtnStop.Enabled := False;
-  spdbtnPause.Enabled := False;
+  StopTests;
 end;
 
 
@@ -1114,6 +1112,9 @@ begin
     Exit;
   end;
 
+  FStopping := False;
+  FPaused := False;
+
   AResponse := '';
   try
     spdbtnRunAll.Enabled := False;
@@ -1229,6 +1230,27 @@ begin
         if FSettingsHandlers[i].IsRadioItem and TargetItemIsRadio then
           FSettingsHandlers[i].IsChecked := False;  //uncheck all the other radio items
   end;
+end;
+
+
+procedure TfrmPitstopTestRunner.PauseTests;
+begin
+  FPaused := True;
+end;
+
+
+procedure TfrmPitstopTestRunner.ContinueTests;
+begin
+  FPaused := False;
+end;
+
+
+procedure TfrmPitstopTestRunner.StopTests;
+begin
+  FPaused := False;
+  FStopping := True;
+  spdbtnStop.Enabled := False;
+  spdbtnPause.Enabled := False;
 end;
 
 end.

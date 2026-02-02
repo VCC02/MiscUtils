@@ -36,6 +36,15 @@ procedure CreatePitstopCommandServer;
 procedure DestroyPitstopCommandServer;
 
 
+const
+  CPitstopCmd_AddToLog = 'AddToLog';
+  CPitstopCmd_RunCategory = 'RunCategory';
+  CPitstopCmd_SetTestVars = 'SetTestVars';
+  CPitstopCmd_PauseTests = 'PauseTests';
+  CPitstopCmd_ContinueTests = 'ContinueTests';
+  CPitstopCmd_StopTests = 'StopTests';
+
+
 var
   TestVars: TStringList; //created / destroyed by CreatePitstopCommandServer / DestroyPitstopCommandServer
 
@@ -52,7 +61,7 @@ type
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
   end;
 
-  TSyncCmd = (scAddToLog, scRunCategory, scSetTestVars);
+  TSyncCmd = (scAddToLog, scRunCategory, scSetTestVars, scPauseTests, scContinueTests, scStopTests);
   TSyncObj = class(TIdSync)
   private
     FCmd: TSyncCmd;
@@ -81,6 +90,15 @@ begin
 
     scSetTestVars:
       TestVars.Assign(FTestVars);
+
+    scPauseTests:
+      frmPitstopTestRunner.PauseTests;
+
+    scContinueTests:
+      frmPitstopTestRunner.ContinueTests;
+
+    scStopTests:
+      frmPitstopTestRunner.StopTests;
   end;
 end;
 
@@ -136,6 +154,48 @@ begin
 end;
 
 
+procedure PauseTests;
+var
+  SyncObj: TSyncObj;
+begin
+  SyncObj := TSyncObj.Create;
+  try
+    SyncObj.FCmd := scPauseTests;
+    SyncObj.Synchronize;
+  finally
+    SyncObj.Free;
+  end;
+end;
+
+
+procedure ContinueTests;
+var
+  SyncObj: TSyncObj;
+begin
+  SyncObj := TSyncObj.Create;
+  try
+    SyncObj.FCmd := scContinueTests;
+    SyncObj.Synchronize;
+  finally
+    SyncObj.Free;
+  end;
+end;
+
+
+procedure StopTests;
+var
+  SyncObj: TSyncObj;
+begin
+  SyncObj := TSyncObj.Create;
+  try
+    SyncObj.FCmd := scStopTests;
+    SyncObj.Synchronize;
+  finally
+    SyncObj.Free;
+  end;
+end;
+
+
 procedure TServerHandlers.IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
   Cmd: string;
@@ -146,13 +206,13 @@ begin
 
   AResponseInfo.ContentType := 'text/plain'; // 'text/html';  default type
 
-  if Cmd = '/' + 'AddToLog' then
+  if Cmd = '/' + CPitstopCmd_AddToLog then
   begin
     AddToLog(ARequestInfo.Params.Values['Log']);
     AResponseInfo.ContentText := 'Done';
   end;
 
-  if Cmd = '/' + 'RunCategory' then
+  if Cmd = '/' + CPitstopCmd_RunCategory then
   begin
     CategoryName := ARequestInfo.Params.Values['Category'];
     AddToLog('Running category: ' + CategoryName);
@@ -160,9 +220,27 @@ begin
     Exit;
   end;
 
-  if Cmd = '/' + 'SetTestVars' then
+  if Cmd = '/' + CPitstopCmd_SetTestVars then
   begin
     SetTestVars(ARequestInfo.Params);
+    AResponseInfo.ContentText := 'Done';
+  end;
+
+  if Cmd = '/' + CPitstopCmd_PauseTests then
+  begin
+    PauseTests;
+    AResponseInfo.ContentText := 'Done';
+  end;
+
+  if Cmd = '/' + CPitstopCmd_ContinueTests then
+  begin
+    ContinueTests;
+    AResponseInfo.ContentText := 'Done';
+  end;
+
+  if Cmd = '/' + CPitstopCmd_StopTests then
+  begin
+    StopTests;
     AResponseInfo.ContentText := 'Done';
   end;
 end;
@@ -173,7 +251,7 @@ begin
   IdHTTPServer1 := TIdHTTPServer.Create;
   IdHTTPServer1.DefaultPort := 7472;
   ServerHandlers := TServerHandlers.Create;
-  TestVars := TStringList.Create;
+
   try
     IdHTTPServer1.OnCommandGet := @ServerHandlers.IdHTTPServer1CommandGet;
 
@@ -197,7 +275,6 @@ begin
   finally
     ServerHandlers.Free;
     IdHTTPServer1.Free;
-    TestVars.Free;
   end;
 end;
 
@@ -207,5 +284,11 @@ begin
   Result := TestVars;
 end;
 
+
+initialization
+  TestVars := TStringList.Create;
+
+finalization
+  FreeAndNil(TestVars);
 end.
 
