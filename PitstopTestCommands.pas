@@ -36,15 +36,6 @@ procedure CreatePitstopCommandServer;
 procedure DestroyPitstopCommandServer;
 
 
-const
-  CPitstopCmd_AddToLog = 'AddToLog';
-  CPitstopCmd_RunCategory = 'RunCategory';
-  CPitstopCmd_SetTestVars = 'SetTestVars';
-  CPitstopCmd_PauseTests = 'PauseTests';
-  CPitstopCmd_ContinueTests = 'ContinueTests';
-  CPitstopCmd_StopTests = 'StopTests';
-
-
 var
   TestVars: TStringList; //created / destroyed by CreatePitstopCommandServer / DestroyPitstopCommandServer
 
@@ -52,7 +43,7 @@ implementation
 
 
 uses
-  PitstopTestRunner,
+  PitstopTestRunner, PitstopTestUtils,
   IdHTTPServer, IdCustomHTTPServer, IdContext, IdSync;
 
 type

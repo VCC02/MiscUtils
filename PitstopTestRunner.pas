@@ -168,7 +168,7 @@ implementation
 {$R *.frm}
 
 uses
-  testregistry, IniFiles, Clipbrd;
+  testregistry, IniFiles, Clipbrd, PitstopTestUtils;
 
 { TfrmPitstopTestRunner }
 
@@ -1097,9 +1097,6 @@ end;
 
 
 function TfrmPitstopTestRunner.RunCategoryByName(ACatName: string; out AResponse: string): Boolean;
-const
-  CFirstSeparator = '(::)';
-  CSecondSeparator = '(:.:)';
 var
   Node: PVirtualNode;
   NodeData: PTestNodeRec;
@@ -1236,12 +1233,14 @@ end;
 procedure TfrmPitstopTestRunner.PauseTests;
 begin
   FPaused := True;
+  AddToLog('Pausing...');
 end;
 
 
 procedure TfrmPitstopTestRunner.ContinueTests;
 begin
   FPaused := False;
+  AddToLog('Continuing...');
 end;
 
 
@@ -1251,6 +1250,7 @@ begin
   FStopping := True;
   spdbtnStop.Enabled := False;
   spdbtnPause.Enabled := False;
+  AddToLog('Stopping...');
 end;
 
 end.
