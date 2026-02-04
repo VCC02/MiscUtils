@@ -39,6 +39,8 @@ const
   CPitstopCmd_ContinueTests = 'ContinueTests';
   CPitstopCmd_StopTests = 'StopTests';
 
+  CPitstopCmd_Param_Auth = 'Auth';
+
   CFirstSeparator = '(::)';
   CSecondSeparator = '(:.:)';
   CRunInfoPrefix = 'Run info: ';

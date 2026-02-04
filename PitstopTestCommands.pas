@@ -48,6 +48,9 @@ uses
 
 type
   TServerHandlers = class
+  private
+    FAuthString: string;
+
     procedure IdHTTPServer1CommandGet(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
   end;
@@ -197,6 +200,13 @@ begin
 
   AResponseInfo.ContentType := 'text/plain'; // 'text/html';  default type
 
+  if ARequestInfo.Params.Values[CPitstopCmd_Param_Auth] <> ServerHandlers.FAuthString then  //empty string is allowed if this is how the app is started
+  begin
+    AddToLog('Forbidden: ' + Cmd);
+    AResponseInfo.ContentText := 'Forbidden';
+    Exit;
+  end;
+
   if Cmd = '/' + CPitstopCmd_AddToLog then
   begin
     AddToLog(ARequestInfo.Params.Values['Log']);
@@ -238,10 +248,24 @@ end;
 
 
 procedure CreatePitstopCommandServer;
+var
+  i: Integer;
 begin
-  IdHTTPServer1 := TIdHTTPServer.Create;
-  IdHTTPServer1.DefaultPort := 7472;
-  ServerHandlers := TServerHandlers.Create;
+  if IdHTTPServer1 = nil then
+  begin
+    IdHTTPServer1 := TIdHTTPServer.Create;
+    IdHTTPServer1.DefaultPort := 7472;
+
+    ServerHandlers := TServerHandlers.Create;
+    ServerHandlers.FAuthString := '';
+
+    for i := 1 to ParamCount - 1 do
+      if ParamStr(i) = '--Auth' then
+      begin
+        ServerHandlers.FAuthString := ParamStr(i + 1);
+        Break;
+      end;
+  end;
 
   try
     IdHTTPServer1.OnCommandGet := @ServerHandlers.IdHTTPServer1CommandGet;
@@ -261,11 +285,14 @@ end;
 
 procedure DestroyPitstopCommandServer;
 begin
+  if IdHTTPServer1 = nil then
+    Exit;
+
   try
     IdHTTPServer1.Active := False;
   finally
     ServerHandlers.Free;
-    IdHTTPServer1.Free;
+    FreeAndNil(IdHTTPServer1);
   end;
 end;
 
@@ -278,6 +305,7 @@ end;
 
 initialization
   TestVars := TStringList.Create;
+  IdHTTPServer1 := nil;
 
 finalization
   FreeAndNil(TestVars);
