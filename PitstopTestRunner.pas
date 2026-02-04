@@ -107,6 +107,7 @@ type
   private
     FPaused: Boolean;
     FStopping: Boolean;
+    FStoppingNow: Boolean;
     FPersistentTestSettings: TStringList;
     FSettingsHandlers: TSettingsHandlerRecArr;
 
@@ -146,7 +147,7 @@ type
 
     procedure PauseTests;
     procedure ContinueTests;
-    procedure StopTests;
+    procedure StopTests(AStopNow: Boolean = True);
   end;
 
 
@@ -176,6 +177,7 @@ procedure TfrmPitstopTestRunner.FormCreate(Sender: TObject);
 begin
   FPaused := False;
   FStopping := False;
+  FStoppingNow := True;
   vstTests.Colors.UnfocusedSelectionColor := clGradientInactiveCaption;
   vstTests.NodeDataSize := SizeOf(TTestNodeRec);
   FPersistentTestSettings := TStringList.Create;
@@ -722,7 +724,7 @@ begin
 
   NodeData^.TestResult := 'Not executed yet';
 
-  if FStopping then
+  if FStopping and FStoppingNow then
   begin
     NodeData^.Status := tsInit;
     vstTests.InvalidateNode(ANode);
@@ -786,7 +788,7 @@ begin
       Inc(CategoryProgress);  //after setting the progress bar
       Result := RunCategory(Node);
 
-      if FStopping then
+      if FStopping and FStoppingNow then
         Break;
 
       Application.ProcessMessages;
@@ -1244,13 +1246,14 @@ begin
 end;
 
 
-procedure TfrmPitstopTestRunner.StopTests;
+procedure TfrmPitstopTestRunner.StopTests(AStopNow: Boolean = True);
 begin
   FPaused := False;
   FStopping := True;
+  FStoppingNow := AStopNow;
   spdbtnStop.Enabled := False;
   spdbtnPause.Enabled := False;
-  AddToLog('Stopping...');
+  AddToLog('Stopping... ' + BoolToStr(FStoppingNow, 'Now', 'Later'));
 end;
 
 end.

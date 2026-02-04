@@ -40,6 +40,7 @@ const
   CPitstopCmd_StopTests = 'StopTests';
 
   CPitstopCmd_Param_Auth = 'Auth';
+  CPitstopCmd_Param_StoppingNow = 'StoppingNow';
 
   CFirstSeparator = '(::)';
   CSecondSeparator = '(:.:)';

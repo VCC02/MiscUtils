@@ -63,6 +63,7 @@ type
     FCategory: string;
     FTestVars: TStringList;
     FResponse: string;
+    FStoppingNow: Boolean;
   protected
     procedure DoSynchronize; override;
   end;
@@ -92,7 +93,7 @@ begin
       frmPitstopTestRunner.ContinueTests;
 
     scStopTests:
-      frmPitstopTestRunner.StopTests;
+      frmPitstopTestRunner.StopTests(FStoppingNow);
   end;
 end;
 
@@ -176,13 +177,14 @@ begin
 end;
 
 
-procedure StopTests;
+procedure StopTests(AStoppingNow: Boolean);
 var
   SyncObj: TSyncObj;
 begin
   SyncObj := TSyncObj.Create;
   try
     SyncObj.FCmd := scStopTests;
+    SyncObj.FStoppingNow := AStoppingNow;
     SyncObj.Synchronize;
   finally
     SyncObj.Free;
@@ -241,7 +243,7 @@ begin
 
   if Cmd = '/' + CPitstopCmd_StopTests then
   begin
-    StopTests;
+    StopTests(ARequestInfo.Params.Values[CPitstopCmd_Param_StoppingNow] <> 'False');
     AResponseInfo.ContentText := 'Done';
   end;
 end;
