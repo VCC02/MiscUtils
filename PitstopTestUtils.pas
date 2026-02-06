@@ -31,7 +31,13 @@ interface
 uses
   Classes, SysUtils;
 
+
+type
+  TTestStatus = (tsInit, tsFailed, tsPassed, tsRunning, tsPaused);
+
 const
+  CTestStatusStr: array[TTestStatus] of string = ('tsInit', 'tsFailed', 'tsPassed', 'tsRunning', 'tsPaused');
+
   CPitstopCmd_AddToLog = 'AddToLog';
   CPitstopCmd_RunCategory = 'RunCategory';
   CPitstopCmd_SetTestVars = 'SetTestVars';
@@ -48,6 +54,7 @@ const
 
 
 procedure ParseTestResult(ATestLine: string; out ATestName, ATestResult, AErrorMessage, ARunInfo: string);
+function TestStatusAsStringToStatus(ATestStatusStr: string): TTestStatus;
 
 
 implementation
@@ -71,6 +78,20 @@ begin
     ARunInfo := Copy(ARunInfo, Pos(CRunInfoPrefix, ARunInfo) + Length(CRunInfoPrefix), MaxInt);
 
   ARunInfo := StringReplace(ARunInfo, #13#10, ', ', [rfReplaceAll]);
+end;
+
+
+function TestStatusAsStringToStatus(ATestStatusStr: string): TTestStatus;
+var
+  i: TTestStatus;
+begin
+  Result := tsInit;
+  for i := Low(TTestStatus) to High(TTestStatus) do
+    if ATestStatusStr = CTestStatusStr[i] then
+    begin
+      Result := i;
+      Break;
+    end;
 end;
 
 end.

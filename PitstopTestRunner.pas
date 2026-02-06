@@ -30,11 +30,9 @@ interface
 
 uses
   LCLType, Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls,
-  Buttons, VirtualTrees, fpcunit, ImgList, ComCtrls, Menus;
+  Buttons, VirtualTrees, fpcunit, ImgList, ComCtrls, Menus, PitstopTestUtils;
 
 type
-  TTestStatus = (tsInit, tsFailed, tsPassed, tsRunning, tsPaused);
-
   TTestNodeRec = record
     Test: TTest;
     IsRootTest: Boolean;
@@ -151,9 +149,6 @@ type
   end;
 
 
-const
-  CTestStatusStr: array[TTestStatus] of string = ('tsInit', 'tsFailed', 'tsPassed', 'tsRunning', 'tsPaused');
-
 var
   frmPitstopTestRunner: TfrmPitstopTestRunner;
 
@@ -169,7 +164,7 @@ implementation
 {$R *.frm}
 
 uses
-  testregistry, IniFiles, Clipbrd, PitstopTestUtils;
+  testregistry, IniFiles, Clipbrd;
 
 { TfrmPitstopTestRunner }
 
