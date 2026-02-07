@@ -138,7 +138,7 @@ type
     function RunCategoryByName(ACatName: string; out AResponse: string): Boolean;
     procedure SetExtraTestResult(ATest: TTest; AExtraResult: string);
     procedure GetPersistentTestSettings(ASettings: TStringList);
-    procedure SetValueToPersistentTestSettings(AVarName, AValue: string);
+    procedure SetValueToPersistentTestSettings(AVarName, AValue: string; ASaveNowToDisk: Boolean);
 
     procedure RegisterTestSettings(ASettingsCategory, AParentCaption, AMenuEntryCaption: string; ASettingsHandler: TSettingsHandler; AIsAutoCheck, AIsRadioItem, AIsChecked: Boolean);
     procedure UpdateTestSettingsItemCheckedState(ASettingsCategory, AParentCaption, AMenuEntryCaption: string; AIsChecked: Boolean);
@@ -1179,9 +1179,17 @@ begin
 end;
 
 
-procedure TfrmPitstopTestRunner.SetValueToPersistentTestSettings(AVarName, AValue: string);
+procedure TfrmPitstopTestRunner.SetValueToPersistentTestSettings(AVarName, AValue: string; ASaveNowToDisk: Boolean);
 begin
   FPersistentTestSettings.Values[AVarName] := AValue;
+
+  if ASaveNowToDisk then
+  begin
+    try
+      SaveSettingsToIni;
+    except
+    end;
+  end;
 end;
 
 

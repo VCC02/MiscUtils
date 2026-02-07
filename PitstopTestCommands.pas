@@ -37,7 +37,7 @@ procedure DestroyPitstopCommandServer;
 
 
 var
-  TestVars: TStringList; //created / destroyed by CreatePitstopCommandServer / DestroyPitstopCommandServer
+  TestVars: TStringList; //created / destroyed by initialization / finalization sections
 
 implementation
 
