@@ -116,8 +116,11 @@ type
     procedure GetListOfSelectedTests(AList: TStringList; ATestNameContainsParent: Boolean = False);         //selected doesn't mean checked
     procedure GetSelectedNodes(var ASelectedNodes: TNodeArray);  //selected doesn't mean checked
     procedure SelectTestsByName(AList: TStringList; ATestNameContainsParent: Boolean = False);
+
     function GetNodeByTest(ATest: TTest): PVirtualNode;
-    function GetNodeByName(AName: string): PVirtualNode;
+    function GetCategoryNodeByName(AName: string): PVirtualNode;
+    function GetTestNodeByName(ACatName, ATestName: string): PVirtualNode;
+
     procedure LoadSettingsFromIni;
     procedure SaveSettingsToIni;
     procedure DisplayTestResultFromSelectedTest;
@@ -136,6 +139,7 @@ type
   public
     procedure AddToLog(s: string);
     function RunCategoryByName(ACatName: string; out AResponse: string): Boolean;
+    function RunTestByName(ACatName, ATestName: string; out AResponse: string): Boolean;
     procedure SetExtraTestResult(ATest: TTest; AExtraResult: string);
     procedure GetPersistentTestSettings(ASettings: TStringList);
     procedure SetValueToPersistentTestSettings(AVarName, AValue: string; ASaveNowToDisk: Boolean);
@@ -442,13 +446,17 @@ begin
 end;
 
 
-function TfrmPitstopTestRunner.GetNodeByName(AName: string): PVirtualNode;   //For now, it works only if the test names are unique, or a category is searched for (as a test)
+function TfrmPitstopTestRunner.GetCategoryNodeByName(AName: string): PVirtualNode;
 var
   Node: PVirtualNode;
   NodeData: PTestNodeRec;
 begin
   Result := nil;
   Node := vstTests.GetFirst;
+  if Node = nil then
+    Exit;
+
+  Node := vstTests.GetNext(Node); //first category
   if Node = nil then
     Exit;
 
@@ -463,7 +471,40 @@ begin
           Exit;
         end;
 
-      Node := vstTests.GetNext(Node);
+      Node := vstTests.GetNextSibling(Node);
+    until Node = nil;
+  finally
+    vstTests.EndUpdate;
+  end;
+end;
+
+
+function TfrmPitstopTestRunner.GetTestNodeByName(ACatName, ATestName: string): PVirtualNode;
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Result := nil;
+  Node := GetCategoryNodeByName(ACatName);
+  if Node = nil then
+    Exit;
+
+  Node := vstTests.GetFirstChild(Node);
+  if Node = nil then
+    Exit;
+
+  vstTests.BeginUpdate;
+  try
+    repeat
+      NodeData := vstTests.GetNodeData(Node);
+      if NodeData <> nil then
+        if NodeData^.Test.TestName = ATestName then
+        begin
+          Result := Node;
+          Exit;
+        end;
+
+      Node := vstTests.GetNextSibling(Node);
     until Node = nil;
   finally
     vstTests.EndUpdate;
@@ -1099,7 +1140,7 @@ var
   NodeData: PTestNodeRec;
 begin
   Result := False;
-  Node := GetNodeByName(ACatName);
+  Node := GetCategoryNodeByName(ACatName);
   if Node = nil then
   begin
     AResponse := 'Category not found';
@@ -1140,6 +1181,52 @@ begin
 
       Node := Node^.NextSibling;
     until Node = nil;
+  end;
+end;
+
+
+function TfrmPitstopTestRunner.RunTestByName(ACatName, ATestName: string; out AResponse: string): Boolean;
+var
+  Node: PVirtualNode;
+  NodeData: PTestNodeRec;
+begin
+  Result := False;
+  Node := GetTestNodeByName(ACatName, ATestName);
+  if Node = nil then
+  begin
+    AResponse := 'Test not found';
+    Exit;
+  end;
+
+  FStopping := False;
+  FPaused := False;
+
+  AResponse := '';
+  try
+    spdbtnRunAll.Enabled := False;
+    spdbtnRunSelectedTest.Enabled := False;
+    spdbtnRunAllSelectedTests.Enabled := False;
+    spdbtnPause.Enabled := True;
+    spdbtnStop.Enabled := True;
+    InitStatusOnAllTests;
+
+    try
+      vstTests.Expanded[Node] := True;
+      vstTests.Repaint;
+      Result := RunTest(Node);
+    finally
+      spdbtnRunAll.Enabled := True;
+      spdbtnRunSelectedTest.Enabled := True;
+      spdbtnRunAllSelectedTests.Enabled := True;
+      spdbtnPause.Enabled := False;
+      spdbtnStop.Enabled := False;
+    end;
+  finally
+    NodeData := vstTests.GetNodeData(Node);
+    AResponse := AResponse + NodeData^.Test.TestName + '=' + CTestStatusStr[NodeData^.Status] + CFirstSeparator +
+                                                             NodeData^.TestResult + CSecondSeparator +
+                                                             NodeData^.ExtraResult +
+                                                             #4#5;
   end;
 end;
 

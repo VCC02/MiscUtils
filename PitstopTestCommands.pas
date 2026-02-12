@@ -55,12 +55,13 @@ type
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
   end;
 
-  TSyncCmd = (scAddToLog, scRunCategory, scSetTestVars, scPauseTests, scContinueTests, scStopTests);
+  TSyncCmd = (scAddToLog, scRunCategory, scRunTest, scSetTestVars, scPauseTests, scContinueTests, scStopTests);
   TSyncObj = class(TIdSync)
   private
     FCmd: TSyncCmd;
     FMsg: string;
     FCategory: string;
+    FTest: string;
     FTestVars: TStringList;
     FResponse: string;
     FStoppingNow: Boolean;
@@ -82,6 +83,9 @@ begin
 
     scRunCategory:
       frmPitstopTestRunner.RunCategoryByName(FCategory, FResponse);
+
+    scRunTest:
+      frmPitstopTestRunner.RunTestByName(FCategory, FTest, FResponse);
 
     scSetTestVars:
       TestVars.Assign(FTestVars);
@@ -121,6 +125,23 @@ begin
   try
     SyncObj.FCmd := scRunCategory;
     SyncObj.FCategory := ACategory;
+    SyncObj.Synchronize;
+    Result := SyncObj.FResponse;
+  finally
+    SyncObj.Free;
+  end;
+end;
+
+
+function RunTest(ACategory, ATest: string): string;
+var
+  SyncObj: TSyncObj;
+begin
+  SyncObj := TSyncObj.Create;
+  try
+    SyncObj.FCmd := scRunTest;
+    SyncObj.FCategory := ACategory;
+    SyncObj.FTest := ATest;
     SyncObj.Synchronize;
     Result := SyncObj.FResponse;
   finally
@@ -195,7 +216,7 @@ end;
 procedure TServerHandlers.IdHTTPServer1CommandGet(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
   Cmd: string;
-  CategoryName: string;
+  CategoryName, TestName: string;
 begin
   Cmd := ARequestInfo.Document;
   ARequestInfo.Params.LineBreak := #13#10;
@@ -217,9 +238,18 @@ begin
 
   if Cmd = '/' + CPitstopCmd_RunCategory then
   begin
-    CategoryName := ARequestInfo.Params.Values['Category'];
+    CategoryName := ARequestInfo.Params.Values[CPitstopCmd_Param_Category];
     AddToLog('Running category: ' + CategoryName);
     AResponseInfo.ContentText := RunCategory(CategoryName);
+    Exit;
+  end;
+
+  if Cmd = '/' + CPitstopCmd_RunTest then
+  begin
+    CategoryName := ARequestInfo.Params.Values[CPitstopCmd_Param_Category];
+    TestName := ARequestInfo.Params.Values[CPitstopCmd_Param_Test];
+    AddToLog('Running test: ' + CategoryName + '.' + TestName);
+    AResponseInfo.ContentText := RunTest(CategoryName, TestName);
     Exit;
   end;
 

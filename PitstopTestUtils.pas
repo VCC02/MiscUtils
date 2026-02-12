@@ -40,6 +40,7 @@ const
 
   CPitstopCmd_AddToLog = 'AddToLog';
   CPitstopCmd_RunCategory = 'RunCategory';
+  CPitstopCmd_RunTest = 'RunTest';
   CPitstopCmd_SetTestVars = 'SetTestVars';
   CPitstopCmd_PauseTests = 'PauseTests';
   CPitstopCmd_ContinueTests = 'ContinueTests';
@@ -47,6 +48,8 @@ const
 
   CPitstopCmd_Param_Auth = 'Auth';
   CPitstopCmd_Param_StoppingNow = 'StoppingNow';
+  CPitstopCmd_Param_Category = 'Category';
+  CPitstopCmd_Param_Test = 'Test';
 
   CFirstSeparator = '(::)';
   CSecondSeparator = '(:.:)';
