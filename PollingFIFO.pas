@@ -86,9 +86,21 @@ var
   RawCount: Integer;
   FoundLock: Boolean;
   tk: UInt64;
+  AppCaption, AppProcMsgErr, TimeoutErr: string;
 begin
   tk := GetTickCount64;
 
+  try
+    if Application <> nil then //this may still be a race condition     - This check depends on user code to set Application to nil, right before exiting.
+      AppCaption := Application.MainForm.Caption
+    else
+      AppCaption := 'Unknown app.';
+  except
+    on E: Exception do
+     AppCaption := 'Unknown app ex: ' + E.Message;
+  end;
+
+  AppProcMsgErr := '';
   {$IFnDEF UNIX}
     repeat
       FoundLock := False;
@@ -96,10 +108,26 @@ begin
       if RawCount > 0 then
         FoundLock := True;
 
-      Application.ProcessMessages;
+      try
+        if Application <> nil then //this may still be a race condition   - This check depends on user code to set Application to nil, right before exiting.
+          Application.ProcessMessages;
+      except
+        on E: Exception do
+         AppProcMsgErr := E.Message;
+      end;
+
       Sleep(2);
     until not FoundLock or (GetTickCount64 - tk > 5000);
   {$ENDIF}
+
+  if GetTickCount64 - tk > 5000 then
+  begin
+    TimeoutErr := 'Error: A polling FIFO is still in use.';
+    if AppProcMsgErr <> '' then
+      TimeoutErr := TimeoutErr + #13#10 + AppProcMsgErr;
+
+    MessageBox(0, PChar(TimeoutErr), PChar(AppCaption), MB_ICONERROR);
+  end;
 
   {$IFDEF FPC}   
     DoneCriticalSection(FCritSec);
