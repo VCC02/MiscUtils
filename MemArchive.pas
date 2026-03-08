@@ -56,8 +56,11 @@ uses
 //------------------------------------------
 
 
+const
+  CHashSize = 32;
+
 type
-  TArr32OfByte = array[0..31] of Byte;
+  TArr32OfByte = array[0..CHashSize - 1] of Byte;   //has to match CHashSize
   TOnEncryptArchive = procedure(AArchiveStream: TMemoryStream) of object;
   TOnDecryptArchive = procedure(AArchiveStream: TMemoryStream) of object;
   TOnGetKeyFromPassword = procedure(APassword: string; var ArcKey: TArr32OfByte) of object;
@@ -67,11 +70,6 @@ type
   TOnDecompress = function(AArchiveStream, APlainStream: TMemoryStream): Boolean of object;                    //decompresses AArchiveStream, results APlainStream
   TOnEncryptionCleanup = procedure of object;
 
-  {$IFnDEF FPC}
-    {$IFDEF VER180}
-      QWord = Int64;
-    {$ENDIF}
-  {$ENDIF}
 
   TMemArchive = class(TObject)
   private
@@ -156,7 +154,6 @@ uses
 
 const
   CPaddingSize = 4;
-  CHashSize = 32;
   CPaddingAndHashSize = CPaddingSize + CHashSize;
   CReservedFieldsSize = 64;
   CTotalFileSize = 8; //may not be updated for now
@@ -411,9 +408,9 @@ begin
   FArchiveStream.Position := CPaddingSize; //point to hash
   FArchiveStream.Read(ExpectedHash[0], CHashSize);
 
-  DoOnComputeArchiveHash(Pointer(QWord(FArchiveStream.Memory) + CPaddingAndHashSize), FArchiveStream.Size - CPaddingAndHashSize, CurrentHash, 'CheckHashOfDecryptedArchive');
+  DoOnComputeArchiveHash(Pointer(UInt64(FArchiveStream.Memory) + CPaddingAndHashSize), FArchiveStream.Size - CPaddingAndHashSize, CurrentHash, 'CheckHashOfDecryptedArchive');
 
-  for i := 0 to 32 - 1 do
+  for i := 0 to CHashSize - 1 do
     if CurrentHash[i] <> ExpectedHash[i] then
       raise Exception.Create('Archive is invalid. Hash mismatch. ' + ArrOfByteToHex(CurrentHash) + '   ' + ArrOfByteToHex(ExpectedHash));
 end;
@@ -425,7 +422,7 @@ var
 begin
   FArchiveStream.Position := CPaddingAndHashSize;
 
-  DoOnComputeArchiveHash(Pointer(QWord(FArchiveStream.Memory) + CPaddingAndHashSize), FArchiveStream.Size - CPaddingAndHashSize, CurrentHash, 'SetHashOfDecryptedArchive');
+  DoOnComputeArchiveHash(Pointer(UInt64(FArchiveStream.Memory) + CPaddingAndHashSize), FArchiveStream.Size - CPaddingAndHashSize, CurrentHash, 'SetHashOfDecryptedArchive');
 
   FArchiveStream.Position := CPaddingSize; //point to hash
   FArchiveStream.Write(CurrentHash[0], CHashSize);
