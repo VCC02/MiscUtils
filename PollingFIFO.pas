@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2026 VCC
     creation date: Jul 2022
     initial release date: 26 Jul 2022
 
@@ -91,7 +91,7 @@ begin
   tk := GetTickCount64;
 
   try
-    if Application <> nil then //this may still be a race condition     - This check depends on user code to set Application to nil, right before exiting.
+    if (Application <> nil) and not Application.Terminated then //this may still be a race condition.
       AppCaption := Application.MainForm.Caption
     else
       AppCaption := 'Unknown app.';
@@ -109,7 +109,7 @@ begin
         FoundLock := True;
 
       try
-        if Application <> nil then //this may still be a race condition   - This check depends on user code to set Application to nil, right before exiting.
+        if (Application <> nil) and not Application.Terminated then //this may still be a race condition.
           Application.ProcessMessages;
       except
         on E: Exception do
