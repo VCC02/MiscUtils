@@ -68,7 +68,8 @@ uses
 
 
 function ConnectToCOM(AComName: string; ABaudRate: Cardinal; ARxBufSize, ATxBufSize: Integer): Cardinal;  //Returns a handle, greater than 0 for success. Returns 0, in case of error.
-procedure DisconnectFromCOM(AComName: string);
+procedure DisconnectFromCOM(AComName: string); overload;
+procedure DisconnectFromCOM(AConnHandle: THandle); overload;
 procedure ListExistentCOMPorts(AList: TStrings; AIncludeNonExistent: Boolean = False);
 
 function COMIsConnected(AComName: string): Boolean; overload;
@@ -369,6 +370,16 @@ var
   Idx: Integer;
 begin
   Idx := GetCOMIndexByName(AComName);
+  if Idx > -1 then
+    DisconnectFromCOMByIndex(Idx);
+end;
+
+
+procedure DisconnectFromCOM(AConnHandle: THandle);
+var
+  Idx: Integer;
+begin
+  Idx := GetCOMIndexByHandle(AConnHandle);
   if Idx > -1 then
     DisconnectFromCOMByIndex(Idx);
 end;
