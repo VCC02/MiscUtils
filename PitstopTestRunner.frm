@@ -1,10 +1,10 @@
 object frmPitstopTestRunner: TfrmPitstopTestRunner
   Left = 373
-  Height = 460
+  Height = 470
   Top = 185
   Width = 438
   Caption = 'Pitstop Test Runner'
-  ClientHeight = 460
+  ClientHeight = 470
   ClientWidth = 438
   Constraints.MinHeight = 460
   Constraints.MinWidth = 438
@@ -14,7 +14,7 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
   OnDestroy = FormDestroy
   object vstTests: TVirtualStringTree
     Left = 0
-    Height = 203
+    Height = 200
     Top = 48
     Width = 438
     Anchors = [akTop, akLeft, akRight, akBottom]
@@ -776,7 +776,7 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
   object memTestResult: TMemo
     Left = 0
     Height = 80
-    Top = 253
+    Top = 252
     Width = 438
     Anchors = [akLeft, akRight, akBottom]
     ReadOnly = True
@@ -892,6 +892,17 @@ object frmPitstopTestRunner: TfrmPitstopTestRunner
     ShowHint = True
     ParentShowHint = False
     OnClick = spdbtnSettingsClick
+  end
+  object prbTimeout: TProgressBar
+    Left = 0
+    Height = 10
+    Top = 458
+    Width = 438
+    Anchors = [akLeft, akRight, akBottom]
+    ParentShowHint = False
+    ShowHint = True
+    Smooth = True
+    TabOrder = 4
   end
   object tmrStartup: TTimer
     Enabled = False

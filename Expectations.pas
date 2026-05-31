@@ -52,6 +52,8 @@ type
   TDWordCallbackFunc = function: DWord;
   TBooleanCallbackFunc = function: Boolean;
 
+  TExpectationTimeoutCallbackProc = procedure(AElapsedTime: Integer);
+
   TExpectDataType = (edtString, edtInteger, edtDWord, edtBoolean); //couldn't use TTypeKind, because Integer and DWord resolve to the same type
 
   EExp = class(Exception)
@@ -106,6 +108,7 @@ type
   TLoopedExpect = class
   private
     FTimeout: Integer;
+    FElapsed: Integer;
 
     FActualValue: PString;
     FActualValueDWord: PDWord;
@@ -116,6 +119,8 @@ type
     FActualValueIntegerCallbackFunc: TIntegerCallbackFunc;
     FActualValueDWordCallbackFunc: TDWordCallbackFunc;
     FActualValueBooleanCallbackFunc: TBooleanCallbackFunc;
+
+    FETCProc: TExpectationTimeoutCallbackProc;
 
     procedure UntypedValidator(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
     procedure UntypedValidatorDifferent(ExpectedValue: Pointer; AExpectDataType: TExpectDataType; ExtraMessage: string = '');
@@ -157,6 +162,13 @@ function LoopedExpect(ActualValue: TStringCallbackFunc; Timeout: Integer = 1000)
 function LoopedExpect(ActualValue: TIntegerCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
 function LoopedExpect(ActualValue: TBooleanCallbackFunc; Timeout: Integer = 1000): TLoopedExpect; overload;
 
+function LoopedExpectWithFB(ActualValue: PString; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect; overload;
+function LoopedExpectWithFB(ActualValue: PInteger; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect; overload;
+function LoopedExpectWithFB(ActualValue: PDWord; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect; overload;
+function LoopedExpectWithFB(ActualValue: PBoolean; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect; overload;
+function LoopedExpectWithFB(ActualValue: TStringCallbackFunc; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect; overload;
+function LoopedExpectWithFB(ActualValue: TIntegerCallbackFunc; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect; overload;
+function LoopedExpectWithFB(ActualValue: TBooleanCallbackFunc; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect; overload;
 
 implementation
 
@@ -573,6 +585,8 @@ constructor TLoopedExpect.Create;
 begin
   inherited Create;
   FTimeout := 1000;
+  FElapsed := 0;
+  FETCProc := nil;
 
   FActualValue := nil;
   FActualValueInt := nil;
@@ -706,8 +720,15 @@ begin
         UntypedValidator(ExpectedValue, AExpectDataType, ExtraMessage);
         Break;
       except
-        if GetTickCount64 - tk > FTimeout then
+        FElapsed := GetTickCount64 - tk;
+        if FElapsed > FTimeout then
           raise;
+      end;
+
+      try
+        if Assigned(FETCProc) then
+          FETCProc(FElapsed);
+      except
       end;
 
       Application.ProcessMessages;
@@ -728,7 +749,14 @@ begin
     repeat
       Application.ProcessMessages;
       Sleep(1);
-    until GetTickCount64 - tk > FTimeout;
+      FElapsed := GetTickCount64 - tk;
+
+      try
+        if Assigned(FETCProc) then
+          FETCProc(FElapsed);
+      except
+      end;
+    until FElapsed > FTimeout;
 
     UntypedValidatorDifferent(ExpectedValue, AExpectDataType, ExtraMessage);
   finally
@@ -923,6 +951,55 @@ begin
   Result.FTimeout := Timeout;
 
   Result.FActualValueBooleanCallbackFunc := ActualValue;
+end;
+
+
+function LoopedExpectWithFB(ActualValue: PString; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect; overload;
+begin
+  Result := LoopedExpect(ActualValue, Timeout);
+  Result.FETCProc := AETCProc;
+end;
+
+
+function LoopedExpectWithFB(ActualValue: PInteger; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect;
+begin
+  Result := LoopedExpect(PInteger(ActualValue), Timeout);
+  Result.FETCProc := AETCProc;
+end;
+
+
+function LoopedExpectWithFB(ActualValue: PDWord; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect;
+begin
+  Result := LoopedExpect(PDWord(ActualValue), Timeout);
+  Result.FETCProc := AETCProc;
+end;
+
+
+function LoopedExpectWithFB(ActualValue: PBoolean; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect;
+begin
+  Result := LoopedExpect(ActualValue, Timeout);
+  Result.FETCProc := AETCProc;
+end;
+
+
+function LoopedExpectWithFB(ActualValue: TStringCallbackFunc; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect;
+begin
+  Result := LoopedExpect(ActualValue, Timeout);
+  Result.FETCProc := AETCProc;
+end;
+
+
+function LoopedExpectWithFB(ActualValue: TIntegerCallbackFunc; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect;
+begin
+  Result := LoopedExpect(ActualValue, Timeout);
+  Result.FETCProc := AETCProc;
+end;
+
+
+function LoopedExpectWithFB(ActualValue: TBooleanCallbackFunc; Timeout: Integer = 1000; AETCProc: TExpectationTimeoutCallbackProc = nil): TLoopedExpect;
+begin
+  Result := LoopedExpect(ActualValue, Timeout);
+  Result.FETCProc := AETCProc;
 end;
 
 end.

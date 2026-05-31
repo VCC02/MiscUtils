@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2025 VCC
+    Copyright (C) 2026 VCC
     creation date: 30 Jan 2025
     initial release date: 30 Jan 2025
 
@@ -69,6 +69,7 @@ type
     pmRun: TPopupMenu;
     pmSettings: TPopupMenu;
     prbTestProgress: TProgressBar;
+    prbTimeout: TProgressBar;
     spdbtnExtraRunSelectedTest: TSpeedButton;
     spdbtnRunAllSelectedTests: TSpeedButton;
     spdbtnSettings: TSpeedButton;
@@ -125,6 +126,7 @@ type
     procedure SaveSettingsToIni;
     procedure DisplayTestResultFromSelectedTest;
     procedure CopySelectedTestNamesToClipboard;
+    procedure UpdateTimeoutProgressBarHint;
 
     procedure InitStatusOnAllTests;
     function RunTest(ANode: PVirtualNode): Boolean;
@@ -150,6 +152,9 @@ type
     procedure PauseTests;
     procedure ContinueTests;
     procedure StopTests(AStopNow: Boolean = True);
+
+    procedure SetTimeoutProgressBarMax(AMaxValue: Integer);      //set this in test, to the timeout value passed to LoopedExpectWithFB
+    procedure SetTimeoutProgressBarPosition(APosition: Integer); //set this in the TExpectationTimeoutCallbackProc callback, to the AElapsedTime argument
   end;
 
 
@@ -1344,6 +1349,26 @@ begin
   spdbtnStop.Enabled := False;
   spdbtnPause.Enabled := False;
   AddToLog('Stopping... ' + BoolToStr(FStoppingNow, 'Now', 'Later'));
+end;
+
+
+procedure TfrmPitstopTestRunner.UpdateTimeoutProgressBarHint;
+begin
+  prbTimeout.Hint := IntToStr(prbTimeout.Position) + ' / ' + IntToStr(prbTimeout.Max);
+end;
+
+
+procedure TfrmPitstopTestRunner.SetTimeoutProgressBarMax(AMaxValue: Integer);
+begin
+  prbTimeout.Max := AMaxValue;
+  UpdateTimeoutProgressBarHint;
+end;
+
+
+procedure TfrmPitstopTestRunner.SetTimeoutProgressBarPosition(APosition: Integer);
+begin
+  prbTimeout.Position := APosition;
+  UpdateTimeoutProgressBarHint;
 end;
 
 end.
