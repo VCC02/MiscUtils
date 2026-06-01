@@ -168,6 +168,8 @@ var
 - [nice to have] - report test results (xml or ini)
 }
 
+procedure UpdateWaitingProgress(AElapsedTime: Integer);
+
 implementation
 
 {$R *.frm}
@@ -1369,6 +1371,12 @@ procedure TfrmPitstopTestRunner.SetTimeoutProgressBarPosition(APosition: Integer
 begin
   prbTimeout.Position := APosition;
   UpdateTimeoutProgressBarHint;
+end;
+
+
+procedure UpdateWaitingProgress(AElapsedTime: Integer);
+begin
+  frmPitstopTestRunner.SetTimeoutProgressBarPosition(AElapsedTime);
 end;
 
 end.
