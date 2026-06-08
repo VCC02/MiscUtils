@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 18 May 2024
     initial release date: 19 May 2024
 
@@ -120,7 +120,8 @@ type
     procedure OpenArchive(AArchiveStream: TMemoryStream; CreateNewArchive: Boolean);
     function CloseArchive: string;
 
-    procedure AddFromStream(AFileName: string; AContent: TMemoryStream; UseBuffer: Boolean = True);
+    procedure AddFromStream(AFileName: string; AContent: TMemoryStream; UseBuffer: Boolean = True); overload;
+    procedure AddFromStream(AFileName: string; AContent: TMemoryStream; AContentCustomSize: Int64; UseBuffer: Boolean = True); overload; //use -1 for AContentCustomSize, to leave stream position as it is
     procedure AddFromString(AFileName: string; AContent: string);
     procedure ExtractToStream(AFileName: string; AContent: TMemoryStream);
     procedure ExtractToString(AFileName: string; var AContent: string);
@@ -563,7 +564,7 @@ begin
 end;
 
 
-procedure TMemArchive.AddFromStream(AFileName: string; AContent: TMemoryStream; UseBuffer: Boolean = True);
+procedure TMemArchive.AddFromStream(AFileName: string; AContent: TMemoryStream; AContentCustomSize: Int64; UseBuffer: Boolean = True);
 var
   FnmLen: LongInt;
   StreamSize, FilePosition: Int64;
@@ -585,13 +586,31 @@ begin
   FPlainStream.Write(FnmLen, 4);                       //string length
   FPlainStream.Write(AFileName[1], Length(AFileName)); //filename itself
 
-  AContent.Position := 0;
+  if AContent.Position < 0 then
+    AContent.Position := 0;
+
+  if AContentCustomSize = -1 then
+    AContent.Position := 0
+  else  //leave position as it is, but set the size to user-provided value
+  begin
+    if AContentCustomSize > AContent.Size then
+      AContentCustomSize := AContent.Size;
+
+    StreamSize := Max(0, AContentCustomSize - AContent.Position);
+  end;
+
   FPlainStream.Write(StreamSize, {SizeOf(StreamSize)} 8);
 
   if StreamSize > 0 then
-    FPlainStream.CopyFrom(AContent, StreamSize);
+    FPlainStream.CopyFrom(AContent, StreamSize);  //FPlainStream will grow in size after this
 
   CheckMaxValues;  //The valid filecount is obtained after adding the file. That's why this check is placed at the end of AddFromStream procedure.
+end;
+
+
+procedure TMemArchive.AddFromStream(AFileName: string; AContent: TMemoryStream; UseBuffer: Boolean = True);
+begin
+  AddFromStream(AFileName, AContent, -1, UseBuffer);
 end;
 
 
