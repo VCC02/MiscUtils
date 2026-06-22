@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="12"/>
+    <BuildModes Active="Default"/>
+    <Units>
+      <Unit>
+        <Filename Value="Second.ppr"/>
+        <FRMtype Value="0"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="41"/>
+        <CursorPos X="31" Y="53"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit>
+    </Units>
+    <JumpHistory HistoryIndex="3">
+      <Position>
+        <Filename Value="Second.ppr"/>
+        <Caret Line="26" Column="24" TopLine="17"/>
+      </Position>
+      <Position>
+        <Filename Value="Second.ppr"/>
+        <Caret Line="22" Column="35" TopLine="7"/>
+      </Position>
+      <Position>
+        <Filename Value="Second.ppr"/>
+        <Caret Line="55" Column="28" TopLine="40"/>
+      </Position>
+      <Position>
+        <Filename Value="Second.ppr"/>
+        <Caret Line="66" Column="22" TopLine="39"/>
+      </Position>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>

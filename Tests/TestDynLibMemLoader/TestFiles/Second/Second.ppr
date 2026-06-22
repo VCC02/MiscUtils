@@ -1,0 +1,93 @@
+{
+    Copyright (C) 2026 VCC
+    creation date: 19 Jun 2026
+    initial release date: 22 Jun 2026
+
+    author: VCC
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}
+
+
+library Second;
+
+{$mode objfpc}{$H+}
+
+uses
+  SysUtils, Classes;
+
+var
+  FGlobalVarA: Integer;
+  FGlobalVarB: Integer;
+
+
+procedure SetTwoGlobalVarsStdcall(AIntA, AIntB: Integer); stdcall;
+begin
+  FGlobalVarA := AIntA;
+  FGlobalVarB := AIntB;
+end;
+
+
+procedure SetTwoGlobalVarsCdecl(AIntA, AIntB: Integer); cdecl;
+begin
+  FGlobalVarA := AIntA;
+  FGlobalVarB := AIntB;
+end;
+
+
+function GetAGlobalVarFromTwo(AIndex: Byte): Integer; stdcall;
+begin
+  case AIndex of
+    0: Result := FGlobalVarA;
+    1: Result := FGlobalVarB;
+    else
+      Result := -1;
+  end;
+end;
+
+
+procedure HandleAnotherException(ADummyValue: Integer); cdecl;
+var
+  TempStream: TMemoryStream;
+begin
+  try
+    TempStream := TMemoryStream.Create;
+    try
+      try
+        TempStream.SetSize(3);
+      finally
+        TempStream.LoadFromFile('*\*');   //AV here
+      end;
+    finally
+      TempStream.Free;
+    end;
+  except
+    FGlobalVarA := -1;
+    FGlobalVarB := -2;
+  end;
+end;
+
+
+exports
+  SetTwoGlobalVarsStdcall,
+  SetTwoGlobalVarsCdecl,
+  GetAGlobalVarFromTwo,
+  HandleAnotherException;
+
+begin
+  FGlobalVarA := 1234567898;
+  FGlobalVarB := 1234567897;
+end.
