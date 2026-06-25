@@ -109,6 +109,7 @@ type
     function GetProcAddress(AFuncName: PChar; ARaiseExceptionIfNotFound: Boolean = False): Pointer; overload;
     function GetProcAddress(AFuncName: string; ARaiseExceptionIfNotFound: Boolean = False): Pointer; overload;
     procedure ListExportedFunctions(var AFunctions: TExportedFunctionArr);
+    procedure HandleTLS(AReason: DWord); //Can be called with DLL_THREAD_ATTACH and DLL_THREAD_DETACH when the app using this library, creates a new thread / destroys it.
     procedure FreeLibrary;
 
     property SuccessfullyInitialized: Boolean read FSuccessfullyInitialized;
@@ -161,6 +162,8 @@ type
       FirstThunk: DWord;
     end;
     PIMAGE_IMPORT_DESCRIPTOR = ^IMAGE_IMPORT_DESCRIPTOR;
+
+    //ToDo: IMAGE_TLS_DIRECTORY for Delphi
   {$ENDIF}
 
   {$IFDEF CPUX64} //Delphi only
@@ -241,7 +244,7 @@ procedure TDynLibMemLoader.SetTableSections(ALibraryContent: Pointer; AExistingH
 var
   TempSection: PIMAGESECTIONHEADER;
   i, n: Integer;
-  TempSectionAlignment: DWord; //This is SectionAlignment field in IMAGE_OPTIONAL_HEADER structure
+  CommitSize: DWord;
   SrcPointer, DestPointer, VAPointer: Pointer;
 begin
   TempSection := GetFirstSection(FImageNtHeaders);
@@ -254,13 +257,17 @@ begin
 
     if TempSection^.SizeOfRawData = 0 then
     begin
-      TempSectionAlignment := AExistingHeaders.OptionalHeader.SectionAlignment;
-      if TempSectionAlignment > 0 then
+      CommitSize := AExistingHeaders.OptionalHeader.SectionAlignment;
+      if CommitSize > 0 then
       begin
-        DestPointer := VirtualAlloc(VAPointer, PtrUInt(TempSectionAlignment), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        if CommitSize < TempSection^.Misc.VirtualSize then
+          CommitSize := TempSection^.Misc.VirtualSize;
+
+        DestPointer := VirtualAlloc(VAPointer, PtrUInt(CommitSize), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
         FLibSections[i].Address := DestPointer;
-        FLibSections[i].Size := TempSectionAlignment;
+        FLibSections[i].Size := CommitSize;
         TempSection^.Misc.PhysicalAddress := UInt64(DestPointer);
+        ZeroMemory(DestPointer, CommitSize);
       end;
     end
     else
@@ -347,6 +354,68 @@ begin
 end;
 
 
+function GetExportRange(ADllHandle: HINST; out AExportVirtualAddress, AExportSize: UInt64): Boolean;
+var
+  DosHeader: IMAGE_DOS_HEADER;
+  TempImageNtHeaders: PImageNtHeaders;
+  ImageDataDir: PImageDataDirectory;
+begin
+  Result := False;
+  AExportVirtualAddress := 0;
+  AExportSize := 0;
+
+  if ADllHandle = 0 then
+    Exit;
+
+  Move(Pointer(ADllHandle)^, DosHeader, SizeOf(IMAGE_DOS_HEADER));
+  if DosHeader.e_magic <> IMAGE_DOS_SIGNATURE then
+    Exit;
+
+  TempImageNtHeaders := PImageNtHeaders(UInt64(ADllHandle) + DosHeader._lfanew);
+  if TempImageNtHeaders^.Signature <> IMAGE_NT_SIGNATURE then
+    Exit;
+
+  ImageDataDir := @TempImageNtHeaders^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT]; //EXPORT this time
+  if ImageDataDir^.Size = 0 then
+    Exit;
+
+  AExportVirtualAddress := UInt64(ADllHandle) + ImageDataDir^.VirtualAddress;
+  AExportSize := ImageDataDir^.Size;
+  Result := True;
+end;
+
+
+function GetForwarderProcAddress(AFwd: string): Pointer;
+var
+  DotPs: Integer;
+  FwdDll, FwdFunc: string;
+  DllHandle: HINST;
+  FuncOrdinal: Int64;
+begin
+  Result := nil;
+  DotPs := Pos('.', AFwd);
+  if DotPs = 0 then
+    raise Exception.Create('Forwarder export string doesn''t have the expected format: ' + AFwd);
+
+  FwdDll := Copy(AFwd, 1, DotPs);
+  FwdFunc := Copy(AFwd, DotPs + 1, MaxInt);
+
+  DllHandle := Windows.LoadLibrary(PChar(FwdDll));
+  if DllHandle = 0 then
+    raise Exception.Create('Unable to load forwarder dll: ' + FwdDll);
+
+  if (FwdFunc <> '') and (FwdFunc[1] = '#') then
+  begin   //"#<ordinal>" format
+    Delete(FwdFunc, 1, 1);
+    FuncOrdinal := StrToInt64Def(FwdFunc, -1);
+    if FuncOrdinal > -1 then
+      Result := Windows.GetProcAddress(DllHandle, PAnsiChar(FuncOrdinal and $0000FFFF));
+  end
+  else    //"<name>" format
+    Result := Windows.GetProcAddress(DllHandle, PAnsiChar(FwdFunc));
+end;
+
+
 procedure TDynLibMemLoader.LoadImportedLibraries;
 const
   COrdinalMask: UInt64 = $0000FFFF;
@@ -359,11 +428,14 @@ var
   Temp64: UInt64;
   ThunkRef, IATAddress: PPtrUInt;
   FuncNamePtr: Pointer;
-  FuncNameStr: AnsiString;
+  FuncNameStr, ImportedLibNameStr: AnsiString;
   ThunkData: IMAGE_IMPORT_BY_NAME;
   TempImportedLibsAddress: Pointer;
   MaxImportRVA, ThunkRVA, ThunkValue: UInt64;
   Is64Bit: Boolean;
+  ExportVirtualAddress, ExportSize: UInt64;
+  IsValidExportRange: Boolean;
+  DepAddress: Pointer;
 begin
   ImageDataDir := @FImageNtHeaders^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
 
@@ -383,12 +455,23 @@ begin
       Break;
 
     ImportedLibNameAddress := Pointer(FBaseCodeAddress + UInt64(ImportDescriptor^.Name));
-    ConvertPAnsiCharToPChar(ImportedLibNameAddress, ImportedLibName);
-    ImportedLibHandle := Windows.LoadLibrary(@ImportedLibName[0]);
-    //ImportedLibHandle := Windows.LoadLibrary(PAnsiChar(ImportedLibNameAddress));  //a simple call, if the library name is not unicode
+
+    try
+      ConvertPAnsiCharToPChar(ImportedLibNameAddress, ImportedLibName);
+      ImportedLibNameStr := AnsiString(PAnsiChar(ImportedLibNameAddress)); //AnsiString(ImportedLibName);
+    except
+      raise Exception.Create('Cannot convert library name: ' + ImportedLibNameStr);
+    end;
+
+    try
+      ImportedLibHandle := Windows.LoadLibrary(@ImportedLibName[0]);   //External AV when ImportedLibName is 'cmdlg32.dll', imported by a custom dll, only after loading Kernel32.dll, for using 'Sleep'. This happens if the custom dll uses the Application variable in an exported function. (The exported function initializes the global Application variable and creates a form, and this export is not even called by the loader app).
+      //ImportedLibHandle := Windows.LoadLibrary(PAnsiChar(ImportedLibNameAddress));  //a simple call, if the library name is not unicode
+    except
+      ImportedLibHandle := 0;
+    end;
 
     if ImportedLibHandle = 0 then
-      raise Exception.Create('Cannot load library or library not found: ' + string(ImportedLibName));
+      raise Exception.Create('Cannot load library or library not found: ' + ImportedLibNameStr);
 
     if ImportDescriptor^.OriginalFirstThunk <> 0 then
       ThunkRef := Pointer(FBaseCodeAddress + UInt64(ImportDescriptor^.OriginalFirstThunk))
@@ -412,19 +495,38 @@ begin
       if ThunkValue = 0 then
         Break;
 
+      IsValidExportRange := GetExportRange(ImportedLibHandle, ExportVirtualAddress, ExportSize);
+
       if    (Is64Bit and (ThunkValue and IMAGE_ORDINAL_FLAG64 <> 0)) or
         (not Is64Bit and (ThunkValue and IMAGE_ORDINAL_FLAG32 <> 0)) then
-        IATAddress^ := UInt64(Windows.GetProcAddress(ImportedLibHandle, PAnsiChar(ThunkValue and COrdinalMask)))
+      begin
+        //IATAddress^ := UInt64(Windows.GetProcAddress(ImportedLibHandle, PAnsiChar(ThunkValue and COrdinalMask))) //old code, which does not use forwarders
+        DepAddress := Pointer(Windows.GetProcAddress(ImportedLibHandle, PAnsiChar(ThunkValue and COrdinalMask)))
+      end
       else
       begin
         FuncNamePtr := Pointer(FBaseCodeAddress + ThunkValue);
         Move(FuncNamePtr^, ThunkData, SizeOf(IMAGE_IMPORT_BY_NAME));
         FuncNameStr := AnsiString(PAnsiChar(@ThunkData.Name));
-        IATAddress^ := UInt64(Windows.GetProcAddress(ImportedLibHandle, PAnsiChar(FuncNameStr)));
+        //IATAddress^ := UInt64(Windows.GetProcAddress(ImportedLibHandle, PAnsiChar(FuncNameStr)));  //old code, which does not use forwarders
+        DepAddress := Pointer(Windows.GetProcAddress(ImportedLibHandle, PAnsiChar(FuncNameStr)));
       end;
 
-      if IATAddress^ = 0 then
+      //if IATAddress^ = 0 then
+      if DepAddress = nil then
         raise Exception.Create('GetProcAddress cannot get address while creating import table, at ModuleIndex ' + IntToStr(FImportedLibsCount) + ' and function ' + string(@ThunkData.Name) + '.');
+
+      if IsValidExportRange then
+      begin
+        if (UInt64(DepAddress) >= ExportVirtualAddress) and (UInt64(DepAddress) < ExportVirtualAddress + ExportSize) then // in range
+        begin
+          //ToDo: requires more testing
+          //MessageBox(0, 'in range', '', 0);  //debug code
+          DepAddress := GetForwarderProcAddress(AnsiString(PAnsiChar(DepAddress)));    //ToDo: This call (and there is one more) loads the new libray, which has to be freed later.
+        end;            //Ideally, there should be a recursion on solving forwarders, but for now, one level should be fine.
+      end;
+
+      IATAddress^ := UInt64(DepAddress);
 
       Inc(IATAddress);
       Inc(ThunkRef);
@@ -622,6 +724,8 @@ begin
     end;
 
     ProtectTableSections;
+    HandleTLS(DLL_PROCESS_ATTACH);
+
     if FImageNtHeaders^.OptionalHeader.AddressOfEntryPoint > 0 then
     begin
       if AAttachLibraryOnLoad then
@@ -700,11 +804,13 @@ begin
 end;
 
 
+
 function TDynLibMemLoader.GetProcAddress(AFuncName: PChar; ARaiseExceptionIfNotFound: Boolean = False): Pointer;
 var
   ProcIndex: Integer;
   ImageDataDir: PImageDataDirectory;
   ExportsDir: PIMAGE_EXPORT_DIRECTORY;
+  CurrentAddress, ExportVirtualAddress, ExportSize: UInt64;
 begin
   Result := nil;
   if AFuncName = nil then
@@ -726,7 +832,19 @@ begin
 
   ProcIndex := FindProcIndexByName(AFuncName);
   if ProcIndex > -1 then
-    Result := FExportedFunctions[ProcIndex].Address;
+  begin
+    CurrentAddress := UInt64(FExportedFunctions[ProcIndex].Address);
+    ExportVirtualAddress := UInt64(ExportsDir);
+    ExportSize := ImageDataDir^.Size;
+
+    if (CurrentAddress >= ExportVirtualAddress) and (CurrentAddress < ExportVirtualAddress + ExportSize) then
+      Result := GetForwarderProcAddress(AnsiString(PAnsiChar(CurrentAddress)))
+    else
+      Result := FExportedFunctions[ProcIndex].Address;
+
+    //No forwarders handling:
+    //Result := FExportedFunctions[ProcIndex].Address;
+  end;
 end;
 
 
@@ -737,6 +855,51 @@ begin
     Exit;
 
   Result := GetProcAddress(PChar(@AFuncName[1]), ARaiseExceptionIfNotFound);
+end;
+
+
+procedure TDynLibMemLoader.HandleTLS(AReason: DWord);
+var
+  TLSDirEntry: PImageDataDirectory;
+  TLSVirtualAddress: UInt64;
+  CallbacksVirtualAddress: UInt64;
+  Is64bit: Boolean;
+  TLSDir64: PIMAGE_TLS_DIRECTORY64;
+  TLSDir32: PIMAGE_TLS_DIRECTORY32;
+  i: Integer;
+  CallbackProc: TLibEntryProc;
+begin
+  TLSDirEntry := @FImageNtHeaders^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
+  if (TLSDirEntry^.Size = 0) or (TLSDirEntry^.VirtualAddress = 0) then
+    Exit; //no TLS
+
+  TLSVirtualAddress := FBaseCodeAddress + TLSDirEntry^.VirtualAddress;
+  Is64Bit := FImageNtHeaders^.OptionalHeader.Magic = $20B;
+
+  if Is64Bit then
+  begin
+    TLSDir64 := PIMAGE_TLS_DIRECTORY64(TLSVirtualAddress);
+    CallbacksVirtualAddress := TLSDir64^.AddressOfCallBacks;
+  end
+  else
+  begin
+    TLSDir32 := PIMAGE_TLS_DIRECTORY32(TLSVirtualAddress);
+    CallbacksVirtualAddress := TLSDir32^.AddressOfCallBacks;
+  end;
+
+  if CallbacksVirtualAddress = 0 then
+    Exit;
+
+  for i := 0 to 1023 do
+  begin
+    //ToDo: verify pointer arithmetic:  - if wrong, then change Pointer(FBaseCodeAddress ..) to UInt64(..)
+    //Eventually, replace this with ^array
+    CallbackProc := PPointer(Pointer(FBaseCodeAddress + CallbacksVirtualAddress) + i * SizeOf(Pointer))^;  //ToDo: verify if SizeOf(Pointer) or (Ord(Is64Bit) + 1) * 4
+    if not Assigned(CallbackProc) then
+      Break;
+
+    CallbackProc(FBaseCodeAddress, AReason, nil);
+  end;
 end;
 
 
@@ -762,6 +925,8 @@ begin
 
   if FImageNtHeaders^.OptionalHeader.AddressOfEntryPoint > 0 then  //not all libraries implement this entry point function
   begin
+    HandleTLS(DLL_PROCESS_DETACH);
+
     @LibEntryProc := Pointer(FBaseCodeAddress + UInt64(FImageNtHeaders^.OptionalHeader.AddressOfEntryPoint));
     if @LibEntryProc = nil then
       raise Exception.Create('Cannot get library entry point.');
