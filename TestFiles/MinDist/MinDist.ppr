@@ -1,0 +1,198 @@
+{
+    Copyright (C) 2026 VCC
+    creation date: 24 Jun 2026
+    initial release date: 25 Jun 2026
+
+    author: VCC
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+    OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+}
+
+
+
+library MinDist;
+
+{$H+}
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
+uses
+  Windows,
+  Interfaces, Classes, SysUtils, Graphics, ExtCtrls, Forms, Math,
+  //IdTCPClient,
+  DistFindSubControlDM, ImgList,
+  //TplZlibUnit, TplLzmaUnit, IntegerList,
+  ////IdGlobal,
+  //ClickerUtils, ClickerExtraUtils,
+  ClickerActionPlugins, DllUtils,
+  //ClickerFileProviderUtils, DynArrays, PollingFIFO, InMemFileSystem,
+  //DistFindSubControlCommonConsts, ClickerIniFiles, ClickerActionProperties,
+  //
+  //ClickerTemplates, MQTTClient, MQTTUtils, MQTTConnectCtrl, MQTTSubscribeCtrl,
+  //MQTTUnsubscribeCtrl, MemArchive,
+  DistFindSubControlPluginProperties,
+  //ClickerPluginInMemFileSystem, ClickerPrimitives,
+  ClickerActionPluginAccess,
+  //DistFindSubControlPropertyEditorForm, FontSorting
+  SimpleCOMUI
+  ;
+
+
+//var
+//  AddToLogCallback: TOnActionPlugin_AddToLog;
+//  ActionPlugin_InMemFSCallback: TOnActionPlugin_InMemFS;
+//  ActionPlugin_ExecuteActionCallback: TOnActionPlugin_ExecuteAction;
+//  ActionPlugin_AppProcMsgCallback: TOnActionPlugin_AppProcMsg;
+//  GPluginReference: Pointer;
+
+
+//procedure AddToLog(AMsg: string);  //thread safe
+//begin
+//  if @AddToLogCallback <> nil then
+//    AddToLogCallback(DefaultPluginReference, @AMsg[1]);
+//end;
+
+
+function GetAPIVersion: DWord; cdecl;
+begin
+  Result := 10;//CActionPlugin_APIVersion;
+end;
+
+
+procedure GetListOfProperties(APluginReference: Pointer;                 //UIClicker passes the plugin reference to the plugin, then the plugin calls some callbacks with that reference
+                              AListOfProperties: Pointer;
+                              AListOfPropertiesLen: PDWord;
+                              AOnActionPlugin_UpdatePropertyIcons: TOnActionPlugin_UpdatePropertyIcons); cdecl;
+var
+  Properties: string;
+begin
+  Properties := FillInPropertyDetails;  //Less than 10000 bytes, with the last property being "UpdateBackgroundInterval".
+  AListOfPropertiesLen^ := SetPointedContentFromString(Properties, AListOfProperties);
+
+  dmProperties := TdmProperties.Create(nil);
+  try
+    UpdatePropertyIcons(APluginReference, AOnActionPlugin_UpdatePropertyIcons, dmProperties.imglstProperties, CPropertiesCount);
+  finally
+    dmProperties.Free;
+  end;
+end;
+
+
+//function ExecutePlugin(APluginReference: Pointer;
+//                       AListOfPluginSettings: Pointer;
+//                       AListOfPluginSettingsLen: PDWord;
+//
+//                       AOnActionPlugin_GetActionCount: TOnActionPlugin_GetActionCount;
+//                       AOnActionPlugin_GetActionInfoByIndex: TOnActionPlugin_GetActionInfoByIndex;
+//                       AOnActionPlugin_GetActionContentByIndex: TOnActionPlugin_GetActionContentByIndex;
+//                       AOnActionPlugin_ExecuteAction: TOnActionPlugin_ExecuteAction;
+//                       AOnActionPlugin_GetAllTemplateVars: TOnActionPlugin_GetAllTemplateVars;
+//                       AOnActionPlugin_SetTemplateVar: TOnActionPlugin_SetTemplateVar;
+//                       AOnActionPlugin_DebugPoint: TOnActionPlugin_DebugPoint;
+//                       AOnActionPlugin_AddToLog: TOnActionPlugin_AddToLog;
+//                       AOnActionPlugin_SetResultImg: TOnActionPlugin_SetResultImg;
+//                       AOnActionPlugin_LoadBitmap: TOnActionPlugin_LoadBitmap;
+//                       AOnActionPlugin_GetAllowedFilesInfo: TOnActionPlugin_GetAllowedFilesInfo;
+//                       AOnActionPlugin_SetBitmap: TOnActionPlugin_SetBitmap;
+//                       AOnActionPlugin_Screenshot: TOnActionPlugin_Screenshot;
+//                       AOnActionPlugin_CheckStopAllActionsOnDemand: TOnActionPlugin_CheckStopAllActionsOnDemand;
+//                       AOnActionPlugin_InMemFS: TOnActionPlugin_InMemFS;
+//                       AOnActionPlugin_AppProcMsg: TOnActionPlugin_AppProcMsg
+//                       ): Boolean; cdecl;
+////var
+////  IdTCPClient1: TIdTCPClient;
+//begin
+//  Result := True;
+//
+//  //DefaultOnActionPlugin_DebugPoint := AOnActionPlugin_DebugPoint;
+//  //DefaultPluginReference := APluginReference;
+//  //AddToLogCallback := AOnActionPlugin_AddToLog;
+//  //ActionPlugin_InMemFSCallback := AOnActionPlugin_InMemFS;
+//  //ActionPlugin_ExecuteActionCallback := AOnActionPlugin_ExecuteAction;
+//  //ActionPlugin_AppProcMsgCallback := AOnActionPlugin_AppProcMsg;
+//  //GPluginReference := APluginReference;
+//  //
+//  //IdTCPClient1 := TIdTCPClient.Create;
+//  //try
+//  //
+//  //finally
+//  //  IdTCPClient1.Free;
+//  //end;
+//end;
+
+
+//function EditProperty(APluginReference: Pointer;
+//                      AOnActionPlugin_InMemFS: TOnActionPlugin_InMemFS;
+//                      AOnActionPlugin_AppProcMsg: TOnActionPlugin_AppProcMsg;
+//                      APropertyIndex: Integer;
+//                      ACurrentValue: Pointer;
+//                      ANewValue: Pointer;
+//                      ALenOfNewValue: PDWord): Boolean; cdecl;
+//var
+//  CurrentValue, NewValue: string;
+//  frmDistFindSubControlPropertyEditor: TfrmDistFindSubControlPropertyEditor;
+//begin
+//  //ActionPlugin_AppProcMsgCallback := AOnActionPlugin_AppProcMsg;
+//  //GPluginReference := APluginReference;
+//  //DefaultPluginReference := APluginReference;
+//  //
+//  ////VerbLevel := 2;
+//  //SetPointedContentToString(ACurrentValue, CurrentValue);
+//  //
+//  //NewValue := CurrentValue;
+//  //
+//  ////open editor here
+//  //Result := EditCustomFontProfilesProperty(APluginReference, AOnActionPlugin_InMemFS, APropertyIndex, CurrentValue, NewValue);
+//  //ALenOfNewValue^ := SetPointedContentFromString(NewValue, ANewValue);
+//
+//  //When using Application, the loader crashed on loading imports, even if this (EditProperty) is not called.
+//
+//  Application.Initialize;
+//  Application.CreateForm(TfrmDistFindSubControlPropertyEditor, frmDistFindSubControlPropertyEditor); //Probably it's ok with any form, only to link the Forms code.
+//  try
+//
+//  finally
+//    frmDistFindSubControlPropertyEditor.Free;
+//  end;
+//end;
+
+
+function BadExport: Boolean; cdecl;
+var
+  frSimpleCOMUI: TfrSimpleCOMUI;
+begin
+  Application.Initialize;
+  Application.CreateForm(TfrSimpleCOMUI, frSimpleCOMUI); //Probably it's ok with any form, only to link the Forms code.
+  try
+
+  finally
+    frSimpleCOMUI.Free;
+  end;
+end;
+
+
+exports
+  GetAPIVersion,
+  GetListOfProperties,
+  //ExecutePlugin,
+  //EditProperty;
+  BadExport;
+
+begin
+
+end.
+

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="12"/>
+    <BuildModes Active="Default"/>
+    <Units>
+      <Unit>
+        <Filename Value="MinDist.ppr"/>
+        <FRMtype Value="0"/>
+        <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="8"/>
+        <CursorPos X="35" Y="16"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClickerDistFindSubControlPlugin\DistFindSubControlDM.frm"/>
+        <FRMtype Value="0"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="22"/>
+        <DefaultSyntaxHighlighter Value="FRM"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClickerDistFindSubControlPlugin\DistFindSubControlDM.pas"/>
+        <FRMtype Value="200"/>
+        <IsPartOfProject Value="True"/>
+        <HasResources Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="22"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClicker\ClickerUtils\ClickerUtils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="22"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClicker\ClickerClient\DllUtils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="0"/>
+        <UsageCount Value="22"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\DynArrays.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="22"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\MQTTClient\Lib\MQTTClient.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="22"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClicker\ClickerPrimitiveUtils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
+        <TopLine Value="-1"/>
+        <CursorPos X="-1" Y="-1"/>
+        <UsageCount Value="22"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClicker\ClickerUtils\ClickerPrimitives.pas"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="5"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="25"/>
+        <CursorPos X="5" Y="30"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClicker\ClickerUtils\ClickerExtraUtils.pas"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="26"/>
+        <CursorPos X="27" Y="41"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClickerDistFindSubControlPlugin\DistFindSubControlPropertyEditorForm.pas"/>
+        <FRMtype Value="0"/>
+        <ComponentName Value="frmDistFindSubControlPropertyEditor"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="74"/>
+        <CursorPos X="46" Y="130"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\..\UIClicker\ClickerPreviewForm.pas"/>
+        <FRMtype Value="0"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="558"/>
+        <CursorPos X="44" Y="573"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\..\SimpleCOMUI.pas"/>
+        <FRMtype Value="200"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="frSimpleCOMUI"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="121"/>
+        <CursorPos X="17" Y="61"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit>
+    </Units>
+    <JumpHistory HistoryIndex="29">
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="7" Column="44"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="9" Column="50"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="17" Column="70"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="3" Column="20"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="14" Column="63"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="15" Column="60"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="24" Column="23"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="23" Column="47" TopLine="3"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="96" Column="33"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="14" Column="41"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="105" Column="20" TopLine="103"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="17" Column="62" TopLine="5"/>
+      </Position>
+      <Position>
+        <Filename Value="..\..\..\..\..\UIClicker\ClickerUtils\ClickerExtraUtils.pas"/>
+        <Caret Line="40" Column="40" TopLine="24"/>
+      </Position>
+      <Position>
+        <Filename Value="..\..\..\..\..\UIClicker\ClickerUtils\ClickerExtraUtils.pas"/>
+        <Caret Line="41" Column="29" TopLine="21"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="127" Column="35" TopLine="113"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="8" Column="11"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="31" Column="58" TopLine="11"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="127" Column="45" TopLine="116"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="136" Column="28" TopLine="126"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="145" Column="16" TopLine="140"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="31" Column="34" TopLine="12"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="38" Column="26" TopLine="21"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="62" Column="30" TopLine="44"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="147" Column="45" TopLine="136"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="152" Column="22" TopLine="139"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="44" Column="50" TopLine="25"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="15" Column="34"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="55" Column="35" TopLine="40"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="13" Column="27"/>
+      </Position>
+      <Position>
+        <Filename Value="MinDist.ppr"/>
+        <Caret Line="22" Column="40"/>
+      </Position>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>
