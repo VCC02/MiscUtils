@@ -76,8 +76,12 @@ type
     procedure LoadUnload_SingleDll_VerifyExceptionHandlingInsideSameDllTwice;
     procedure SeparateLoadingAndUnloading_TwoDlls_ThenLoadingAndUnloadingFirst;
 
+    procedure LoadingAndUnloading_SameDllTwice_MinDist;
+    procedure LoadingAndUnloading_SameDllTwice_Dist;
+    procedure LoadingAndUnloading_SameDllTwice_BrokerParams;
     procedure SeparateLoadingAndUnloading_TwoDlls_ThenLoadingAndUnloadingFirst_DistAndBrokerParams;
     procedure LoadSleepFromKernel32;
+    procedure LoadSleepExFromKernel32;
 
     procedure AfterAll_AlwaysExecute;
   end;
@@ -459,6 +463,84 @@ begin
 end;
 
 
+procedure TTestLoader.LoadingAndUnloading_SameDllTwice_MinDist;
+const
+  CMaxSharedStringLength = 10 * 1048576;
+var
+  DistProperties: string;
+  Len: DWord;
+  i: Integer;
+begin
+  for i := 1 to 2 do
+  begin
+    FDistPluginLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\MinDist\lib\' + CLibDirByBitness + '\MinDist.dll');
+    try
+      SetAddrOfDistProcs;
+      Expect(GetAPIVersion_Dist).ToBe(10);
+
+      SetLength(DistProperties, CMaxSharedStringLength);
+      GetListOfProperties_Dist(@Self, @DistProperties[1], @Len, @DoOnActionPlugin_UpdatePropertyIcons);
+      SetLength(DistProperties, Len);
+      Expect(Copy(DistProperties, 1, 14)).ToBe('FindSubControl');
+    finally
+      UnloadDll(FDistPluginLoader);
+    end;
+  end;
+end;
+
+
+procedure TTestLoader.LoadingAndUnloading_SameDllTwice_Dist;
+const
+  CMaxSharedStringLength = 10 * 1048576;
+var
+  DistProperties: string;
+  Len: DWord;
+  i: Integer;
+begin
+  for i := 1 to 2 do
+  begin
+    FDistPluginLoader := LoadDll(ExtractFilePath(ParamStr(0)) + '..\..\..\UIClickerDistFindSubControlPlugin\lib\' + CLibDirByBitness + '\UIClickerDistFindSubControl.dll');
+    try
+      SetAddrOfDistProcs;
+      Expect(GetAPIVersion_Dist).ToBe(10);
+
+      SetLength(DistProperties, CMaxSharedStringLength);
+      GetListOfProperties_Dist(@Self, @DistProperties[1], @Len, @DoOnActionPlugin_UpdatePropertyIcons);
+      SetLength(DistProperties, Len);
+      Expect(Copy(DistProperties, 1, 14)).ToBe('FindSubControl');
+    finally
+      UnloadDll(FDistPluginLoader);
+    end;
+  end;
+end;
+
+
+procedure TTestLoader.LoadingAndUnloading_SameDllTwice_BrokerParams;
+const
+  CMaxSharedStringLength = 10 * 1048576;
+var
+  BrokerParamsProperties: string;
+  Len: DWord;
+  i: Integer;
+begin
+  for i := 1 to 2 do
+  begin
+    FBrokerParamsPluginLoader := LoadDll(ExtractFilePath(ParamStr(0)) + '..\..\..\UIClickerDistFindSubControlPlugin\BrokerParams\lib\' + CLibDirByBitness + '\BrokerParams.dll');
+    try
+      SetAddrOfBrokerParamsProcs;
+      Expect(GetAPIVersion_BrokerParams).ToBe(10);
+
+      SetLength(BrokerParamsProperties, CMaxSharedStringLength);
+      GetListOfProperties_BrokerParams(@Self, @BrokerParamsProperties[1], @Len, @DoOnActionPlugin_UpdatePropertyIcons);
+      SetLength(BrokerParamsProperties, Len);
+      Expect(Copy(BrokerParamsProperties, 1, 9)).ToBe('Reserved=');
+    finally
+      UnloadDll(FBrokerParamsPluginLoader);
+    end;
+  end;
+end;
+
+
 procedure TTestLoader.SeparateLoadingAndUnloading_TwoDlls_ThenLoadingAndUnloadingFirst_DistAndBrokerParams;
 const
   CMaxSharedStringLength = 10 * 1048576;
@@ -510,6 +592,27 @@ end;
 
 procedure TTestLoader.LoadSleepFromKernel32;
 type
+  TSleepEx = function(dWMilliseconds: DWord; bAlterable: LongBool): DWord; stdcall;
+var
+  tk: UInt64;
+  SleepProc: TSleepEx;
+  Loader: TDynLibMemLoader;
+begin
+  Loader := LoadDll('C:\Windows\System32\' + KernelDLL + '.dll'); //assume 'C:\Windows\System32\'
+  try
+    @SleepProc := Loader.GetProcAddress('SleepEx', True);
+
+    tk := GetTickCount64;
+    SleepProc(200, False);
+    Expect(Integer(GetTickCount64 - tk)).ToBeGreaterThan(100);
+  finally
+    UnloadDll(Loader);
+  end;
+end;
+
+
+procedure TTestLoader.LoadSleepExFromKernel32;
+type
   TSleep = procedure(dWMilliseconds: DWord); stdcall;
 var
   tk: UInt64;
@@ -521,7 +624,7 @@ begin
     @SleepProc := Loader.GetProcAddress('Sleep', True);
 
     tk := GetTickCount64;
-    SleepProc(100);
+    SleepProc(200);
     Expect(Integer(GetTickCount64 - tk)).ToBeGreaterThan(100);
   finally
     UnloadDll(Loader);
