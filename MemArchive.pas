@@ -94,6 +94,8 @@ type
     FOnDecompress: TOnDecompress;
     FOnEncryptionCleanup: TOnEncryptionCleanup;
 
+    procedure SetMaxExpectedFilenameLength(Value: Integer);
+
     procedure DoOnEncryptArchive(AArchiveStream: TMemoryStream);
     procedure DoOnDecryptArchive(AArchiveStream: TMemoryStream);
     procedure DoOnGetKeyFromPassword(APassword: string; var AArcKey: TArr32OfByte);
@@ -130,7 +132,7 @@ type
 
     property MaxExpectedFileCount: Integer read FMaxExpectedFileCount write FMaxExpectedFileCount; //When this is set to a positive value, an exception is raised when opening an archive with too many files or when adding too many files.
     property MaxExpectedTotalFileSize: Int64 read FMaxExpectedTotalFileSize write FMaxExpectedTotalFileSize; //sum of all file sizes. Does not include filenames.
-    property MaxExpectedFilenameLength: Integer read FMaxExpectedFilenameLength write FMaxExpectedFilenameLength;
+    property MaxExpectedFilenameLength: Integer read FMaxExpectedFilenameLength write SetMaxExpectedFilenameLength;
 
     property Password: string read FPassword write FPassword; //Should be set only once, before calling OpenArchive (if archive encryption is desired). There is no support for changing archive password.
     property CompressionLevel: Integer read FCompressionLevel write FCompressionLevel; //Compression specific value.
@@ -154,15 +156,25 @@ uses
 
 
 const
-  CPaddingSize = 4;
-  CPaddingAndHashSize = CPaddingSize + CHashSize;
-  CReservedFieldsSize = 64;
-  CTotalFileSize = 8; //may not be updated for now
-  CReservedAfterTotalFileSize = 8;
-  CHeaderSize = CReservedFieldsSize + CTotalFileSize + CReservedAfterTotalFileSize;
+  CPaddingSizeField = 4;
+  CPaddingAndHashSizeField = CPaddingSizeField + CHashSize;
+  CReservedFieldsSizeField = 64;
+  CTotalFileSizeField = 8; //may not be updated for now
+  CReservedAfterTotalFileSizeField = 8;
+  CHeaderSizeField = CReservedFieldsSizeField + CTotalFileSizeField + CReservedAfterTotalFileSizeField;
 
-  CFilenameLengthSize = 4;
-  CFileContentSize = 8;
+  CFilenameLengthSizeField = 4;
+  CFileContentSizeField = 8;
+
+  {$IFDEF CPUX64}
+    CMaxCompressedFileSize = 16 * 1073741824; //16GB
+    CMaxDecompressedFileSize = 32 * 1073741824; //32GB
+  {$ELSE}
+    CMaxCompressedFileSize = 1 * 1073741824; //1GB
+    CMaxDecompressedFileSize = 2 * 1073741824; //2GB
+  {$ENDIF}
+
+  CPaddingTo = 32; //Verify any calculations, which does padding to 32 byte, if changing this value.  For example: "PaddingSize := CompressedSize - (CompressedSize shr 5) shl 5;"
 
 
 constructor TMemArchive.Create;
@@ -197,19 +209,41 @@ begin
 end;
 
 
+procedure TMemArchive.SetMaxExpectedFilenameLength(Value: Integer);
+begin
+  FMaxExpectedFilenameLength := Min(Max(Value, 255), 8192);
+end;
+
+
 procedure TMemArchive.DoOnEncryptArchive(AArchiveStream: TMemoryStream);
+var
+  OldSize: Int64;
 begin
   if Assigned(FOnEncryptArchive) then
-    FOnEncryptArchive(FArchiveStream)
+  begin
+    OldSize := FArchiveStream.Size;
+    FOnEncryptArchive(FArchiveStream);
+
+    if FArchiveStream.Size <> OldSize then
+      raise Exception.Create('Archive size modified by OnEncryptArchive.');
+  end
   else
     raise Exception.Create('OnEncryptArchive is not assigned.');
 end;
 
 
 procedure TMemArchive.DoOnDecryptArchive(AArchiveStream: TMemoryStream);
+var
+  OldSize: Int64;
 begin
   if Assigned(FOnDecryptArchive) then
-    FOnDecryptArchive(FArchiveStream)
+  begin
+    OldSize := FArchiveStream.Size;
+    FOnDecryptArchive(FArchiveStream);
+
+    if FArchiveStream.Size <> OldSize then
+      raise Exception.Create('Archive size modified by OnDecryptArchive.');
+  end
   else
     raise Exception.Create('OnDecryptArchive is not assigned.');
 end;
@@ -254,7 +288,11 @@ end;
 function TMemArchive.DoOnDecompress(AArchiveStream, APlainStream: TMemoryStream): Boolean;
 begin
   if Assigned(FOnDecompress) then
-    Result := FOnDecompress(AArchiveStream, APlainStream)
+  begin
+    Result := FOnDecompress(AArchiveStream, APlainStream);
+    if APlainStream.Size > CMaxDecompressedFileSize then
+      raise Exception.Create('Decompressed size exceeded limit.');
+  end
   else
     raise Exception.Create('OnDecompress is not assigned.');
 end;
@@ -284,7 +322,7 @@ end;
 function TMemArchive.GetPositionOfFileSizeInPlainStream(FileName: string; AInitPos: Int64 = -1): Int64; //points to the 8-byte file size
 var
   //APosition: Int64;
-  AFileNameLen: Integer;
+  TempFileNameLen: Integer;
   InitPos: Int64;
   DecodedFileName: string;
   FileContentSize: Int64;
@@ -294,7 +332,7 @@ begin
   if FPlainStream.Size = 0 then
     Exit;
 
-  if FPlainStream.Size <= CHeaderSize then
+  if FPlainStream.Size <= CHeaderSizeField then
     Exit;
 
   //jump from file to file, until match
@@ -304,27 +342,45 @@ begin
     InitPos := AInitPos;
 
   try
-    FPlainStream.Position := CHeaderSize;  //start of files
+    FPlainStream.Position := CHeaderSizeField;  //start of files
     repeat
       //read filename string length
-      FPlainStream.Read(AFileNameLen, CFilenameLengthSize);
+      if Int64(CFilenameLengthSizeField) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filename size does not fit into the next section of the archive.');
+
+      FPlainStream.Read(TempFileNameLen, CFilenameLengthSizeField);
+
+      if (TempFileNameLen < 1) or (TempFileNameLen > FMaxExpectedFilenameLength) then
+        raise Exception.Create('The filename is empty or too long.');
+
+      if Int64(TempFileNameLen) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filename does not fit into the next section of the archive.');
 
       //read string
-      SetLength(DecodedFileName, AFileNameLen);
-      FPlainStream.Read(DecodedFileName[1], AFileNameLen);
+      SetLength(DecodedFileName, TempFileNameLen);
+      FPlainStream.Read(DecodedFileName[1], TempFileNameLen);
 
       //read file size
-      FPlainStream.Read(FileContentSize, CFileContentSize);
+      if Int64(CFileContentSizeField) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filesize info does not fit into the next section of the archive.');
+
+      FPlainStream.Read(FileContentSize, CFileContentSizeField);
+
+      if FileContentSize > CMaxCompressedFileSize then
+        raise Exception.Create('The filesize is greater than the allowed limit.');
+
+      if (FileContentSize < 0) or (FPlainStream.Position + FileContentSize > FPlainStream.Size) then
+        raise Exception.Create('The file content does not fit into the next section of the archive.');
 
       if DecodedFileName = FileName then //found   //////////////////////////////////////////////////////////////////  there is a special comparison compatible to MAC OS, for Unicode strings. Simple string comparison will not work on all strings. See FreePascal docs on strings.
       begin
-        Result := FPlainStream.Position - CFileContentSize;
+        Result := FPlainStream.Position - CFileContentSizeField;
         Exit;
       end;
 
       // go past the file content
       FPlainStream.Position := Min(FPlainStream.Position + FileContentSize, FPlainStream.Size);
-    until FPlainStream.Position >= FPlainStream.Size;
+    until FPlainStream.Position >= FPlainStream.Size;   //Position can be at most the same as Size  (limited by TStream)
   finally
     FPlainStream.Position := InitPos;
   end;
@@ -336,7 +392,7 @@ var
   a: array of Byte;
   i: Integer;
 begin
-  SetLength(a, CHeaderSize);
+  SetLength(a, CHeaderSizeField);
   for i := 0 to Length(a) - 1 do
     a[i] := 0;
 
@@ -366,10 +422,10 @@ var
   PaddingSize, CompressedSize, i: LongInt;
   Padding: array of Byte;
 begin
-  CompressedSize := FArchiveStream.Size;
+  CompressedSize := FArchiveStream.Size;  //even if CompressedSize is negative, PaddingSize is >= 0
   PaddingSize := CompressedSize - (CompressedSize shr 5) shl 5;      //modulo without division
   if PaddingSize > 0 then
-    PaddingSize := 32 - PaddingSize;              //padding to 32 bytes
+    PaddingSize := LongInt(CPaddingTo) - PaddingSize;              //padding to 32 bytes   (padding to CPaddingTo bytes)
 
   FArchiveStream.Position := 0;
   FArchiveStream.Write(PaddingSize, SizeOf(PaddingSize));
@@ -406,10 +462,10 @@ begin
   if FArchiveStream.Size = 0 then
     raise Exception.Create('Archive is invalid. There is no content.');
 
-  FArchiveStream.Position := CPaddingSize; //point to hash
+  FArchiveStream.Position := CPaddingSizeField; //point to hash
   FArchiveStream.Read(ExpectedHash[0], CHashSize);
 
-  DoOnComputeArchiveHash(Pointer(UInt64(FArchiveStream.Memory) + CPaddingAndHashSize), FArchiveStream.Size - CPaddingAndHashSize, CurrentHash, 'CheckHashOfDecryptedArchive');
+  DoOnComputeArchiveHash(Pointer(UInt64(FArchiveStream.Memory) + CPaddingAndHashSizeField), FArchiveStream.Size - CPaddingAndHashSizeField, CurrentHash, 'CheckHashOfDecryptedArchive');
 
   for i := 0 to CHashSize - 1 do
     if CurrentHash[i] <> ExpectedHash[i] then
@@ -421,11 +477,11 @@ function TMemArchive.SetHashOfDecryptedArchive: string;
 var
   CurrentHash: TArr32OfByte;
 begin
-  FArchiveStream.Position := CPaddingAndHashSize;
+  FArchiveStream.Position := CPaddingAndHashSizeField;
 
-  DoOnComputeArchiveHash(Pointer(UInt64(FArchiveStream.Memory) + CPaddingAndHashSize), FArchiveStream.Size - CPaddingAndHashSize, CurrentHash, 'SetHashOfDecryptedArchive');
+  DoOnComputeArchiveHash(Pointer(UInt64(FArchiveStream.Memory) + CPaddingAndHashSizeField), FArchiveStream.Size - CPaddingAndHashSizeField, CurrentHash, 'SetHashOfDecryptedArchive');
 
-  FArchiveStream.Position := CPaddingSize; //point to hash
+  FArchiveStream.Position := CPaddingSizeField; //point to hash
   FArchiveStream.Write(CurrentHash[0], CHashSize);
 
   Result := ArrOfByteToHex(CurrentHash);
@@ -463,15 +519,22 @@ begin
     CheckHashOfDecryptedArchive;
 
     FArchiveStream.Position := 0;
-    FArchiveStream.Read(PaddingSize, CPaddingSize);  //Position becomes 4
+    FArchiveStream.Read(PaddingSize, CPaddingSizeField);  //Position becomes 4
+
+    if (PaddingSize < 0) or (PaddingSize > CPaddingTo - 1) then
+      raise Exception.Create('Invalid padding size (' + IntToStr(PaddingSize) + ').');
+
+    if PaddingSize > FArchiveStream.Size then
+      raise Exception.Create('The padding size exceeds archive size.');
+
     FArchiveStream.SetSize(FArchiveStream.Size - PaddingSize); //discard padding
-    FArchiveStream.Position := CPaddingAndHashSize; //padding size + hash of decrypted
+    FArchiveStream.Position := CPaddingAndHashSizeField; //padding size + hash of decrypted
 
     if FCompressionLevel > 0 then
     begin
       TempArchiveStream := TMemoryStream.Create;
       try
-        TempArchiveStream.CopyFrom(FArchiveStream, FArchiveStream.Size - CPaddingAndHashSize);
+        TempArchiveStream.CopyFrom(FArchiveStream, FArchiveStream.Size - CPaddingAndHashSizeField);
         TempArchiveStream.Position := 0;
         FPlainStream.Position := 0;
 
@@ -486,7 +549,7 @@ begin
     else
     begin
       FPlainStream.Position := 0;
-      FPlainStream.CopyFrom(FArchiveStream, FArchiveStream.Size - CPaddingAndHashSize);
+      FPlainStream.CopyFrom(FArchiveStream, FArchiveStream.Size - CPaddingAndHashSizeField);
     end;
 
     CheckMaxValues;
@@ -514,9 +577,9 @@ begin
 
   if FShouldUpdateArchiveOnClose then
   begin
-    FArchiveStream.Position := CPaddingAndHashSize; //  position of compressed content (which comes after the padding info, a.k.a. 4)  + size of hash
+    FArchiveStream.Position := CPaddingAndHashSizeField; //  position of compressed content (which comes after the padding info, a.k.a. 4)  + size of hash
 
-    if FArchiveStream.Size <> CPaddingAndHashSize then
+    if FArchiveStream.Size <> CPaddingAndHashSizeField then
       raise Exception.Create('================= Archive size mismatch on setting position.');
 
     if FCompressionLevel > 0 then
@@ -530,7 +593,7 @@ begin
         FArchiveStream.CopyFrom(TempArchiveStream, TempArchiveStream.Size);
         FillChar(TempArchiveStream.Memory^, TempArchiveStream.Size, 0);
 
-        if FArchiveStream.Size <> TempArchiveStream.Size + CPaddingAndHashSize then
+        if FArchiveStream.Size <> TempArchiveStream.Size + CPaddingAndHashSizeField then
           raise Exception.Create('================= Archive size mismatch on close.');
       finally
         TempArchiveStream.Free;
@@ -539,7 +602,7 @@ begin
     else
     begin
       FPlainStream.Position := 0;
-      FArchiveStream.Position := CPaddingAndHashSize;  //size of padding field + size of hash
+      FArchiveStream.Position := CPaddingAndHashSizeField;  //size of padding field + size of hash
       FArchiveStream.CopyFrom(FPlainStream, FPlainStream.Size);
     end;
 
@@ -640,12 +703,19 @@ begin
     raise Exception.Create('The archive does not contain this file: ' + '"' + AFileName + '"');
 
   FPlainStream.Position := AFilePos;
-  FPlainStream.Read(FileContentSize, CFileContentSize); //this moves position to file content
 
-  if FileContentSize > 0 then
+  if Int64(CFileContentSizeField) > FPlainStream.Size - FPlainStream.Position then
+    raise Exception.Create('The filesize info does not fit into the next section of the archive.');
+
+  FPlainStream.Read(FileContentSize, CFileContentSizeField); //this moves position to file content
+
+  if (FileContentSize > 0) and (FileContentSize < CMaxCompressedFileSize) then
   begin
+    if FileContentSize > FPlainStream.Size - FPlainStream.Position then
+      raise Exception.Create('The current archive does not have enough content, to match the given file size.');
+
     AContent.Position := 0;
-    AContent.CopyFrom(FPlainStream, FileContentSize);
+    AContent.CopyFrom(FPlainStream, FileContentSize);  //this enlarges AContent, to fit FileContentSize
   end
   else
     AContent.Clear;
@@ -678,7 +748,7 @@ end;
 
 procedure TMemArchive.GetListOfFiles(AListOfFiles: TStringList);
 var
-  AFileNameLen: Integer;
+  TempFileNameLen: Integer;
   InitPos: Int64;
   DecodedFileName: string;
   FileContentSize: Int64;
@@ -686,38 +756,56 @@ begin
   if FPlainStream.Size = 0 then
     Exit;
 
-  if FPlainStream.Size <= CHeaderSize then
+  if FPlainStream.Size <= CHeaderSizeField then
     Exit;
 
   //jump from file to file, until match
-  InitPos := FPlainStream.Position;
+  InitPos := FPlainStream.Position;        //GetListOfFiles is used for debugging, so the position depends on the caller, i.e. CheckMaxValues
 
   try
-    FPlainStream.Position := CHeaderSize;  //start of files
+    FPlainStream.Position := CHeaderSizeField;  //start of files
     repeat
       //read filename string length
-      FPlainStream.Read(AFileNameLen, CFilenameLengthSize);
+      if Int64(CFilenameLengthSizeField) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filename size does not fit into the next section of the archive.');
+
+      FPlainStream.Read(TempFileNameLen, CFilenameLengthSizeField);
+
+      if Int64(TempFileNameLen) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filename does not fit into the next section of the archive.');
+
+      if (TempFileNameLen < 1) or (TempFileNameLen > FMaxExpectedFilenameLength) then
+        raise Exception.Create('The filename is empty or too long.');
 
       //read string
-      SetLength(DecodedFileName, AFileNameLen);
-      FPlainStream.Read(DecodedFileName[1], AFileNameLen);
+      SetLength(DecodedFileName, TempFileNameLen);
+      FPlainStream.Read(DecodedFileName[1], TempFileNameLen);
       AListOfFiles.Add(DecodedFileName);
 
       //read file size
-      FPlainStream.Read(FileContentSize, CFileContentSize);
+      if Int64(CFileContentSizeField) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filesize info does not fit into the next section of the archive.');
+
+      FPlainStream.Read(FileContentSize, CFileContentSizeField);
+
+      if FileContentSize > CMaxCompressedFileSize then
+        raise Exception.Create('The filesize is greater than the allowed limit.');
+
+      if (FileContentSize < 0) or (FPlainStream.Position + FileContentSize > FPlainStream.Size) then
+        raise Exception.Create('The file content does not fit into the next section of the archive.');
 
       // go past the file content
       FPlainStream.Position := Min(FPlainStream.Position + FileContentSize, FPlainStream.Size);
-    until FPlainStream.Position >= FPlainStream.Size;
+    until FPlainStream.Position >= FPlainStream.Size;   //Position can be at most the same as Size  (limited by TStream)
   finally
-    FPlainStream.Position := InitPos;
+    FPlainStream.Position := InitPos;  //Restore
   end;
 end;
 
 
 procedure TMemArchive.CheckMaxValues;         //////////////////////////// ToDo:  max archive size  (maybe in OpenArchive)
 var
-  AFileNameLen: Integer;
+  TempFileNameLen: Integer;
   InitPos: Int64;
   FileContentSize: Int64;
   FileCount: Integer;
@@ -732,7 +820,7 @@ begin
   if FPlainStream.Size = 0 then
     Exit;
 
-  if FPlainStream.Size <= CHeaderSize then
+  if FPlainStream.Size <= CHeaderSizeField then
     Exit;
 
   //jump from file to file, until match
@@ -746,18 +834,21 @@ begin
   try
     FileCount := 0;
     TotalFileSize := 0;
-    FPlainStream.Position := CHeaderSize;  //start of files
+    FPlainStream.Position := CHeaderSizeField;  //start of files
     repeat
       //read filename string length
-      FPlainStream.Read(AFileNameLen, CFilenameLengthSize);
+      if Int64(CFilenameLengthSizeField) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filename size does not fit into the next section of the archive.');
+
+      FPlainStream.Read(TempFileNameLen, CFilenameLengthSizeField);
 
       {$IFDEF DebugLimits}
         ListOfFileSizes.Add('FileNameLen = ' + IntToStr(AFileNameLen));
       {$ENDIF}
 
-      if (FMaxExpectedFilenameLength > 0) and (AFileNameLen > FMaxExpectedFilenameLength) then
+      if (TempFileNameLen < 1) or (TempFileNameLen > FMaxExpectedFilenameLength) then
       begin
-        s := 'The filename is too long.' {$IFDEF DebugLimits} + IntToStr(AFileNameLen) {$ENDIF};
+        s := 'The filename is empty or too long.' {$IFDEF DebugLimits} + IntToStr(AFileNameLen) {$ENDIF};
         {$IFDEF DebugLimits}
           SetLength(DbgFileName, AFileNameLen);
 
@@ -773,7 +864,10 @@ begin
         raise Exception.Create(s);
       end;
 
-      FPlainStream.Position := FPlainStream.Position + AFileNameLen;    //advance past filename
+      if Int64(TempFileNameLen) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filename does not fit into the next section of the archive.');
+
+      FPlainStream.Position := FPlainStream.Position + TempFileNameLen;    //advance past filename
       Inc(FileCount);
 
       if (FMaxExpectedFileCount > 0) and (FileCount > FMaxExpectedFileCount) then
@@ -787,7 +881,17 @@ begin
       end;
 
       //read file size
-      FPlainStream.Read(FileContentSize, CFileContentSize);
+      if Int64(CFileContentSizeField) > FPlainStream.Size - FPlainStream.Position then
+        raise Exception.Create('The filesize info does not fit into the next section of the archive.');
+
+      FPlainStream.Read(FileContentSize, CFileContentSizeField);
+
+      if FileContentSize > CMaxCompressedFileSize then
+        raise Exception.Create('The filesize is greater than the allowed limit.');
+
+      if (FileContentSize < 0) or (FPlainStream.Position + FileContentSize > FPlainStream.Size) then
+        raise Exception.Create('The file content does not fit into the next section of the archive.');
+
       Inc(TotalFileSize, FileContentSize);
 
       {$IFDEF DebugLimits}
@@ -806,7 +910,7 @@ begin
 
       // go past the file content
       FPlainStream.Position := Min(FPlainStream.Position + FileContentSize, FPlainStream.Size);
-    until FPlainStream.Position >= FPlainStream.Size;
+    until FPlainStream.Position >= FPlainStream.Size;  //Position can be at most the same as Size  (limited by TStream)
   finally
     FPlainStream.Position := InitPos;
 
