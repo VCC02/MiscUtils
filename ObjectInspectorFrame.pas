@@ -1991,6 +1991,10 @@ begin
   FEditingNode := Node;
   FEditingColumn := Column;
 
+  FTextEditorEditBox.Font.Style := vstOI.Font.Style;
+  FTextEditorEditBox.Font.Name := vstOI.Font.Name;
+  FTextEditorEditBox.Font.Size := vstOI.Font.Size;
+
   FTextEditorEditBox.Show;
   //FTextEditorEditBox.Left := GetLocalComboEditorLeft;  //this is also called from timer
   AssignPopupMenuAndTooltipToEditor(FTextEditorEditBox);
