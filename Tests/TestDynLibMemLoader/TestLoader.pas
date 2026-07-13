@@ -80,9 +80,13 @@ type
     procedure LoadingAndUnloading_SameDllTwice_Dist;
     procedure LoadingAndUnloading_SameDllTwice_BrokerParams;
     procedure SeparateLoadingAndUnloading_TwoDlls_ThenLoadingAndUnloadingFirst_DistAndBrokerParams;
-    procedure LoadSleepFromKernel32;
-    procedure LoadSleepExFromKernel32;
 
+    {$IFDEF Windows}
+      procedure LoadSleepFromKernel32;
+      procedure LoadSleepExFromKernel32;
+    {$ELSE}
+      procedure LoadSleepFromLibc;
+    {$ENDIF}
     procedure AfterAll_AlwaysExecute;
   end;
 
@@ -100,10 +104,18 @@ uses
 
 
 const
-  {$IFnDEF CPU64}
-    CLibDirByBitness = 'i386-win32';
+  {$IFDEF Windows}
+    {$IFnDEF CPU64}
+      CLibDirByBitness = 'i386-win32';
+    {$ELSE}
+      CLibDirByBitness = 'x86_64-win64';
+    {$ENDIF}
   {$ELSE}
-    CLibDirByBitness = 'x86_64-win64';
+    {$IFnDEF CPU64}
+      CLibDirByBitness = 'i386-linux';
+    {$ELSE}
+      CLibDirByBitness = 'x86_64-linux';
+    {$ENDIF}
   {$ENDIF}
 
 
@@ -203,13 +215,13 @@ var
   Content: TMemoryStream;
 begin
   Result := nil;
-  Expect(FileExists(APath)).ToBe(True, 'The dll must exist at ' + APath);
+  Expect(FileExists(APath)).ToBe(True, 'The ' + {$IFDEF Windows} '.dll' {$ELSE} '.so' {$ENDIF} + ' file must exist at ' + APath);
 
   Result := TDynLibMemLoader.Create;
   Content := TMemoryStream.Create;
   try
     Content.LoadFromFile(APath);
-    Expect(Result.LoadLibrary(Content.Memory, AAttachLibraryOnLoad)).ToBe(True, 'The dll must be loaded.');
+    Expect(Result.LoadLibrary(Content.Memory {$IFDEF UNIX}, Content.Size {$ENDIF}, AAttachLibraryOnLoad)).ToBe(True, 'The dll must be loaded.');
   finally
     Content.Free;
   end;
@@ -243,17 +255,41 @@ begin
 end;
 
 
+function GetLibPath_First: string;
+begin
+  Result := ExtractFilePath(ParamStr(0));
+
+  {$IFDEF Windows}
+    Result := Result + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll';
+  {$ELSE}
+    Result := Result + 'TestFiles/First/lib/' + CLibDirByBitness + '/libfirst.so';
+  {$ENDIF}
+end;
+
+
+function GetLibPath_Second: string;
+begin
+  Result := ExtractFilePath(ParamStr(0));
+
+  {$IFDEF Windows}
+    Result := Result + 'TestFiles\Second\lib\' + CLibDirByBitness + '\Second.dll';
+  {$ELSE}
+    Result := Result + 'TestFiles/Second/lib/' + CLibDirByBitness + '/libsecond.so';
+  {$ENDIF}
+end;
+
+
 procedure TTestLoader.LoadUnload_SingleDll_WithoutCallingFunctions;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
   UnloadDll(FFirstLoader);
 end;
 
 
 procedure TTestLoader.LoadUnload_TwoDll_WithoutCallingFunctions;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
-  FSecondLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\Second\lib\' + CLibDirByBitness + '\Second.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
+  FSecondLoader := LoadDll(GetLibPath_Second);
 
   UnloadDll(FSecondLoader);
   UnloadDll(FFirstLoader);
@@ -264,7 +300,7 @@ procedure TTestLoader.LoadUnload_SingleDll_GetAllFunctions;
 var
   Functions: TExportedFunctionArr;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
   try
     FFirstLoader.ListExportedFunctions(Functions);
     Expect(Integer(Length(Functions))).ToBe(4);
@@ -282,7 +318,7 @@ procedure TTestLoader.LoadUnload_SingleDll_VerifyAllFunctionAddresses;
 var
   Functions: TExportedFunctionArr;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
   try
     FFirstLoader.ListExportedFunctions(Functions);
     Expect(Integer(Length(Functions))).ToBe(4);
@@ -300,7 +336,7 @@ end;
 
 procedure TTestLoader.LoadUnload_SingleDll_VerifyDefaultGlobalVar_NoMain;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll', False);
+  FFirstLoader := LoadDll(GetLibPath_First, False);
   try
     SetAddrOfFirstProcs;
 
@@ -313,7 +349,7 @@ end;
 
 procedure TTestLoader.LoadUnload_SingleDll_VerifyDefaultGlobalVar;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
   try
     SetAddrOfFirstProcs;
 
@@ -326,7 +362,7 @@ end;
 
 procedure TTestLoader.LoadUnload_SingleDll_VerifySettingGlobalVar;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
   try
     SetAddrOfFirstProcs;
 
@@ -343,7 +379,7 @@ end;
 
 procedure TTestLoader.LoadUnload_SingleDll_VerifyExceptionHandlingInsideDll;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
   try
     SetAddrOfFirstProcs;
 
@@ -357,8 +393,8 @@ end;
 
 procedure TTestLoader.LoadUnload_SameDllTwice_VerifySettingGlobalVar;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
-  FFirstLoader2 := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
+  FFirstLoader2 := LoadDll(GetLibPath_First);
   try
     SetAddrOfFirstProcs;
     SetAddrOfFirst2Procs;
@@ -387,8 +423,8 @@ end;
 
 procedure TTestLoader.LoadUnload_SingleDll_VerifyExceptionHandlingInsideSameDllTwice;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
-  FFirstLoader2 := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
+  FFirstLoader2 := LoadDll(GetLibPath_First);
   try
     SetAddrOfFirstProcs;
     SetAddrOfFirst2Procs;
@@ -408,7 +444,7 @@ end;
 
 procedure TTestLoader.SeparateLoadingAndUnloading_TwoDlls_ThenLoadingAndUnloadingFirst;
 begin
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
   try
     SetAddrOfFirstProcs;
     Expect(GetAGlobalVar).ToBe(1234567890);
@@ -418,7 +454,7 @@ begin
     UnloadDll(FFirstLoader);
   end;
 
-  FSecondLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\Second\lib\' + CLibDirByBitness + '\Second.dll');
+  FSecondLoader := LoadDll(GetLibPath_Second);
   try
     SetAddrOfSecondProcs;
     Expect(GetAGlobalVarFromTwo(0)).ToBe(1234567898);
@@ -443,7 +479,7 @@ begin
   end;
 
   //Second loading of the first dll, after loading and unloading another one.
-  FFirstLoader := LoadDll(ExtractFilePath(ParamStr(0)) + 'TestFiles\First\lib\' + CLibDirByBitness + '\First.dll');
+  FFirstLoader := LoadDll(GetLibPath_First);
   try
     SetAddrOfFirstProcs;
     Expect(GetAGlobalVar).ToBe(1234567890);
@@ -590,47 +626,79 @@ begin
 end;
 
 
-procedure TTestLoader.LoadSleepFromKernel32;
-type
-  TSleepEx = function(dWMilliseconds: DWord; bAlterable: LongBool): DWord; stdcall;
-var
-  tk: UInt64;
-  SleepProc: TSleepEx;
-  Loader: TDynLibMemLoader;
-begin
-  Loader := LoadDll('C:\Windows\System32\' + KernelDLL + '.dll'); //assume 'C:\Windows\System32\'
-  try
-    @SleepProc := Loader.GetProcAddress('SleepEx', True);
+{$IFDEF Windows}
+  procedure TTestLoader.LoadSleepFromKernel32;
+  type
+    TSleep = procedure(dWMilliseconds: DWord); stdcall;
+  var
+    tk: UInt64;
+    SleepProc: TSleep;
+    Loader: TDynLibMemLoader;
+  begin
+    Loader := LoadDll('C:\Windows\System32\' + KernelDLL + '.dll'); //assume 'C:\Windows\System32\'
+    try
+      @SleepProc := Loader.GetProcAddress('Sleep', True);
 
-    tk := GetTickCount64;
-    SleepProc(200, False);
-    Expect(Integer(GetTickCount64 - tk)).ToBeGreaterThan(100);
-  finally
-    UnloadDll(Loader);
+      tk := GetTickCount64;
+      SleepProc(200);
+      Expect(Integer(GetTickCount64 - tk)).ToBeGreaterThan(100);
+    finally
+      UnloadDll(Loader);
+    end;
   end;
-end;
 
 
-procedure TTestLoader.LoadSleepExFromKernel32;
-type
-  TSleep = procedure(dWMilliseconds: DWord); stdcall;
-var
-  tk: UInt64;
-  SleepProc: TSleep;
-  Loader: TDynLibMemLoader;
-begin
-  Loader := LoadDll('C:\Windows\System32\' + KernelDLL + '.dll'); //assume 'C:\Windows\System32\'
-  try
-    @SleepProc := Loader.GetProcAddress('Sleep', True);
+  procedure TTestLoader.LoadSleepExFromKernel32;
+  type
+    TSleepEx = function(dWMilliseconds: DWord; bAlterable: LongBool): DWord; stdcall;
+  var
+    tk: UInt64;
+    SleepProc: TSleepEx;
+    Loader: TDynLibMemLoader;
+  begin
+    Loader := LoadDll('C:\Windows\System32\' + KernelDLL + '.dll'); //assume 'C:\Windows\System32\'
+    try
+      @SleepProc := Loader.GetProcAddress('SleepEx', True);
 
-    tk := GetTickCount64;
-    SleepProc(200);
-    Expect(Integer(GetTickCount64 - tk)).ToBeGreaterThan(100);
-  finally
-    UnloadDll(Loader);
+      tk := GetTickCount64;
+      SleepProc(200, False);
+      Expect(Integer(GetTickCount64 - tk)).ToBeGreaterThan(100);
+    finally
+      UnloadDll(Loader);
+    end;
   end;
-end;
+{$ELSE}
+  procedure TTestLoader.LoadSleepFromLibc;
+  type
+    TTimeSpec = record
+      Sec: Int64;
+      NanoSec: Int64;
+    end;
 
+    PTimeSpec = ^TTimeSpec;
+    TNanoSleep = function(AReq, ARem: PTimeSpec): Integer; cdecl;
+  var
+    tk: UInt64;
+    SleepProc: TNanoSleep;
+    Loader: TDynLibMemLoader;
+    TimeReq: TTimeSpec;
+  begin
+    Loader := LoadDll('/usr/lib/x86_64-linux-gnu/libc.so.6');  //ubuntu-style paths
+    //Loader := LoadDll('/lib/x86_64-linux-gnu//libc.so.6');  //ubuntu-style paths - link
+    try
+      @SleepProc := Loader.GetProcAddress('nanosleep', True);
+
+      TimeReq.Sec := 0;
+      TimeReq.NanoSec := 200 * 1000000;
+
+      tk := GetTickCount64;
+      SleepProc(@TimeReq, nil);
+      Expect(Integer(GetTickCount64 - tk)).ToBeGreaterThan(100);
+    finally
+      UnloadDll(Loader);
+    end;
+  end;
+{$ENDIF}
 
 procedure TTestLoader.AfterAll_AlwaysExecute;
 begin
