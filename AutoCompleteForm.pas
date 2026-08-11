@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2023 VCC
+    Copyright (C) 2026 VCC
     creation date: Sep 2023 (06)
     initial release date: 07 Sep 2023
 
@@ -567,6 +567,7 @@ begin
   vstIdentifiers.Anchors := [akTop, akLeft, akRight, akBottom];
   vstIdentifiers.Caption := 'VST with list of variables and functions'; //used by UI tests, to identify the component
   vstIdentifiers.Colors.UnfocusedColor := clMedGray;
+  vstIdentifiers.Color := clInactiveCaption;
   vstIdentifiers.DefaultNodeHeight := 16;
   vstIdentifiers.DefaultText := 'Node';
   vstIdentifiers.Font.Height := -13;
@@ -581,7 +582,7 @@ begin
   vstIdentifiers.TreeOptions.SelectionOptions := [toFullRowSelect];
   vstIdentifiers.ScrollBarOptions.AlwaysVisible := True;
   vstIdentifiers.OnDblClick := vstIdentifiersDblClick;
-  vstIdentifiers.OnDrawText := vstIdentifiersDrawText;
+  //vstIdentifiers.OnDrawText := vstIdentifiersDrawText;
   vstIdentifiers.OnGetText := vstIdentifiersGetText;
   vstIdentifiers.OnPaintText := vstIdentifiersPaintText;
   vstIdentifiers.OnKeyDown := vstIdentifiersKeyDown;
@@ -724,31 +725,46 @@ procedure TfrmAutoComplete.vstIdentifiersPaintText(Sender: TBaseVirtualTree;
   const TargetCanvas: TCanvas; Node: PVirtualNode; Column: TColumnIndex;
   TextType: TVSTTextType);
 begin
-  if Column = 0 then
-  begin
-    if Integer(Node^.Index) < FListOfVars.Count then
-    begin  //vars
+  case Column of
+    0:
+    begin
+      if Integer(Node^.Index) < FListOfVars.Count then
+      begin  //vars
+        if vstIdentifiers.Focused then
+        begin
+          if not vstIdentifiers.Selected[Node] then
+            TargetCanvas.Font.Color := clMaroon
+          else
+            TargetCanvas.Font.Color := $00CCCCFF;
+        end
+        else
+          TargetCanvas.Font.Color := clMaroon;
+      end
+      else
+      begin  //functions
+        if vstIdentifiers.Focused then
+        begin
+          if not vstIdentifiers.Selected[Node] then
+            TargetCanvas.Font.Color := clGreen
+          else
+            TargetCanvas.Font.Color := $00CCFFC;
+        end
+        else
+          TargetCanvas.Font.Color := clGreen;
+      end;
+    end;
+
+    1, 2:
+    begin
       if vstIdentifiers.Focused then
       begin
         if not vstIdentifiers.Selected[Node] then
-          TargetCanvas.Font.Color := clMaroon
+          TargetCanvas.Font.Color := clWindowText
         else
-          TargetCanvas.Font.Color := $00CCCCFF;
+          TargetCanvas.Font.Color := clHighlightText;
       end
       else
-        TargetCanvas.Font.Color := clMaroon;
-    end
-    else
-    begin  //functions
-      if vstIdentifiers.Focused then
-      begin
-        if not vstIdentifiers.Selected[Node] then
-          TargetCanvas.Font.Color := clGreen
-        else
-          TargetCanvas.Font.Color := $00CCFFC;
-      end
-      else
-        TargetCanvas.Font.Color := clGreen;
+        TargetCanvas.Font.Color := clWindowText;
     end;
   end;
 end;
