@@ -170,7 +170,7 @@ const
   {$IFDEF CPUX64}
     CMaxCompressedFileSize = 16 * 1073741824; //16GB
     CMaxDecompressedFileSize = 32 * 1073741824; //32GB
-    CMaxTotalFileSize = 10 * CMaxDecompressedFileSize  //for the near future
+    CMaxTotalFileSize = 10 * CMaxDecompressedFileSize;  //for the near future
   {$ELSE}
     CMaxCompressedFileSize = 1 * 1073741824; //1GB
     CMaxDecompressedFileSize = 2 * 1073741824; //2GB
@@ -477,7 +477,7 @@ begin
   FArchiveStream.Position := CPaddingSizeField; //point to hash
   FArchiveStream.Read(ExpectedHash[0], CHashSize);
 
-  DoOnComputeArchiveHash(Pointer(UInt64(FArchiveStream.Memory) + CPaddingAndHashSizeField), ActualDataSize, CurrentHash, 'CheckHashOfDecryptedArchive');
+  DoOnComputeArchiveHash({%H-}Pointer({%H-}UInt64(FArchiveStream.Memory) + CPaddingAndHashSizeField), ActualDataSize, CurrentHash, 'CheckHashOfDecryptedArchive');
 
   for i := 0 to CHashSize - 1 do
     if CurrentHash[i] <> ExpectedHash[i] then
@@ -497,7 +497,7 @@ begin
   if ActualDataSize < 0 then
     raise Exception.Create('Data size is negative on computing hash.');
 
-  DoOnComputeArchiveHash(Pointer(UInt64(FArchiveStream.Memory) + CPaddingAndHashSizeField), ActualDataSize, CurrentHash, 'SetHashOfDecryptedArchive');
+  DoOnComputeArchiveHash({%H-}Pointer({%H-}UInt64(FArchiveStream.Memory) + CPaddingAndHashSizeField), ActualDataSize, CurrentHash, 'SetHashOfDecryptedArchive');
 
   FArchiveStream.Position := CPaddingSizeField; //point to hash
   FArchiveStream.Write(CurrentHash[0], CHashSize);
@@ -663,7 +663,7 @@ end;
 
 procedure TMemArchive.AddFromStream(AFileName: string; AContent: TMemoryStream; AContentCustomSize: Int64; UseBuffer: Boolean = True);
 var
-  FnmLen: LongInt;
+  {%H-}FnmLen: LongInt;
   StreamSize, FilePosition: Int64;
 begin
   if not FIsValid then

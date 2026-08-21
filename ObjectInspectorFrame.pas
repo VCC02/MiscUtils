@@ -465,10 +465,11 @@ type
     property ExtraInfoVisible: Boolean read FExtraInfoVisible write SetExtraInfoVisible; //to be set before calling ReloadContent
 
     property EditingText: string read FEditingText write FEditingText; //do not move this to published, it's a runtime thing
+    property ColumnWidths[Index: Integer]: Integer read GetColumnWidth write SetColumnWidth; //moved from published, although not needed there
   published
     property ColorFormat: TOIColorFormat read FColorFormat write FColorFormat;  //affects ColorBox editors when getting selected color
     property PropertyItemHeight: Integer read FPropertyItemHeight write SetPropertyItemHeight;
-    property ColumnWidths[Index: Integer]: Integer read GetColumnWidth write SetColumnWidth;
+
     property OICaption: string read GetOICaption write SetOICaption; //Used for testing, to help identify the control. This sets the VST caption.
 
     property OnOIGetCategoryCount: TOnOIGetCategoryCount write FOnOIGetCategoryCount;
@@ -559,7 +560,7 @@ uses
 
 const
   CTextEditorSpacing = 5;
-  CEmptySpaceForIcon = '       ';
+  //CEmptySpaceForIcon = '       ';
   CMinComboWidth = 30;  //minimum combobox width, to be displayed
   CDefaultArrowButonWidth = 21;
 
