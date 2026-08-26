@@ -140,7 +140,7 @@ begin
   Result := AStr;
 
   for i := ACurrentCaretPos - 1 downto 1 do
-    if not (AStr[i] in ['0'..'9', 'a'..'z', 'A'..'Z', '_']) then
+    if not (AStr[i] in ['0'..'9', 'a'..'z', 'A'..'Z', '_', '$']) then
     begin
       Result := Copy(AStr, i + 1, MaxInt);
       Break;
@@ -415,7 +415,7 @@ begin
   if LastBlankPos = Length(s) then // ' ' is the last character (useless)
     Result := s
   else
-    Result := Copy(s, LastBlankPos + 1, MaxInt);
+    Result := Copy(s, LastBlankPos + 1, MaxInt);    //copies everything after the last ' ' or the last '='
 end;
 
 
@@ -425,7 +425,12 @@ var
 begin
   LastBlankPos := Max(Max(NegPos(' ', s), NegPos('=', s)), NegPos('$', s));
   if LastBlankPos = Length(s) then // ' ' is the last character (useless)
-    Result := '' //s
+  begin
+    if (s > '') and (Pos(' ', s) = 0) and (s[1] = '$') and (s[Length(s)] = '$') then //a valid var
+      Result := s
+    else
+      Result := '' //s
+  end
   else
     Result := Copy(s, LastBlankPos + 1, MaxInt);
 end;
@@ -436,17 +441,20 @@ var
   Node, FirstVisible: PVirtualNode;
   TempIsVisible: Boolean;
   UpperCaseSearchWord: string;
+  TempSearchWord: string;
 begin
   Node := vstIdentifiers.GetFirst;
   if Node = nil then
     Exit;
 
   FirstVisible := nil;
-  FSearchWord := Trim(CropToTheLeft_AllSymbols(FSearchWord));
+  TempSearchWord := Trim(CropToTheLeft_AllSymbols(FSearchWord));
+  //FSearchWord := Trim(CropToTheLeft_AllSymbols(FSearchWord));
 
-  UpperCaseSearchWord := UpperCase(FSearchWord);
+  UpperCaseSearchWord := UpperCase(TempSearchWord);
+  vstIdentifiers.Header.Columns[1].Text := 'Definition                    [Searched text: "' + TempSearchWord + '", from "' + FSearchWord + '"]';
   repeat
-    TempIsVisible := (FSearchWord = '') or
+    TempIsVisible := (TempSearchWord = '') or
     ((Integer(Node^.Index) < FListOfVars.Count) and (Pos(UpperCaseSearchWord, UpperCase(FListOfVars.Strings[Node^.Index])) > 0)) or
     ((Integer(Node^.Index) >= FListOfVars.Count) and (Pos(UpperCaseSearchWord, UpperCase(FListOfFuncs.Strings[Node^.Index - FListOfVars.Count])) > 0));
 
@@ -506,7 +514,7 @@ begin
   FSelected := '';
 
   Node := vstIdentifiers.GetFirstSelected;
-  if Node <> nil then
+  if (Node <> nil) and vstIdentifiers.IsVisible[Node] then
   begin
     if Integer(Node^.Index) < FListOfVars.Count then
       FSelected := FListOfVars.Strings[Node^.Index]
@@ -521,7 +529,7 @@ end;
 procedure TfrmAutoComplete.FormClose(Sender: TObject;
   var CloseAction: TCloseAction);
 var
-  LastPart: string;
+  LastPart, LastSelectedPart: string;
 begin
   try
     if FSelected <> '' then
@@ -535,13 +543,17 @@ begin
         if Pos(LastPart, FSelected) = 1 then
           FEdit.Text := FEdit.Text + Copy(FSelected, Length(LastPart) + 1, MaxInt)
         else
-          if (Pos('$', LastPart) = 0) or (Pos(LastPart, Copy(FSelected, 1, Pos('=', FSelected))) = 1) then
+        begin
+          LastSelectedPart := CropToTheLeft(FSelected);
+          if (Pos('$', LastPart) = 0) {and (Pos('$', FSelected) = 0))} or   //the commented code is required for corner case: $Desktop_Width$=1920$Screen_Width$=1920, but it's not that important
+             ((Pos(LastPart, Copy(FSelected, 1, Pos('=', FSelected))) = 1) and (LastSelectedPart <> LastPart)) then
           begin
             FEdit.Text := Copy(FEdit.Text, 1, Pos(LastPart, FEdit.Text) - 1);
             FEdit.Text := FEdit.Text + FSelected;       //the LastPart is deleted from FEdit.Text, then completly replaced by FSelected
           end
           else
             FEdit.Text := FEdit.Text + FSelected;     //e.g. FEdit.Text = '$Desktop_Width$=1920',  FSelected = '$Screen_Width$=1920'
+        end;
       end;
 
       FEdit.SelStart := Length(FEdit.Text);
@@ -574,6 +586,8 @@ begin
   vstIdentifiers.Font.Name := 'Courier New';
   vstIdentifiers.Header.AutoSizeIndex := 0;
   vstIdentifiers.Header.DefaultHeight := 17;
+  vstIdentifiers.Header.Options := [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible];
+  vstIdentifiers.Header.Font.Color := clGreen;
   vstIdentifiers.Indent := 4;
   vstIdentifiers.ParentFont := False;
   vstIdentifiers.PopupMenu := pmVST;
