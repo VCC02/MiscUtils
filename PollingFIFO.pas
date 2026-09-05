@@ -38,10 +38,15 @@ uses
   Classes, SysUtils;
 
 type
+  TOnAppProcMsg = procedure of object;
+
   TPollingFIFO = class
   private
     FFIFO: TStringList;
     FCritSec: TRTLCriticalSection;
+    FOnAppProcMsg: TOnAppProcMsg;
+
+    procedure DoOnAppProcMsg;
   public
     constructor Create;
     destructor Destroy; override;
@@ -52,6 +57,8 @@ type
     procedure PopAll(OutStrings: TStringList);
     function PopAllAsString: string;
     function GetLength: Integer;
+
+    property OnAppProcMsg: TOnAppProcMsg write FOnAppProcMsg;
   end;
 
   
@@ -63,8 +70,10 @@ type
 implementation
 
 
-uses
-  Forms;
+{$IFnDEF UseCustomAppProcMsg}
+  uses
+    Forms;
+{$ENDIF}
 
 
 constructor TPollingFIFO.Create;
@@ -72,6 +81,7 @@ begin
   inherited Create;
   FFIFO := TStringList.Create;
   FFIFO.LineBreak := #13#10;
+  FOnAppProcMsg := nil;
 
   {$IFDEF FPC}
     InitCriticalSection(FCritSec);
@@ -91,9 +101,11 @@ begin
   tk := GetTickCount64;
 
   try
-    if (Application <> nil) and not Application.Terminated then //this may still be a race condition.
-      AppCaption := Application.MainForm.Caption
-    else
+    {$IFnDEF UseCustomAppProcMsg}
+      if (Application <> nil) and (Application.MainForm <> nil) and not Application.Terminated then //this may still be a race condition.
+        AppCaption := Application.MainForm.Caption
+      else
+    {$ENDIF}
       AppCaption := 'Unknown app.';
   except
     on E: Exception do
@@ -109,8 +121,12 @@ begin
         FoundLock := True;
 
       try
-        if (Application <> nil) and not Application.Terminated then //this may still be a race condition.
-          Application.ProcessMessages;
+        {$IFnDEF UseCustomAppProcMsg}
+          if (Application <> nil) and (Application.MainForm <> nil) and not Application.Terminated then //this may still be a race condition.
+            Application.ProcessMessages;
+        {$ELSE}
+          DoOnAppProcMsg;
+        {$ENDIF}
       except
         on E: Exception do
          AppProcMsgErr := E.Message;
@@ -138,6 +154,15 @@ begin
   FreeAndNil(FFIFO);
 
   inherited Destroy;
+end;
+
+
+procedure TPollingFIFO.DoOnAppProcMsg;
+begin
+  if Assigned(FOnAppProcMsg) then
+    FOnAppProcMsg()
+  else
+    raise Exception.Create('OnAppProcMsg not assigned.');
 end;
 
 
