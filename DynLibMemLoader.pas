@@ -707,8 +707,12 @@ end;
       ImageRuntime: PIMAGE_RUNTIME_FUNCTION_ENTRY;
       Count: DWord;
     {$ENDIF}
+    Is64Bit: Boolean;
   begin
     Result := False;
+
+    if ALibraryContent = nil then
+      raise Exception.Create('The library (' + {$IFDEF UNIX} '.so' {$ELSE} '.dll' {$ENDIF} + ') content is empty.');
 
     try
       Move(ALibraryContent^, DosHeader, SizeOf(IMAGE_DOS_HEADER));
@@ -743,6 +747,16 @@ end;
 
       FImageNtHeaders := PImageNtHeaders(UInt64(HeaderAddress) + UInt64(DosHeader._lfanew));
       FImageNtHeaders^.OptionalHeader.ImageBase := PtrUInt(CodeAddress);
+
+      Is64Bit := FImageNtHeaders^.OptionalHeader.Magic = $20B;
+
+      {$IFDEF CPUX64}
+        if not Is64Bit then
+      {$ELSE}
+        if Is64Bit then
+      {$ENDIF}
+          raise Exception.Create('The library bitness does not match the executable bitness.');
+
       SetTableSections(ALibraryContent, OldHeader);
 
       LocationAmount := UInt64(CodeAddress) - UInt64(OldHeader.OptionalHeader.ImageBase);
