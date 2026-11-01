@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 21 Apr 2024  - copied from TestDynArraysOfWord.pas
     initial release date: 21 Apr 2024
 
@@ -40,6 +40,9 @@ type
     procedure TearDown; override;
   published
     procedure TestSimpleAllocation;
+    {$IFDEF UsingDynTFT}
+      procedure TestReAllocationWhenMemoryIsFull;
+    {$ENDIF}
     procedure TestWritingToArray;
     procedure TestReallocationToLargerArray;
     procedure TestReallocationToSmallerArray;
@@ -139,6 +142,37 @@ begin
     FreeDynArrayOfDWord(Arr);  //the array has to be manually freed, because there is no reference counting
   end;
 end;
+
+
+{$IFDEF UsingDynTFT}
+procedure TTestDynArraysOfDWordCase.TestReAllocationWhenMemoryIsFull; //the allocation is expected to fail
+const
+  CArrayAllocLen = HEAP_SIZE shr 2 - 40;
+var
+  Arr: TDynArrayOfDWord;
+  AllocationResult: Boolean;
+  OldPointer: Pointer;
+begin
+  InitDynArrayOfDWordToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynOfDWordLength(Arr, CArrayAllocLen);
+  try
+    Expect(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(True));
+    Expect(Arr.Len).ToBe(CArrayAllocLen);
+    OldPointer := Arr.Content;
+
+    AllocationResult := SetDynOfDWordLength(Arr, HEAP_SIZE + 7);  //this is expected to fail
+
+    Expect(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(False));
+    Expect(Arr.Len).ToBe(CArrayAllocLen);
+    Expect(Arr.Content).ToBePointer(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
+  finally
+    FreeDynArrayOfDWord(Arr);  //the array has to be manually freed, because there is no reference counting
+  end;
+end;
+{$ENDIF}
 
 
 procedure TTestDynArraysOfDWordCase.TestWritingToArray;

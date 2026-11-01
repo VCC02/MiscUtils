@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 18 Apr 2024
     initial release date: 18 Apr 2024
 
@@ -40,6 +40,9 @@ type
     procedure TearDown; override;
   published
     procedure TestSimpleAllocation;
+    {$IFDEF UsingDynTFT}
+      procedure TestReAllocationWhenMemoryIsFull;
+    {$ENDIF}
     procedure TestWritingToArray;
     procedure TestReallocationToLargerArray;
     procedure TestReallocationToSmallerArray;
@@ -127,6 +130,37 @@ begin
     FreeDynArrayOfPtrUInt(Arr);  //the array has to be manually freed, because there is no reference counting
   end;
 end;
+
+
+{$IFDEF UsingDynTFT}
+procedure TTestDynArraysOfPtrUIntCase.TestReAllocationWhenMemoryIsFull; //the allocation is expected to fail
+const
+  CArrayAllocLen = HEAP_SIZE shr {$IFnDEF CPU64} 2 - 40 {$ELSE} 4 - 80 {$ENDIF};
+var
+  Arr: TDynArrayOfPtrUInt;
+  AllocationResult: Boolean;
+  OldPointer: Pointer;
+begin
+  InitDynArrayOfPtrUIntToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynOfPtrUIntLength(Arr, CArrayAllocLen);
+  try
+    Expect(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(True));
+    Expect(Arr.Len).ToBe(CArrayAllocLen);
+    OldPointer := Arr.Content;
+
+    AllocationResult := SetDynOfPtrUIntLength(Arr, HEAP_SIZE + 7);  //this is expected to fail
+
+    Expect(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(False));
+    Expect(Arr.Len).ToBe(CArrayAllocLen);
+    Expect(Arr.Content).ToBePointer(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
+  finally
+    FreeDynArrayOfPtrUInt(Arr);  //the array has to be manually freed, because there is no reference counting
+  end;
+end;
+{$ENDIF}
 
 
 procedure TTestDynArraysOfPtrUIntCase.TestWritingToArray;

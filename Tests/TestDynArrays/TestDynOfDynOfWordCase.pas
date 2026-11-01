@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 25 Feb 2024
     initial release date: 25 Feb 2024
 
@@ -40,6 +40,9 @@ type
     procedure TearDown; override;
   published
     procedure TestSimpleAllocation;
+    {$IFDEF UsingDynTFT}
+      procedure TestReAllocationWhenMemoryIsFull;
+    {$ENDIF}
     procedure TestWritingToArray;
     procedure TestReallocationToLargerArray;
     procedure TestReallocationToSmallerArray;
@@ -117,6 +120,49 @@ begin
     FreeDynOfDynOfWordArray(Arr);  //the array has to be manually freed, because there is no reference counting
   end;
 end;
+
+
+{$IFDEF UsingDynTFT}
+procedure TTestDynOfDynOfWordCase.TestReAllocationWhenMemoryIsFull;
+const
+  CArrayAllocLen = HEAP_SIZE shr 5;
+var
+  Arr: TDynArrayOfTDynArrayOfWord;
+  AllocationResult: Boolean;
+  i: Integer;
+  OldPointer: Pointer;
+  OldArrayItems: array of Pointer;
+begin
+  InitDynOfDynOfWordToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynOfDynOfWordLength(Arr, CArrayAllocLen);
+  try
+    Expect(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(True));
+    Expect(Arr.Len).ToBe(CArrayAllocLen, 'Number of items.');
+    OldPointer := Arr.Content;
+
+    for i := 0 to Arr.Len - 1 do
+      CheckInitializedDynArrayOfWord(Arr.Content^[i]^);    //the inner arrays are initialized automatically by SetDynOfDynOfWordLength
+
+    SetLength(OldArrayItems, Arr.Len);
+    for i := 0 to Length(OldArrayItems) - 1 do
+      OldArrayItems[i] := Arr.Content^[i];
+
+    AllocationResult := SetDynOfDynOfWordLength(Arr, CArrayAllocLen + 10000);  //this is expected to fail
+
+    Expect(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(False));
+    Expect(Arr.Len).ToBe(CArrayAllocLen, 'Number of items (again).');
+    Expect(Arr.Content).ToBePointer(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
+
+    for i := 0 to Length(OldArrayItems) - 1 do
+      Expect(Arr.Content^[i]).ToBePointer(OldArrayItems[i], 'The array items should remain unchanged.');
+  finally
+    FreeDynOfDynOfWordArray(Arr);  //the array has to be manually freed, because there is no reference counting
+  end;
+end;
+{$ENDIF}
 
 
 procedure TTestDynOfDynOfWordCase.TestWritingToArray;

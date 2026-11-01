@@ -40,6 +40,9 @@ type
     procedure TearDown; override;
   published
     procedure TestSimpleAllocation;
+    {$IFDEF UsingDynTFT}
+      procedure TestReAllocationWhenMemoryIsFull;
+    {$ENDIF}
     procedure TestWritingToArray;
     procedure TestReallocationToLargerArray;
     procedure TestReallocationToSmallerArray;
@@ -131,6 +134,37 @@ begin
     FreeDynArray(Arr);  //the array has to be manually freed, because there is no reference counting
   end;
 end;
+
+
+{$IFDEF UsingDynTFT}
+procedure TTestDynArrays.TestReAllocationWhenMemoryIsFull; //the allocation is expected to fail
+const
+  CArrayAllocLen = HEAP_SIZE - 10;
+var
+  Arr: TDynArrayOfByte;
+  AllocationResult: Boolean;
+  OldPointer: Pointer;
+begin
+  InitDynArrayToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynLength(Arr, CArrayAllocLen);
+  try
+    Expect(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(True));
+    Expect(Arr.Len).ToBe(CArrayAllocLen);
+    OldPointer := Arr.Content;
+
+    AllocationResult := SetDynLength(Arr, HEAP_SIZE + 7);  //this is expected to fail
+
+    Expect(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+    Expect(Byte(AllocationResult)).ToBe(Byte(False));
+    Expect(Arr.Len).ToBe(CArrayAllocLen);
+    Expect(Arr.Content).ToBePointer(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
+  finally
+    FreeDynArray(Arr);  //the array has to be manually freed, because there is no reference counting
+  end;
+end;
+{$ENDIF}
 
 
 procedure TTestDynArrays.TestWritingToArray;
