@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 23 Apr 2023
     initial release date: 23 Apr 2023
 
@@ -45,7 +45,7 @@ unit DynArrays;
     on unitialized arrays. Thus, it is recommended to validate the code, as much as possible, using FP, before moving to mP.
 
   - Arrays are allocated in heap, using a memory manager. The SetDynLength and ConcatDynArrays return True if successfully allocated.
-    Once an array is no longer needed, it has to be freed, by calling SetDynLength(<Arr>, 0).
+    Once an array is no longer needed, it has to be freed, by calling FreeDynArray(<Arr>), which is the same as SetDynLength(<Arr>, 0).
 
   - Setting a new length to an array, which already has elements, will require at least the same amount of memory to be available.
     If the new length is greater than the current length, more memory is required. See implementation.
@@ -57,7 +57,8 @@ unit DynArrays;
     In case of fragmentation errors, the memory manager becomes unusable, so the allocated data will be lost
   - test on mP that for loops on empty arrays, behave as expected, when TDynArrayLength is DWord instead of LongInt. If not, this has to be changed.
   - The implementations of TDynArrayOfByte, TDynArrayOfWord and TDynArrayOfDWord might share a common implementation, where a data size is passed to each function, for allocation / deallocation.
-    This should decrease the code size at the expense of a stack level. The complez arrays (array of array of..) might also require small changes.
+    This should decrease the code size at the expense of a stack level. The complex arrays (array of array of..) might also require small changes.
+  - On IsDesktop, at least in DynTFT mode, there are GetMem calls. They should be verified with "if MM_error or (AArr.Content = nil) then"
 }
 
 {$IFnDEF IsMCU}
@@ -1085,7 +1086,7 @@ end;
 
 function SetDynLength(var AArr: TDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  OldPointer, NewAllocPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArray(AArr);
@@ -1121,27 +1122,30 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength);
-    if MM_error or (AArr.Content = nil) then    //If compilers report that "MM_error" was not declared, then open MemManager library and uncomment MM_error header.
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(NewAllocPointer, ANewLength);
+    if MM_error or (NewAllocPointer = nil) then    //If compilers report that "MM_error" was not declared, then open MemManager library and uncomment MM_error header.
     begin
       Result := False;
       Exit;
     end;
 
+    AArr.Content := PDynArrayOfByteContent(NewAllocPointer);
+
     if OldPointer <> nil then
-      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len));   //OldPointer = src, AArr.Content = dest
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(NewAllocPointer, OldPointer, Min32(ANewLength, AArr.Len));   //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
-        GetMem(TPtrRec(AArr.Content), ANewLength);
-        if MM_error or (AArr.Content = nil) then
+        GetMem(TPtrRec(NewAllocPointer), ANewLength);
+        if MM_error or (NewAllocPointer = nil) then
         begin
           Result := False;
           Exit;
         end;
       {$ELSE}
-        GetMem(AArr.Content, ANewLength);
+        GetMem(NewAllocPointer, ANewLength);
       {$ENDIF}
+      AArr.Content := PDynArrayOfByteContent(NewAllocPointer);
 
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
 
@@ -1352,8 +1356,10 @@ end;
 
 function SetDynOfDynOfByteLength(var AArr: TDynArrayOfTDynArrayOfByte; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: PDynArrayOfTDynArrayOfByteContent;
+  OldPointer, NewAllocPointer: PDynArrayOfTDynArrayOfByteContent;
+  NewPDynArrayOfByte: PDynArrayOfByte;
   i, MaxCopyIdx: TDynArrayLengthSig;
+  NewAllocPointerArr: TDynArrayOfPtrUInt;
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynOfDynArray(AArr);
@@ -1372,7 +1378,9 @@ begin
         {$IFnDEF IsDesktop}
           {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfByte));
         {$ELSE}
-          Dispose(AArr.Content^[i]);
+          //Dispose(AArr.Content^[i]);  //replaced with FreeMem below
+          AArr.Content^[i]^.Initialized := '';
+          {$IFDEF UsingDynTFT} FreeMem(TPtrRec(AArr.Content^[i]), SizeOf(TDynArrayOfByte)); {$ELSE} FreeMem(AArr.Content^[i], SizeOf(TDynArrayOfByte)); {$ENDIF} //SizeOf struct
         {$ENDIF}
       end;
 
@@ -1400,42 +1408,87 @@ begin
   if (OldPointer = nil) and (AArr.Len > 0) then
     Exit;
 
+  InitDynArrayOfPtrUIntToEmpty(NewAllocPointerArr);
+  if not SetDynOfPtrUIntLength(NewAllocPointerArr, ANewLength) then //using ANewLength, to allow room for the new allocation, which might be larger
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  MaxCopyIdx := TDynArrayLengthSig(Min32(NewAllocPointerArr.Len, AArr.Len)) - 1;
+  for i := 0 to MaxCopyIdx do   //backup existing pointers
+    NewAllocPointerArr.Content^[i] := PtrUInt(AArr.Content^[i]);
+
   {$IFnDEF IsDesktop}
-    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte));    //SizeOf pointer
-    if MM_error or (AArr.Content = nil) then
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(NewAllocPointer, ANewLength * SizeOf(PDynArrayOfByte));    //SizeOf pointer
+    if MM_error or (NewAllocPointer = nil) then
     begin
       Result := False;
+      FreeDynArrayOfPtrUInt(NewAllocPointerArr);
       Exit;
     end;
 
     for i := 0 to ANewLength - 1 do
     begin
-      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
-      if MM_error or (AArr.Content = nil) then
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(NewPDynArrayOfByte, SizeOf(TDynArrayOfByte));           //SizeOf struct
+      if MM_error or (NewPDynArrayOfByte = nil) then  //This may lead to partial allocation, but it is impossible to know it in advance.
       begin
         Result := False;
+        FreeDynArrayOfPtrUInt(NewAllocPointerArr);
         Exit;
       end;
+      NewAllocPointerArr.Content^[i] := PtrUInt(NewPDynArrayOfByte);
     end;
+
+    AArr.Content := PtrUInt(NewAllocPointer);
+    for i := 0 to ANewLength - 1 do
+      AArr.Content^[i] := NewAllocPointerArr.Content^[i]; // update AArr.Content after all items are successfully allocated
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
-        GetMem(TPtrRec(AArr.Content), ANewLength * SizeOf(PDynArrayOfByte)); //SizeOf pointer
-        if MM_error or (AArr.Content = nil) then
+        GetMem(TPtrRec(NewAllocPointer), ANewLength * SizeOf(PDynArrayOfByte)); //SizeOf pointer
+        if MM_error or (NewAllocPointer = nil) then
         begin
           Result := False;
+          FreeDynArrayOfPtrUInt(NewAllocPointerArr);
           Exit;
         end;
       {$ELSE}
-        GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfByte)); //SizeOf pointer
+        GetMem(NewAllocPointer, ANewLength * SizeOf(PDynArrayOfByte)); //SizeOf pointer
       {$ENDIF}
+
                                               /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
       for i := 0 to ANewLength - 1 do
-        New(AArr.Content^[i]);           //SizeOf struct    //Using New instead of GetMem, to properly initialize the "Initialized" field (string). GetMem doesn't do any form of initialization to the allocated structure.
+      begin
+        //New(NewPDynArrayOfByte);           //SizeOf struct    //Using New instead of GetMem, to properly initialize the "Initialized" field (string). GetMem doesn't do any form of initialization to the allocated structure.
+
+        //---------------------- New  - replaced the New() call with GetMem, to make sure it uses the custom MemManager. The "Initialized" field is set to nil (0).
+        {$IFDEF UsingDynTFT}
+          GetMem(TPtrRec(NewPDynArrayOfByte), SizeOf(TDynArrayOfByte)); //SizeOf struct
+          if MM_error or (NewPDynArrayOfByte = nil) then
+          begin
+            Result := False;
+            FreeDynArrayOfPtrUInt(NewAllocPointerArr);
+            Exit;
+          end;
+        {$ELSE}
+          GetMem(NewPDynArrayOfByte, SizeOf(TDynArrayOfByte)); //SizeOf struct
+        {$ENDIF}
+        PtrUInt(NewPDynArrayOfByte^.Initialized) := 0;   //same as NewPDynArrayOfByte^.Initialized := '';
+        //---------------------- New
+
+        NewAllocPointerArr.Content^[i] := PtrUInt(NewPDynArrayOfByte);
+      end; //for
+
+      AArr.Content := PDynArrayOfTDynArrayOfByteContent(NewAllocPointer);
+      for i := 0 to ANewLength - 1 do
+        AArr.Content^[i] := PDynArrayOfByte(NewAllocPointerArr.Content^[i]); // update AArr.Content after all items are successfully allocated
     except
       Result := False;
     end;
   {$ENDIF}
+
+  FreeDynArrayOfPtrUInt(NewAllocPointerArr);
 
   MaxCopyIdx := TDynArrayLengthSig(Min32(AArr.Len, ANewLength)) - 1;
   for i := 0 to MaxCopyIdx do
@@ -1457,7 +1510,9 @@ begin
       {$IFnDEF IsDesktop}
         {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer^[i], SizeOf(TDynArrayOfByte));
       {$ELSE}
-        Dispose(OldPointer^[i]);
+        //Dispose(OldPointer^[i]); //replaced with FreeMem below
+        OldPointer^[i]^.Initialized := '';
+        {$IFDEF UsingDynTFT} FreeMem(TPtrRec(OldPointer^[i]), SizeOf(TDynArrayOfByte)); {$ELSE} FreeMem(OldPointer^[i], SizeOf(TDynArrayOfByte)); {$ENDIF} //SizeOf struct
       {$ENDIF}
     end;
 
@@ -1520,7 +1575,9 @@ begin
     {$IFnDEF IsDesktop}
       {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfByte));
     {$ELSE}
-      Dispose(AArr.Content^[i]);
+      //Dispose(AArr.Content^[i]);  //replaced with FreeMem below
+      AArr.Content^[i]^.Initialized := '';
+      {$IFDEF UsingDynTFT} FreeMem(TPtrRec(AArr.Content^[i]), SizeOf(TDynArrayOfByte)); {$ELSE} FreeMem(AArr.Content^[i], SizeOf(TDynArrayOfByte)); {$ENDIF} //SizeOf struct
     {$ENDIF}
 
     {$IFnDEF IsDesktop}
@@ -1531,7 +1588,9 @@ begin
         Exit;
       end;
     {$ELSE}
-      New(AArr.Content^[i]);
+      //New(AArr.Content^[i]);  //replaced new with GetMem
+      {$IFDEF UsingDynTFT} GetMem(TPtrRec(AArr.Content^[i]), SizeOf(TDynArrayOfByte)); {$ELSE} GetMem(AArr.Content^[i], SizeOf(TDynArrayOfByte)); {$ENDIF} //SizeOf struct
+      PtrUInt(AArr.Content^[i]^.Initialized) := 0;   //same as AArr.Content^[i]^.Initialized := '';
     {$ENDIF}
 
     InitDynArrayToEmpty(AArr.Content^[i]^);
@@ -1545,7 +1604,9 @@ begin
   {$IFnDEF IsDesktop}
     {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfByte));
   {$ELSE}
-    Dispose(AArr.Content^[AArr.Len - 1]);
+    //Dispose(AArr.Content^[AArr.Len - 1]);  //replaced with FreeMem below
+    AArr.Content^[AArr.Len - 1]^.Initialized := '';
+    {$IFDEF UsingDynTFT} FreeMem(TPtrRec(AArr.Content^[AArr.Len - 1]), SizeOf(TDynArrayOfByte)); {$ELSE} FreeMem(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfByte)); {$ENDIF} //SizeOf struct
   {$ENDIF}
 
   NewLen := AArr.Len - 1;
@@ -1650,7 +1711,7 @@ end;
 
 function SetDynOfWordLength(var AArr: TDynArrayOfWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  OldPointer, NewAllocPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfWord(AArr);
@@ -1686,27 +1747,30 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength shl 1);
-    if MM_error or (AArr.Content = nil) then
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(NewAllocPointer, ANewLength shl 1);
+    if MM_error or (NewAllocPointer = nil) then
     begin
       Result := False;
       Exit;
     end;
 
+    AArr.Content := PtrUInt(NewAllocPointer);
+
     if OldPointer <> nil then
-      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl 1);  //OldPointer = src, AArr.Content = dest
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(NewAllocPointer, OldPointer, Min32(ANewLength, AArr.Len) shl 1);  //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
-        GetMem(TPtrRec(AArr.Content), ANewLength shl 1);
-        if MM_error or (AArr.Content = nil) then
+        GetMem(TPtrRec(NewAllocPointer), ANewLength shl 1);
+        if MM_error or (NewAllocPointer = nil) then
         begin
           Result := False;
           Exit;
         end;
       {$ELSE}
-        GetMem(AArr.Content, ANewLength shl 1);
+        GetMem(NewAllocPointer, ANewLength shl 1);
       {$ENDIF}
+      AArr.Content := PDynArrayOfWordContent(NewAllocPointer);
 
       if OldPointer <> nil then
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
@@ -1989,8 +2053,10 @@ end;
 
 function SetDynOfDynOfWordLength(var AArr: TDynArrayOfTDynArrayOfWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: PDynArrayOfTDynArrayOfWordContent;
+  OldPointer, NewAllocPointer: PDynArrayOfTDynArrayOfWordContent;
+  NewPDynArrayOfWord: PDynArrayOfWord;
   i, MaxCopyIdx: TDynArrayLengthSig;
+  NewAllocPointerArr: TDynArrayOfPtrUInt;
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynOfDynArrayOfWord(AArr);
@@ -2009,17 +2075,19 @@ begin
         {$IFnDEF IsDesktop}
           {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfWord));
         {$ELSE}
-          Dispose(AArr.Content^[i]);
+          //Dispose(AArr.Content^[i]);  //replaced with FreeMem below
+          AArr.Content^[i]^.Initialized := '';
+          {$IFDEF UsingDynTFT} FreeMem(TPtrRec(AArr.Content^[i]), SizeOf(TDynArrayOfWord)); {$ELSE} FreeMem(AArr.Content^[i], SizeOf(TDynArrayOfWord)); {$ENDIF} //SizeOf struct
         {$ENDIF}
       end;
 
       {$IFnDEF IsDesktop}
-        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content, AArr.Len* SizeOf(PDynArrayOfWord));
+        {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content, AArr.Len * SizeOf(PDynArrayOfWord));
       {$ELSE}
         {$IFDEF UsingDynTFT}
-          FreeMem(TPtrRec(AArr.Content), AArr.Len* SizeOf(PDynArrayOfWord));
+          FreeMem(TPtrRec(AArr.Content), AArr.Len * SizeOf(PDynArrayOfWord));
         {$ELSE}
-          FreeMem(AArr.Content, AArr.Len* SizeOf(PDynArrayOfWord));
+          FreeMem(AArr.Content, AArr.Len * SizeOf(PDynArrayOfWord));
         {$ENDIF}
       {$ENDIF}
     end;
@@ -2037,42 +2105,87 @@ begin
   if (OldPointer = nil) and (AArr.Len > 0) then
     Exit;
 
+  InitDynArrayOfPtrUIntToEmpty(NewAllocPointerArr);
+  if not SetDynOfPtrUIntLength(NewAllocPointerArr, ANewLength) then //using ANewLength, to allow room for the new allocation, which might be larger
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  MaxCopyIdx := TDynArrayLengthSig(Min32(NewAllocPointerArr.Len, AArr.Len)) - 1;
+  for i := 0 to MaxCopyIdx do   //backup existing pointers
+    NewAllocPointerArr.Content^[i] := PtrUInt(AArr.Content^[i]);
+
   {$IFnDEF IsDesktop}
-    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength * SizeOf(PDynArrayOfWord));    //SizeOf pointer
-    if MM_error or (AArr.Content = nil) then
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(NewAllocPointer, ANewLength * SizeOf(PDynArrayOfWord));    //SizeOf pointer
+    if MM_error or (NewAllocPointer = nil) then
     begin
       Result := False;
+      FreeDynArrayOfPtrUInt(NewAllocPointerArr);
       Exit;
     end;
 
     for i := 0 to ANewLength - 1 do
     begin
-      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfWord));           //SizeOf struct
-      if MM_error or (AArr.Content = nil) then
+      {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(NewPDynArrayOfWord, SizeOf(TDynArrayOfWord));           //SizeOf struct
+      if MM_error or (NewPDynArrayOfWord = nil) then
       begin
         Result := False;
+        FreeDynArrayOfPtrUInt(NewAllocPointerArr);
         Exit;
       end;
+      NewAllocPointerArr.Content^[i] := PtrUInt(NewPDynArrayOfWord);
     end;
+
+    AArr.Content := PtrUInt(NewAllocPointer);
+    for i := 0 to ANewLength - 1 do
+      AArr.Content^[i] := NewAllocPointerArr.Content^[i]; // update AArr.Content after all items are successfully allocated
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
-        GetMem(TPtrRec(AArr.Content), ANewLength * SizeOf(PDynArrayOfWord)); //SizeOf pointer
-        if MM_error or (AArr.Content = nil) then
+        GetMem(TPtrRec(NewAllocPointer), ANewLength * SizeOf(PDynArrayOfWord)); //SizeOf pointer
+        if MM_error or (NewAllocPointer = nil) then
         begin
           Result := False;
+          FreeDynArrayOfPtrUInt(NewAllocPointerArr);
           Exit;
         end;
       {$ELSE}
-        GetMem(AArr.Content, ANewLength * SizeOf(PDynArrayOfWord)); //SizeOf pointer
+        GetMem(NewAllocPointer, ANewLength * SizeOf(PDynArrayOfWord)); //SizeOf pointer
       {$ENDIF}
+
                                               /////////////////////// as an optimization, the inner arrays do not have to be freed and reallocated. Only the pointers to these arrays have to be updated.
       for i := 0 to ANewLength - 1 do
-        New(AArr.Content^[i]);           //SizeOf struct    //Using New instead of GetMem, to properly initialize the "Initialized" field (string). GetMem doesn't do any form of initialization to the allocated structure.
+      begin
+        //New(NewPDynArrayOfWord);           //SizeOf struct    //Using New instead of GetMem, to properly initialize the "Initialized" field (string). GetMem doesn't do any form of initialization to the allocated structure.
+
+        //---------------------- New  - replaced the New() call with GetMem, to make sure it uses the custom MemManager. The "Initialized" field is set to nil (0).
+        {$IFDEF UsingDynTFT}
+          GetMem(TPtrRec(NewPDynArrayOfWord), SizeOf(TDynArrayOfWord)); //SizeOf struct
+          if MM_error or (NewPDynArrayOfWord = nil) then
+          begin
+            Result := False;
+            FreeDynArrayOfPtrUInt(NewAllocPointerArr);
+            Exit;
+          end;
+        {$ELSE}
+          GetMem(NewPDynArrayOfWord, SizeOf(TDynArrayOfWord)); //SizeOf struct
+        {$ENDIF}
+        PtrUInt(NewPDynArrayOfWord^.Initialized) := 0;   //same as NewPDynArrayOfWord^.Initialized := '';
+        //---------------------- New
+
+        NewAllocPointerArr.Content^[i] := PtrUInt(NewPDynArrayOfWord);
+      end; //for
+
+      AArr.Content := PDynArrayOfTDynArrayOfWordContent(NewAllocPointer);
+      for i := 0 to ANewLength - 1 do
+        AArr.Content^[i] := PDynArrayOfWord(NewAllocPointerArr.Content^[i]); // update AArr.Content after all items are successfully allocated
     except
       Result := False;
     end;
   {$ENDIF}
+
+  FreeDynArrayOfPtrUInt(NewAllocPointerArr);
 
   MaxCopyIdx := TDynArrayLengthSig(Min32(AArr.Len, ANewLength)) - 1;
   for i := 0 to MaxCopyIdx do
@@ -2094,7 +2207,9 @@ begin
       {$IFnDEF IsDesktop}
         {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(OldPointer^[i], SizeOf(TDynArrayOfWord));
       {$ELSE}
-        Dispose(OldPointer^[i]);
+        //Dispose(OldPointer^[i]); //replaced with FreeMem below
+        OldPointer^[i]^.Initialized := '';
+        {$IFDEF UsingDynTFT} FreeMem(TPtrRec(OldPointer^[i]), SizeOf(TDynArrayOfWord)); {$ELSE} FreeMem(OldPointer^[i], SizeOf(TDynArrayOfWord)); {$ENDIF} //SizeOf struct
       {$ENDIF}
     end;
 
@@ -2129,7 +2244,7 @@ end;
 
 function DeleteItemFromDynOfDynOfWord(var AArr: TDynArrayOfTDynArrayOfWord; ADelIndex: TDynArrayLengthSig): Boolean;
 var
-  i: Integer;
+  i: TDynArrayLengthSig;
   OldPointer: PDynArrayOfTDynArrayOfWordContent;
   NewLen: DWord;
 begin
@@ -2143,6 +2258,12 @@ begin
     {$ENDIF}
   end;
 
+  if AArr.Len = 0 then  //verify again, in case the above typecasting doesn't work
+  begin
+    Result := True;
+    Exit;
+  end;
+
   for i := ADelIndex to AArr.Len - 2 do
   begin
     FreeDynArrayOfWord(AArr.Content^[i]^);
@@ -2150,7 +2271,9 @@ begin
     {$IFnDEF IsDesktop}
       {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfWord));
     {$ELSE}
-      Dispose(AArr.Content^[i]);
+      //Dispose(AArr.Content^[i]);  //replaced with FreeMem below
+      AArr.Content^[i]^.Initialized := '';
+      {$IFDEF UsingDynTFT} FreeMem(TPtrRec(AArr.Content^[i]), SizeOf(TDynArrayOfWord)); {$ELSE} FreeMem(AArr.Content^[i], SizeOf(TDynArrayOfWord)); {$ENDIF} //SizeOf struct
     {$ENDIF}
 
     {$IFnDEF IsDesktop}
@@ -2161,7 +2284,9 @@ begin
         Exit;
       end;
     {$ELSE}
-      New(AArr.Content^[i]);
+      //New(AArr.Content^[i]);  //replaced new with GetMem
+      {$IFDEF UsingDynTFT} GetMem(TPtrRec(AArr.Content^[i]), SizeOf(TDynArrayOfWord)); {$ELSE} GetMem(AArr.Content^[i], SizeOf(TDynArrayOfWord)); {$ENDIF} //SizeOf struct
+      PtrUInt(AArr.Content^[i]^.Initialized) := 0;   //same as AArr.Content^[i]^.Initialized := '';
     {$ENDIF}
 
     InitDynArrayOfWordToEmpty(AArr.Content^[i]^);
@@ -2175,7 +2300,9 @@ begin
   {$IFnDEF IsDesktop}
     {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfWord));
   {$ELSE}
-    Dispose(AArr.Content^[AArr.Len - 1]);
+    //Dispose(AArr.Content^[AArr.Len - 1]);  //replaced with FreeMem below
+    AArr.Content^[AArr.Len - 1]^.Initialized := '';
+    {$IFDEF UsingDynTFT} FreeMem(TPtrRec(AArr.Content^[AArr.Len - 1]), SizeOf(TDynArrayOfWord)); {$ELSE} FreeMem(AArr.Content^[AArr.Len - 1], SizeOf(TDynArrayOfWord)); {$ENDIF} //SizeOf struct
   {$ENDIF}
 
   NewLen := AArr.Len - 1;
@@ -2276,7 +2403,7 @@ end;
 
 function SetDynOfDWordLength(var AArr: TDynArrayOfDWord; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  OldPointer, NewAllocPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfDWord(AArr);
@@ -2312,27 +2439,30 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength shl 2);
-    if MM_error or (AArr.Content = nil) then
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(NewAllocPointer, ANewLength shl 2);
+    if MM_error or (NewAllocPointer = nil) then
     begin
       Result := False;
       Exit;
     end;
 
+    AArr.Content := PtrUInt(NewAllocPointer);
+
     if OldPointer <> nil then
-      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl 2);  //OldPointer = src, AArr.Content = dest
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(NewAllocPointer, OldPointer, Min32(ANewLength, AArr.Len) shl 2);  //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
-        GetMem(TPtrRec(AArr.Content), ANewLength shl 2);
-        if MM_error or (AArr.Content = nil) then
+        GetMem(TPtrRec(NewAllocPointer), ANewLength shl 2);
+        if MM_error or (NewAllocPointer = nil) then
         begin
           Result := False;
           Exit;
         end;
       {$ELSE}
-        GetMem(AArr.Content, ANewLength shl 2);
+        GetMem(NewAllocPointer, ANewLength shl 2);
       {$ENDIF}
+      AArr.Content := PDynArrayOfDWordContent(NewAllocPointer);
 
       if OldPointer <> nil then
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
@@ -2659,7 +2789,7 @@ end;
 
 function SetDynOfPtrUIntLength(var AArr: TDynArrayOfPtrUInt; ANewLength: TDynArrayLength): Boolean; //returns True if successful, or False if it can't allocate memory
 var
-  OldPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
+  OldPointer, NewAllocPointer: {$IFDEF IsDesktop} PIntPtr; {$ELSE} DWord; {$ENDIF}
 begin
   {$IFDEF IsDesktop}
     CheckInitializedDynArrayOfPtrUInt(AArr);
@@ -2695,27 +2825,30 @@ begin
     Exit;
 
   {$IFnDEF IsDesktop}
-    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content, ANewLength shl CArchBitShift);
-    if MM_error or (AArr.Content = nil) then
+    {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(NewAllocPointer, ANewLength shl CArchBitShift);
+    if MM_error or (NewAllocPointer = nil) then
     begin
       Result := False;
       Exit;
     end;
 
+    AArr.Content := PtrUInt(NewAllocPointer);
+
     if OldPointer <> nil then
-      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(AArr.Content, OldPointer, Min32(ANewLength, AArr.Len) shl CArchBitShift);  //OldPointer = src, AArr.Content = dest
+      {$IFDEF RedefineMemMove} MemMove32 {$ELSE} MemMove {$ENDIF}(NewAllocPointer, OldPointer, Min32(ANewLength, AArr.Len) shl CArchBitShift);  //OldPointer = src, AArr.Content = dest
   {$ELSE}
     try
       {$IFDEF UsingDynTFT}
-        GetMem(TPtrRec(AArr.Content), ANewLength shl CArchBitShift);
-        if MM_error or (AArr.Content = nil) then
+        GetMem(TPtrRec(NewAllocPointer), ANewLength shl CArchBitShift);
+        if MM_error or (NewAllocPointer = nil) then
         begin
           Result := False;
           Exit;
         end;
       {$ELSE}
-        GetMem(AArr.Content, ANewLength shl CArchBitShift);
+        GetMem(NewAllocPointer, ANewLength shl CArchBitShift);
       {$ENDIF}
+      AArr.Content := PDynArrayOfPtrUIntContent(NewAllocPointer);
 
       if OldPointer <> nil then
       //AArr.Len is still the old array length. Only the Content field points somewhere else.
@@ -2958,6 +3091,9 @@ begin
         {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
       {$ELSE}
         Dispose(AArr.Content^[i]);
+        //ToDo: replace Dispose with FreeMem
+        //AArr.Content^[i]^.Initialized := '';
+        //FreeMem(TPtrRec(AArr.Content^[i]), SizeOf(TDynArrayOfTDynArrayOfByte)); //SizeOf struct  or SizeOf PDynArrayOfTDynArrayOfByte ?
       {$ENDIF}
     end;
   end;
@@ -2968,8 +3104,12 @@ begin
     TempDynArrayOfPtrUInt.Len := AArr.Len;
     TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));
     Result := SetDynOfPtrUIntLength(TempDynArrayOfPtrUInt, ANewLength);
-    AArr.Len := TempDynArrayOfPtrUInt.Len;
-    AArr.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
+
+    if Result then //Update the array, only if the allocation is successful.
+    begin
+      AArr.Len := TempDynArrayOfPtrUInt.Len;
+      AArr.Content := PDynArrayOfPDynArrayOfTDynArrayOfByteContent(PtrUInt(TempDynArrayOfPtrUInt.Content));  //This is required, because SetDynOfPtrUIntLength modifies the pointer.
+    end;
   {$ENDIF}
 
   if not Result then
@@ -2977,8 +3117,20 @@ begin
 
   for i := OldLen to ANewLength - 1 do
   begin
-    {$IFnDEF MCU}
+    {$IFnDEF IsMCU}
       New(AArr.Content^[i]);  //AArr.Content^[i] is a pointer to a PDynArrayOfTDynArrayOfByte
+      //ToDo: replace New with GetMem
+      //GetMem(TPtrRec(AArr.Content^[i]), SizeOf(TDynArrayOfTDynArrayOfByte)); //SizeOf struct   or SizeOf PDynArrayOfTDynArrayOfByte ?
+      //
+      //{$IFDEF UsingDynTFT}
+      //  if MM_error or (AArr.Content = nil) then
+      //  begin
+      //    Result := False;
+      //    Exit;
+      //  end;
+      //{$ENDIF}
+      //
+      //PtrUInt(AArr.Content^[i]^.Initialized) := 0;   //same as AArr.Content^[i]^.Initialized := '';
     {$ELSE}
       {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
     {$ENDIF}
@@ -3039,6 +3191,9 @@ begin
 
   {$IFnDEF IsMCU}
     New(TempNewPDynArrayOfTDynArrayOfByte);
+    //ToDo: replace New with GetMem
+    //GetMem(TPtrRec(TempNewPDynArrayOfTDynArrayOfByte), SizeOf(TDynArrayOfTDynArrayOfByte)); //SizeOf struct   or SizeOf PDynArrayOfTDynArrayOfByte ?
+    //PtrUInt(TempNewPDynArrayOfTDynArrayOfByte^.Initialized) := 0;   //same as AArr.Content^[i]^.Initialized := '';
   {$ELSE}
     {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(TempNewPDynArrayOfTDynArrayOfByte, SizeOf(TempNewPDynArrayOfTDynArrayOfByte^));
   {$ENDIF}
@@ -3088,9 +3243,13 @@ begin
 
   {$IFnDEF IsMCU}
     Dispose(AArr.Content^[ADelIndex]);
+    //ToDo: replace Dispose with FreeMem
+    //AArr.Content^[ADelIndex]^.Initialized := '';
+    //FreeMem(TPtrRec(AArr.Content^[ADelIndex]), SizeOf(TDynArrayOfTDynArrayOfByte)); //SizeOf struct  or SizeOf PDynArrayOfTDynArrayOfByte ?
+
     Result := DeleteItemFromDynArrayOfPtrUInt(TDynArrayOfPtrUInt(AArr), ADelIndex);
   {$ELSE}
-    {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[ADelIndex], SizeOf(TDynArrayOfTDynArrayOfByte));
+    {$IFDEF RoundAlloc}FreeMemRound{$ELSE}FreeMem{$ENDIF}(AArr.Content^[ADelIndex], SizeOf(TDynArrayOfTDynArrayOfByte));  //or SizeOf PDynArrayOfTDynArrayOfByte ?
 
     TempDynArrayOfPtrUInt.Len := AArr.Len;
     TempDynArrayOfPtrUInt.Content := PDynArrayOfPtrUIntContent(PtrUInt(AArr.Content));

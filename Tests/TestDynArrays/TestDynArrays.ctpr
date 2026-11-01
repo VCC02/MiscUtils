@@ -54,14 +54,6 @@
         <IsPartOfProject Value="True"/>
       </Unit>
       <Unit>
-        <Filename Value="D:\DynTFT\DynTFTTypes.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit>
-      <Unit>
-        <Filename Value="D:\DynTFT\MemManager.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit>
-      <Unit>
         <Filename Value="TestDynOfDynOfDynOfByteCase.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit>
@@ -81,6 +73,14 @@
         <Filename Value="TestDynArraysOfDWord.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit>
+      <Unit>
+        <Filename Value="..\..\..\DynTFT\MemManager.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\..\..\DynTFT\DynTFTTypes.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -91,7 +91,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..\..;D:\DynTFT\"/>
+      <OtherUnitFiles Value="..\..;..\..\..\DynTFT"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)\$(LCLWidgetType)"/>
     </SearchPaths>
     <Linking>
