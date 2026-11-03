@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: Apr 2023
     initial release date: 23 Apr 2023
 
@@ -114,7 +114,9 @@ end;
 
 procedure TTestDynArrays.TearDown;
 begin
-
+  {$IFDEF UsingDynTFT}
+    Expect(MM_TotalFreeMemSize).ToBe(HEAP_SIZE, 'No memory remains allocated.');
+  {$ENDIF}
 end;
 
 

@@ -59,6 +59,7 @@ unit DynArrays;
   - The implementations of TDynArrayOfByte, TDynArrayOfWord and TDynArrayOfDWord might share a common implementation, where a data size is passed to each function, for allocation / deallocation.
     This should decrease the code size at the expense of a stack level. The complex arrays (array of array of..) might also require small changes.
   - On IsDesktop, at least in DynTFT mode, there are GetMem calls. They should be verified with "if MM_error or (AArr.Content = nil) then"
+  - Verify allocation size on MCU for array of PtrUInt vs. array of DWord (PIC32).
 }
 
 {$IFnDEF IsMCU}
@@ -1582,7 +1583,7 @@ begin
 
     {$IFnDEF IsDesktop}
       {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfByte));           //SizeOf struct
-      if MM_error or (AArr.Content = nil) then
+      if MM_error or (AArr.Content^[i] = nil) then
       begin
         Result := False;
         Exit;
@@ -2278,7 +2279,7 @@ begin
 
     {$IFnDEF IsDesktop}
       {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfWord));           //SizeOf struct
-      if MM_error or (AArr.Content = nil) then
+      if MM_error or (AArr.Content^[i] = nil) then
       begin
         Result := False;
         Exit;
@@ -3133,6 +3134,12 @@ begin
       //PtrUInt(AArr.Content^[i]^.Initialized) := 0;   //same as AArr.Content^[i]^.Initialized := '';
     {$ELSE}
       {$IFDEF RoundAlloc}GetMemRound{$ELSE}GetMem{$ENDIF}(AArr.Content^[i], SizeOf(TDynArrayOfTDynArrayOfByte));
+      if MM_error or (AArr.Content^[i] = nil) then
+      begin
+        Result := False;
+        //ToDo: some cleanup - Free already allocated array
+        Exit;
+      end;
     {$ENDIF}
 
     InitDynOfDynOfByteToEmpty(AArr.Content^[i]^);

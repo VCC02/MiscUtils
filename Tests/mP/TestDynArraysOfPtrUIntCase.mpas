@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 18 Apr 2024
     initial release date: 18 Apr 2024
 
@@ -34,6 +34,8 @@ type
     TestCount: Integer;
   end;
 
+const
+  HEAP_SIZE: DWord; external;
 
 procedure TTestDynArraysOfPtrUIntCase_RunTests;
 procedure RegisterTTestDynArraysOfPtrUIntCaseProcs;
@@ -109,6 +111,37 @@ begin
     ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
     ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), '');
     ExpectDWord(Arr.Len).ToBe(7, '');
+  //finally
+    FreeDynArrayOfPtrUInt(Arr);  //the array has to be manually freed, because there is no reference counting
+  //end;
+end;
+
+
+procedure TTestDynArraysOfPtrUIntCase_TestReAllocationWhenMemoryIsFull; //the allocation is expected to fail
+//const
+//  CArrayAllocLen = HEAP_SIZE shr {$IFnDEF CPU64} 2 - 40 {$ELSE} 4 - 80 {$ENDIF};
+var
+  Arr: TDynArrayOfPtrUInt;
+  AllocationResult: Boolean;
+  OldPointer: PByte;
+  ArrayAllocLen: DWord;
+begin
+  ArrayAllocLen := 2000; //HEAP_SIZE shr {$IFnDEF PIC32} 1 - 32000 {$ELSE} 2 - 64000 {$ENDIF};
+  InitDynArrayOfPtrUIntToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynOfPtrUIntLength(Arr, ArrayAllocLen);
+  //try
+    ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'AllocT');
+    ExpectDWord(Arr.Len).ToBe(ArrayAllocLen, 'Number of items.');
+    OldPointer := Arr.Content;
+
+    AllocationResult := SetDynOfPtrUIntLength(Arr, HEAP_SIZE + 7);  //this is expected to fail
+
+    ExpectBoolean(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(False), 'AllocF');
+    ExpectDWord(Arr.Len).ToBe(ArrayAllocLen, 'Number of items (again).');
+    ExpectDWord(Arr.Content).ToBe(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
   //finally
     FreeDynArrayOfPtrUInt(Arr);  //the array has to be manually freed, because there is no reference counting
   //end;
@@ -716,6 +749,7 @@ begin
   TestDynArraysOfPtrUIntCase.TearDown := @TTestDynArraysOfPtrUIntCase_TearDown;
 
   RegisterTest_TTestDynArraysOfPtrUIntCase('TestSimpleAllocation', @TTestDynArraysOfPtrUIntCase_TestSimpleAllocation);
+  RegisterTest_TTestDynArraysOfPtrUIntCase('TestReAllocationWhenMemoryIsFull', @TTestDynArraysOfPtrUIntCase_TestReAllocationWhenMemoryIsFull);
   RegisterTest_TTestDynArraysOfPtrUIntCase('TestWritingToArray', @TTestDynArraysOfPtrUIntCase_TestWritingToArray);
   RegisterTest_TTestDynArraysOfPtrUIntCase('TestReallocationToLargerArray', @TTestDynArraysOfPtrUIntCase_TestReallocationToLargerArray);
   RegisterTest_TTestDynArraysOfPtrUIntCase('TestReallocationToSmallerArray', @TTestDynArraysOfPtrUIntCase_TestReallocationToSmallerArray);
