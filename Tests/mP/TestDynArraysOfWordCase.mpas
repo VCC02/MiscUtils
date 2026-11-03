@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 19 Apr 2024
     initial release date: 19 Apr 2024
 
@@ -34,6 +34,8 @@ type
     TestCount: Integer;
   end;
 
+const
+  HEAP_SIZE: DWord; external;
 
 procedure TTestDynArraysOfWordCase_RunTests;
 procedure RegisterTTestDynArraysOfWordCaseProcs;
@@ -109,6 +111,37 @@ begin
     ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
     ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), '');
     ExpectDWord(Arr.Len).ToBe(7, '');
+  //finally
+    FreeDynArrayOfWord(Arr);  //the array has to be manually freed, because there is no reference counting
+  //end;
+end;
+
+
+procedure TTestDynArraysOfWordCase_TestReAllocationWhenMemoryIsFull; //the allocation is expected to fail
+//const
+//  CArrayAllocLen = HEAP_SIZE shr 1 - 20;
+var
+  Arr: TDynArrayOfWord;
+  AllocationResult: Boolean;
+  OldPointer: PByte;
+  ArrayAllocLen: DWord;
+begin
+  ArrayAllocLen := HEAP_SIZE shr 1 - 20;
+  InitDynArrayOfWordToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynOfWordLength(Arr, ArrayAllocLen);
+  //try
+    ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'AllocT');
+    ExpectDWord(Arr.Len).ToBe(ArrayAllocLen, 'Number of items.');
+    OldPointer := Arr.Content;
+
+    AllocationResult := SetDynOfWordLength(Arr, HEAP_SIZE + 7);  //this is expected to fail
+
+    ExpectBoolean(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(False), 'AllocF');
+    ExpectDWord(Arr.Len).ToBe(ArrayAllocLen, 'Number of items (again).');
+    ExpectDWord(Arr.Content).ToBe(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
   //finally
     FreeDynArrayOfWord(Arr);  //the array has to be manually freed, because there is no reference counting
   //end;
@@ -984,6 +1017,7 @@ begin
   TestDynArraysOfWordCase.TearDown := @TTestDynArraysOfWordCase_TearDown;
 
   RegisterTest_TTestDynArraysOfWordCase('TestSimpleAllocation', @TTestDynArraysOfWordCase_TestSimpleAllocation);
+  RegisterTest_TTestDynArraysOfWordCase('TestReAllocationWhenMemoryIsFull', @TTestDynArraysOfWordCase_TestReAllocationWhenMemoryIsFull);
   RegisterTest_TTestDynArraysOfWordCase('TestWritingToArray', @TTestDynArraysOfWordCase_TestWritingToArray);
   RegisterTest_TTestDynArraysOfWordCase('TestReallocationToLargerArray', @TTestDynArraysOfWordCase_TestReallocationToLargerArray);
   RegisterTest_TTestDynArraysOfWordCase('TestReallocationToSmallerArray', @TTestDynArraysOfWordCase_TestReallocationToSmallerArray);

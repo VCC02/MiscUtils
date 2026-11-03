@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 19 Apr 2024
     initial release date: 19 Apr 2024
 
@@ -34,6 +34,8 @@ type
     TestCount: Integer;
   end;
 
+const
+  HEAP_SIZE: DWord; external;
 
 procedure TTestDynOfDynOfWordCase_RunTests;
 procedure RegisterTTestDynOfDynOfWordCaseProcs;
@@ -101,6 +103,51 @@ begin
 
     //for i := 0 to Arr.Len - 1 do
     //  CheckInitializedDynArrayOfWord(Arr.Content^[i]^);    //the inner arrays are initialized automatically by SetDynOfDynOfByteLength
+  //finally
+    FreeDynOfDynOfWordArray(Arr);  //the array has to be manually freed, because there is no reference counting
+  //end;
+end;
+
+
+procedure TTestDynOfDynOfWordCase_TestReAllocationWhenMemoryIsFull;
+//const
+//  CArrayAllocLen = HEAP_SIZE shr 5;
+var
+  Arr: TDynArrayOfTDynArrayOfWord;
+  AllocationResult: Boolean;
+  i: Integer;
+  OldPointer: PByte;
+  OldArrayItems: TDynArrayOfPtrUInt; //array of Pointer;
+  ArrayAllocLen: DWord;
+begin
+  ArrayAllocLen := HEAP_SIZE shr 5;
+  InitDynOfDynOfWordToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynOfDynOfWordLength(Arr, ArrayAllocLen);
+  //try
+    ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'AllocT');
+    ExpectDWord(Arr.Len).ToBe(ArrayAllocLen, 'Number of items.');
+    OldPointer := Arr.Content;
+
+    InitDynArrayOfPtrUIntToEmpty(OldArrayItems);
+    ExpectDWord(SetDynOfPtrUIntLength(OldArrayItems, Arr.Len)).ToBe(True, 'OldArrayItems should be allocated.'); //SetLength(OldArrayItems, Arr.Len);
+    //try
+      for i := 0 to OldArrayItems.Len - 1 do //for i := 0 to Length(OldArrayItems) - 1 do
+        OldArrayItems.Content^[i] := PtrUInt(Arr.Content^[i]); //  OldArrayItems[i] := Arr.Content^[i];
+
+      AllocationResult := SetDynOfDynOfWordLength(Arr, ArrayAllocLen + 10000);  //this is expected to fail
+
+      ExpectBoolean(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+      ExpectDWord(Byte(AllocationResult)).ToBe(Byte(False), 'AllocF');
+      ExpectDWord(Arr.Len).ToBe(ArrayAllocLen, 'Number of items (again).');
+      ExpectDWord(Arr.Content).ToBe(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
+
+      for i := 0 to OldArrayItems.Len - 1 do //for i := 0 to Length(OldArrayItems) - 1 do
+        ExpectDWord(Arr.Content^[i]).ToBe(PByte(OldArrayItems.Content^[i]), 'The array items should remain unchanged.'); //ToBePointer(OldArrayItems[i], 'The array items should remain unchanged.');
+    //finally
+      FreeDynArrayOfPtrUInt(OldArrayItems);
+    //end;
   //finally
     FreeDynOfDynOfWordArray(Arr);  //the array has to be manually freed, because there is no reference counting
   //end;
@@ -468,6 +515,7 @@ begin
   TestDynOfDynOfWordCase.TearDown := @TTestDynOfDynOfWordCase_TearDown;
 
   RegisterTest_TTestDynOfDynOfWordCase('TestSimpleAllocation', @TTestDynOfDynOfWordCase_TestSimpleAllocation);
+  RegisterTest_TTestDynOfDynOfWordCase('TestReAllocationWhenMemoryIsFull', @TTestDynOfDynOfWordCase_TestReAllocationWhenMemoryIsFull);
   RegisterTest_TTestDynOfDynOfWordCase('TestWritingToArray', @TTestDynOfDynOfWordCase_TestWritingToArray);
   RegisterTest_TTestDynOfDynOfWordCase('TestReallocationToLargerArray', @TTestDynOfDynOfWordCase_TestReallocationToLargerArray);
   RegisterTest_TTestDynOfDynOfWordCase('TestReallocationToSmallerArray', @TTestDynOfDynOfWordCase_TestReallocationToSmallerArray);

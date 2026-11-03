@@ -1,5 +1,5 @@
 {
-    Copyright (C) 2024 VCC
+    Copyright (C) 2026 VCC
     creation date: 16 Apr 2024
     initial release date: 17 Apr 2024
 
@@ -33,7 +33,9 @@ type
     Tests: TNamedTestProcArr;
     TestCount: Integer;
   end;
-
+  
+const 
+  HEAP_SIZE: DWord; external;
 
 procedure TTestDynArrays_RunTests;
 procedure RegisterTTestDynArraysProcs;
@@ -109,6 +111,37 @@ begin
     ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
     ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), '');
     ExpectDWord(Arr.Len).ToBe(7, '');
+  //finally
+    FreeDynArray(Arr);  //the array has to be manually freed, because there is no reference counting
+  //end;
+end;
+
+
+procedure TTestDynArrays_TestReAllocationWhenMemoryIsFull; //the allocation is expected to fail
+//const
+//  CArrayAllocLen = HEAP_SIZE - 10;
+var
+  Arr: TDynArrayOfByte;
+  AllocationResult: Boolean;
+  OldPointer: PByte; //Pointer;
+  ArrayAllocLen: DWord;
+begin
+  ArrayAllocLen := HEAP_SIZE - 10;
+  InitDynArrayToEmpty(Arr);  //this is what Delphi and FP do automatically
+
+  AllocationResult := SetDynLength(Arr, ArrayAllocLen);
+  //try
+    ExpectBoolean(AllocationResult).ToBe(True, 'Expected a successful allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(True), 'AllocT');
+    ExpectDWord(Arr.Len).ToBe(ArrayAllocLen, 'LenT');
+    OldPointer := Arr.Content;
+
+    AllocationResult := SetDynLength(Arr, HEAP_SIZE + 7);  //this is expected to fail
+
+    ExpectBoolean(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+    ExpectDWord(Byte(AllocationResult)).ToBe(Byte(False), 'AllocF');
+    ExpectDWord(Arr.Len).ToBe(ArrayAllocLen, 'LenF');
+    ExpectDWord(Arr.Content).ToBe(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
   //finally
     FreeDynArray(Arr);  //the array has to be manually freed, because there is no reference counting
   //end;
@@ -721,6 +754,7 @@ begin
   TestDynArrays.TearDown := @TTestDynArrays_TearDown;
   
   RegisterTest_TTestDynArrays('TestSimpleAllocation', @TTestDynArrays_TestSimpleAllocation);
+  RegisterTest_TTestDynArrays('TestReAllocationWhenMemoryIsFull', @TTestDynArrays_TestReAllocationWhenMemoryIsFull);
   RegisterTest_TTestDynArrays('TestWritingToArray', @TTestDynArrays_TestWritingToArray);
   RegisterTest_TTestDynArrays('TestReallocationToLargerArray', @TTestDynArrays_TestReallocationToLargerArray);
   RegisterTest_TTestDynArrays('TestReallocationToSmallerArray', @TTestDynArrays_TestReallocationToSmallerArray);

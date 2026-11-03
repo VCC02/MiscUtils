@@ -96,7 +96,9 @@ end;
 
 procedure TTestDynOfDynOfByteCase.TearDown;
 begin
-
+  {$IFDEF UsingDynTFT}
+    Expect(MM_TotalFreeMemSize).ToBe(HEAP_SIZE, 'No memory remains allocated.');
+  {$ENDIF}
 end;
 
 
@@ -131,7 +133,7 @@ var
   AllocationResult: Boolean;
   i: Integer;
   OldPointer: Pointer;
-  OldArrayItems: array of Pointer;
+  OldArrayItems: TDynArrayOfPtrUInt; //array of Pointer;
 begin
   InitDynOfDynOfByteToEmpty(Arr);  //this is what Delphi and FP do automatically
 
@@ -145,19 +147,24 @@ begin
     for i := 0 to Arr.Len - 1 do
       CheckInitializedDynArray(Arr.Content^[i]^);    //the inner arrays are initialized automatically by SetDynOfDynOfByteLength
 
-    SetLength(OldArrayItems, Arr.Len);
-    for i := 0 to Length(OldArrayItems) - 1 do
-      OldArrayItems[i] := Arr.Content^[i];
+    InitDynArrayOfPtrUIntToEmpty(OldArrayItems);
+    Expect(SetDynOfPtrUIntLength(OldArrayItems, Arr.Len)).ToBe(True, 'OldArrayItems should be allocated.'); //SetLength(OldArrayItems, Arr.Len);
+    try
+      for i := 0 to OldArrayItems.Len - 1 do //for i := 0 to Length(OldArrayItems) - 1 do
+        OldArrayItems.Content^[i] := PtrUInt(Arr.Content^[i]); //  OldArrayItems[i] := Arr.Content^[i];
 
-    AllocationResult := SetDynOfDynOfByteLength(Arr, CArrayAllocLen + 10000);  //this is expected to fail
+      AllocationResult := SetDynOfDynOfByteLength(Arr, CArrayAllocLen + 10000);  //this is expected to fail
 
-    Expect(AllocationResult).ToBe(False, 'Expected a failed allocation.');
-    Expect(Byte(AllocationResult)).ToBe(Byte(False));
-    Expect(Arr.Len).ToBe(CArrayAllocLen, 'Number of items (again).');
-    Expect(Arr.Content).ToBePointer(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
+      Expect(AllocationResult).ToBe(False, 'Expected a failed allocation.');
+      Expect(Byte(AllocationResult)).ToBe(Byte(False));
+      Expect(Arr.Len).ToBe(CArrayAllocLen, 'Number of items (again).');
+      Expect(Arr.Content).ToBePointer(OldPointer, 'The existing pointer should not be lost in case of allocation failure.');
 
-    for i := 0 to Length(OldArrayItems) - 1 do
-      Expect(Arr.Content^[i]).ToBePointer(OldArrayItems[i], 'The array items should remain unchanged.');
+      for i := 0 to OldArrayItems.Len - 1 do //for i := 0 to Length(OldArrayItems) - 1 do
+        Expect(Arr.Content^[i]).ToBePointer(Pointer(OldArrayItems.Content^[i]), 'The array items should remain unchanged.'); //ToBePointer(OldArrayItems[i], 'The array items should remain unchanged.');
+    finally
+      FreeDynArrayOfPtrUInt(OldArrayItems);
+    end;
   finally
     FreeDynOfDynOfByteArray(Arr);  //the array has to be manually freed, because there is no reference counting
   end;

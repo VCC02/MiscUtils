@@ -122,7 +122,9 @@ end;
 
 procedure TTestDynArraysOfWordCase.TearDown;
 begin
-
+  {$IFDEF UsingDynTFT}
+    Expect(MM_TotalFreeMemSize).ToBe(HEAP_SIZE, 'No memory remains allocated.');
+  {$ENDIF}
 end;
 
 
