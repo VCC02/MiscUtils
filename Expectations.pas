@@ -533,7 +533,16 @@ function TExpect.WithItem(ExpectedItemName: string; ExtraMessage: string = ''): 
 begin
   try
     Expect(FActualValueStringList).ToBeAssigned(ExtraMessage + '  Also, make sure you pass a TStringList to Expect(), not a string.');
-    Expect(FActualValueStringList.IndexOfName(ExpectedItemName)).ToBeGreaterThan(-1, ExtraMessage + '  Expected "' + ExpectedItemName + '" to be an item of list.');
+
+    try
+      Expect(FActualValueStringList.IndexOfName(ExpectedItemName)).ToBeGreaterThan(-1, ExtraMessage + '  Expected "' + ExpectedItemName + '" to be an item of list.');
+    except
+      on E: EExp do
+        if FActualValueStringList.Count > 0 then
+          raise EExp.Create(E.Message + ' The list containts ' + IntToStr(FActualValueStringList.Count) + ' item(s). The first one is "' + FActualValueStringList.Strings[0] + '".')
+        else
+          raise EExp.Create(E.Message + ' The list is empty, so it cannot contain "' + ExpectedItemName + '".');
+    end;
 
     Result := TExpectedValue.Create;
     Result.FActualValue := FActualValueStringList.Values[ExpectedItemName];
